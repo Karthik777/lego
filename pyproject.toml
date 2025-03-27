@@ -6,13 +6,27 @@ authors = [{name = "Karthik Rajgopal"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
+package-mode = false
 dependencies = [
     "python-fasthtml (>=0.12.5,<0.13.0)",
     "monsterui (>=1.0.11,<2.0.0)",
     "email-validator (>=2.2.0,<3.0.0)",
     "pyjwt (>=2.10.1,<3.0.0)",
-    "pysymbol-llm (>=0.0.5,<0.0.6)"
 ]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content"
+]
+
+[project.urls]
+Homepage = "https://github.com/Karthik777/lego"
+Issues = "https://github.com/Karthik777/lego/issues"
 
 
 [build-system]

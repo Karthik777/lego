@@ -100,18 +100,6 @@ apsw = "*"
 fastcore = "*"
 
 [[package]]
-name = "astroid"
-version = "3.3.9"
-description = "An abstract syntax tree for Python with inference support."
-optional = false
-python-versions = ">=3.9.0"
-groups = ["main"]
-files = [
-    {file = "astroid-3.3.9-py3-none-any.whl", hash = "sha256:d05bfd0acba96a7bd43e222828b7d9bc1e138aaeb0649707908d3702a9831248"},
-    {file = "astroid-3.3.9.tar.gz", hash = "sha256:622cc8e3048684aa42c820d9d218978021c3c3d174fb03a9f0d615921744f550"},
-]
-
-[[package]]
 name = "beautifulsoup4"
 version = "4.13.3"
 description = "Screen-scraping library"
@@ -623,22 +611,6 @@ docs = ["sphinx", "sphinx-rtd-theme", "zope.interface"]
 tests = ["coverage[toml] (==5.0.4)", "pytest (>=6.0.0,<7.0.0)"]
 
 [[package]]
-name = "pysymbol-llm"
-version = "0.0.5"
-description = "Generate manifest of public symbols win python projects w/docstrings"
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-files = [
-    {file = "pysymbol-llm-0.0.5.tar.gz", hash = "sha256:579d0d3d37ed391f228aa8cebc97792b790769672605a7f993b5813734d426b4"},
-    {file = "pysymbol_llm-0.0.5-py3-none-any.whl", hash = "sha256:d37db0d94d70fa0902065c77df463169e31fa388cfbf4f88c0495b93e2445aa6"},
-]
-
-[package.dependencies]
-astroid = "*"
-fastcore = "*"
-
-[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 description = "Extensions to the standard Python datetime module"
@@ -1081,4 +1053,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "de7c0ee51acd06c1b7f5dc3fcce770770b7754f1b504fe1e2420f48dc1591a76"
+content-hash = "7793324424a60a613d895219d038e843934c97376751ca10dd13ba1ad224cba4"
