@@ -1,0 +1,128 @@
+/* Theme Variables */
+:root {
+  --neo-shadow-offset: 2px;
+  --neo-border-width: 1px;
+  --neo-thick-border-width: 3px;
+  --neo-radius: 4px;
+  --neo-shadow-color: color-mix(in srgb, #000000 80%, transparent);
+  --neo-border-color: #000000;
+  --neo-background: hsl(var(--background));
+  --grid-color: rgba(128, 128, 128, 0.1);
+  --grid-size: 32px;
+}
+
+.dark{
+    --neo-border-color: #FFFFFF;
+    --neo-shadow-color: #FFFFFF;
+    --grid-color: rgba(255, 255, 255, 0.1);
+  }
+
+
+/* Neo-brutalism Theme */
+.neo-brutalism {
+  /* Buttons */
+  .uk-btn:not(.uk-btn-link):not(.uk-btn-ghost) {
+    border: var(--neo-border-width) solid var(--neo-border-color);
+    box-shadow: var(--neo-shadow-offset) var(--neo-shadow-offset) 0 var(--neo-shadow-color);
+    /*border-radius: var(--neo-radius);*/
+    transition: all 0.2s ease;
+    position: relative;
+
+    &:hover {
+      transform: translate(var(--neo-shadow-offset), var(--neo-shadow-offset));
+      box-shadow: 0 0 0 var(--neo-shadow-color);
+    }
+
+    &.uk-btn-icon {
+      border-radius: 100px;
+    }
+
+    &.selected {
+      box-shadow: 0 0 0 var(--neo-shadow-color);
+      border-width: var(--neo-thick-border-width);
+    }
+  }
+
+  /* Form inputs */
+  .uk-input,
+  .uk-select,
+  .uk-textarea {
+    border: var(--neo-border-width) solid var(--neo-border-color);
+    box-shadow: var(--neo-shadow-offset) var(--neo-shadow-offset) 0 var(--neo-shadow-color);
+    /*border-radius: var(--neo-radius);*/
+    background: var(--neo-background);
+    -webkit-appearance: none;
+
+    &:focus {
+      border-color: var(--neo-border-color);
+      box-shadow: var(--neo-shadow-offset) var(--neo-shadow-offset) 0 var(--neo-shadow-color);
+    }
+  }
+
+  /* Cards */
+  .uk-card {
+    border: var(--neo-border-width) solid var(--neo-border-color);
+    box-shadow: var(--neo-shadow-offset) var(--neo-shadow-offset) 0 var(--neo-shadow-color);
+    /*border-radius: var(--neo-radius);*/
+    background: var(--neo-background);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translate(2px, 2px);
+      box-shadow: var(--neo-shadow-offset) var(--neo-shadow-offset) 0 var(--neo-shadow-color);
+    }
+  }
+
+  /* Headers */
+  h1, h2, h3 {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: var(--neo-border-width) dotted var(--neo-border-color);
+    box-shadow: var(--neo-shadow-offset) var(--neo-shadow-offset) 0 var(--neo-shadow-color);
+    /*border-radius: var(--neo-radius);*/
+    background: var(--neo-background);
+  }
+
+  /* Links */
+  .uk-link,
+  a {
+    text-decoration: none;
+    transition: all 0.2s ease;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+}
+
+/* Dark Mode Support */
+[data-theme="dark"] .uk-form-icon:not(.preserve-color) {filter: invert(1);}
+
+/* Firefox Scrollbar */
+@-moz-document url-prefix() {* {scrollbar-width: thin;}}
+.text-danger {color: hsl(var(--destructive));}
+.pop {color: hsl(0 100% 45%) !important;}
+.pop-border {border-color: hsl(var(--popover-foreground)) !important;}
+@keyframes blink {50% { border-color: transparent; }}
+.blink {animation: blink 1.5s step-end infinite;}
+
+.figma-board {
+  position: relative;
+  min-height: calc(100vh - 300px);
+  background-image: radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  background-position: 0px 0px;
+}
+
+.figma-board::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
+    background-size: calc(var(--grid-size) / 4) calc(var(--grid-size) / 4);
+    pointer-events: none;
+}
