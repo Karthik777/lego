@@ -14,12 +14,15 @@ Lego is a modular Python web framework designed to help developers build modern 
 - 🚀 **Fast Rendering**: Optimized HTML rendering with FastHTML
 - 🌓 **Theme Support**: Light/dark mode and customizable themes
 - 💾 **SQLite Database**: Simple database integration with WAL mode for performance
+- 📨 **Resend**: Service for sending emails.
+- 📝 **Logging**: Tacks on to uvicorn logging and support and choose between stream and file (for production)
+
 
 ## Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/lego.git
+git clone https://github.com/karthik777/lego.git
 cd lego
 
 # Using Poetry (recommended)
@@ -60,9 +63,21 @@ lego/
 
 Lego is built on the concept of modular, composable blocks. Each block can:
 
+- All configurations should have defaults unless they are api keys or secrets
 - Be completely standalone(own config, database, dependencies)
 - Build on top of other blocks(use existing databases, config from one or more components)
 - Partially depend on other blocks(use some of the blocks' config or helper methods)
+
+Why?
+
+- **Reusability**: Blocks can be reused across different applications
+- **Scalability**: Add new features without modifying existing code
+- **Maintainability**: Clean separation of concerns for easier debugging and testing
+- **Performance**: Optimize each block for speed and efficiency
+- **Flexibility**: Mix and match blocks to create custom applications
+- **Security**: Isolate sensitive data and logic in separate blocks
+- **Consistency**: Follow a consistent structure and coding style across blocks
+- **Environment Generation**: Generate environment files, sqlite db automatically from defaults. 
 
 This approach allows you to create reusable components that can be mixed and matched to build different applications while maintaining clean separation of concerns.
 
@@ -117,8 +132,8 @@ Lego follows the fast.ai coding style:
 Configuration is managed through `.env.override` files in the project root and module directories. Default configurations are in `core/cfg.py`.
 
 ## Roadmap
-- 📨 **Email integration**: Add support for sending emails with forgot password, verification emails, and self-hosted email server with emailwiz
-- 📝 **Logging**: Add structured logging and support for multiple logging targets
+- 🚀 **Deployment to Fly.io**: as it supports Native SQLite support.
+- 📨 **Email integration**: Add support for self-hosted email server with emailwiz
 - 🗄️ **PostgreSQL support**: Add support for PostgreSQL databases
 - 📊 **Admin dashboard**: Built-in admin interface for managing application data
 - 🧪 **Testing utilities**: Helpers for testing blocks and components

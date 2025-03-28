@@ -3,9 +3,9 @@ from monsterui.franken import *
 from monsterui.foundations import *
 from .cfg import cfg as s
 
-__all__ = ['avatar_menu', 'language_switcher', 'landing', 'welcome_page', 'placeholder',
-           'navbar', 'theme_switcher', 'svg', 'montage', 'typewriter', 'base',
-           'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT', 'welcome', 'not_found']
+__all__ = ['avatar_menu', 'language_switcher', 'landing', 'welcome_page', 'placeholder', 'navbar',
+           'theme_switcher', 'svg', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT',
+           'PresetsT', 'welcome', 'not_found', 'email_template']
 
 class PresetsT:
     shine = "bg-background shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-shine"
@@ -174,11 +174,18 @@ def landing(content, title=s.app_nm, auth=None):
 
 
 def base(content=None, auth=None, title=s.app_sh, style=NavBarT.glass):
-    return Div(cls="figma-board min-h-screen")(
-        Title(title),
+    return Title(title),Div(cls="figma-board min-h-screen")(
         navbar(auth=auth, title=title, style=style),
         Div(content if content else None, cls=f"uk-width-1-1")
     )
+
+def email_template(content, title=s.app_nm, usr=None):
+    if isinstance(usr,dict): content = f"Hello {usr.get('usr_name', f'{title} Patron')} \n\n {content}"
+    header = Div(cls="bg-primary p-4 text-white")(H1(title, cls="text-lg font-bold"))
+    body = Div(cls="p-4")(content)
+    footer = Div(cls="bg-secondary p-2 text-white text-xs")("This email was sent by our team.")
+    return Div(cls="border border-muted rounded-md overflow-hidden")(header, body, footer)
+
 
 def welcome(): return landing(placeholder(f"Welcome to {s.app_nm}"))
 def not_found(): return landing(placeholder("The page you're looking for doesn't exist or has been moved."))

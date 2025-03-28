@@ -3,7 +3,7 @@ from email_validator import validate_email, EmailNotValidError, EmailSyntaxError
 from fasthtml.oauth import OAuth
 from fastlite import Table, threaded, NotFoundError, ifnone
 import hashlib, hmac, time, jwt, re
-from core import landing, placeholder
+from core import landing, placeholder, send_email, email_template
 from .ui import *
 g_oath = git_oath = None
 
@@ -51,7 +51,6 @@ users, confirmation_tokens = db.t.users, db.t.confirmation_tokens
 users.dataclass(); confirmation_tokens.dataclass()
 hsh_key = hashlib.sha256(cfg.jwt_scrt.encode()).digest()
 
-
 def hash_pw(pw): return hmac.new(hsh_key, pw.encode(), hashlib.sha256).digest()
 def chk_pw(pw, hashed): return hmac.compare_digest(hash_pw(pw), hashed)
 @threaded
@@ -73,21 +72,17 @@ def auth_ok(req):
     if not isinstance(auth, dict) or not auth.get("usr_id"): return False
     return True
 
-
 def get_token(uid, typ=TokenT.em_verify):
     tok = jwt.encode(dict(uid=uid, typ=typ), cfg.jwt_scrt, "HS256")
     return confirmation_tokens.insert(dict(user_id=uid, type=typ, token=tok), replace=True) and tok
-
 
 def reqd_chk(attrs: dict) -> AppErr | None:
     fields = [nm for nm, v in attrs.items() if not v]
     return AllFieldsRequired(fields) if fields else None
 
-
 def em_chk(em, full=False) -> AppErr | str:
     try: valid = validate_email(em, check_deliverability=full, globally_deliverable=full); return valid.normalized.lower()
     except (EmailNotValidError, EmailSyntaxError, EmailUndeliverableError): return InvalidEmail
-
 
 def pw_chk(pwd, conf_pwd) -> AppErr | None:
     if pwd != conf_pwd: return PasswordMismatch
@@ -98,7 +93,6 @@ def pw_chk(pwd, conf_pwd) -> AppErr | None:
     if not re.search("[0-9]", pwd): errs.append("Password must contain a number")
     if not re.search("[!@#$%^&*(),.?\":{}|<>]", pwd): errs.append("Password must contain a special character")
     return AppErr(", ".join(errs), ["password", "confirm_password"]) if errs else None
-
 
 def tok_chk(tok) -> AppErr | Table:
     if not tok: return InvalidToken
@@ -114,7 +108,6 @@ def tok_chk(tok) -> AppErr | Table:
     except (NotFoundError, StopIteration): return InvalidToken
     except Exception: return DefaultError
 
-
 def login_form(req, email="", err=None, wrap=False):
     global g_oath, git_oath
     g_redirect = git_redirect = None
@@ -123,6 +116,18 @@ def login_form(req, email="", err=None, wrap=False):
     c = form(git_redirect=git_redirect, g_redirect=g_redirect, email=email, err=err)
     return landing(c) if wrap else c
 
+def send_ver_em(u, ver_link):
+    link = A("Verify Your Account", href=ver_link, cls="text-blue-600 underline p-1")
+    content = Div(P(f"Hi {u.display_name},", cls="p-1"), P(f"Welcome to {cfg.app_nm}.", cls="p-1"), link)
+
+    sub = f"{cfg.app_nm} - Email Verification"
+    send_email(u.email, sub, email_template(content))
+
+def send_pw_ch_em(u, pw_chng_lnk):
+    content = Div(P(f"Hi {u.display_name},", cls="p-1"),
+               P(A("Click here", href=f"{pw_chng_lnk}") + " to reset your pwd."))
+    sub = f"{cfg.app_nm} - Password Change Request"
+    send_email(u.email, sub, email_template(content))
 
 @dataclass
 class Login:
@@ -168,9 +173,8 @@ class Register(Login):
         except (NotFoundError, StopIteration):
             u = users.insert(dict(email=self.email, password_hash=hash_pw(self.password), display_name=self.name))
             tok = get_token(u.id)
-            # TODO: either build an email service or use sendgrid
-            verification_link = f"{cfg.domain}{Routes.verify_email}?token={tok}"
-            print(f"Verification link: {verification_link}")
+            ver_lnk = f"{cfg.domain}{Routes.verify_email}?token={tok}"
+            send_ver_em(u, ver_lnk) if cfg.resend_api_key else print("Resend isn't setup, Verification link:",ver_lnk)
 
 
 @dataclass
@@ -192,9 +196,8 @@ class ForgotPwdLink:
             u = usr_by_em(self.email)
             if u.status != Status.active: return EmailNotVerified
             tok = get_token(u.id, TokenT.pwd_reset)
-            # TODO: either build an email service or use sendgrid
-            verification_link = f"{cfg.domain}{Routes.reset_pw}?token={tok}"
-            print(f"Reset Password link: {verification_link}")
+            pw_chng_lnk = f"{cfg.domain}{Routes.reset_pw}?token={tok}"
+            send_ver_em(u, pw_chng_lnk) if cfg.resend_api_key else print("Resend isn't setup, Reset Password link:", pw_chng_lnk)
         except (NotFoundError, StopIteration): return EmailNotFound
 
 
@@ -229,9 +232,8 @@ class ResendVerLink:
             u = usr_by_em(self.email)
             if u.status == Status.active: return EmailAlreadyVerified
             tok = get_token(u.id)
-            # TODO: either build an email service or use sendgrid
-            verification_link = f"{cfg.domain}{Routes.verify_email}?token={tok}"
-            print(f"Verification link: {verification_link}")
+            ver_lnk = f"{cfg.domain}{Routes.verify_email}?token={tok}"
+            send_ver_em(u, ver_lnk) if cfg.resend_api_key else print(f"Resend isn't setup, Verification link:", ver_lnk)
         except (NotFoundError, StopIteration): return EmailNotFound
 
 

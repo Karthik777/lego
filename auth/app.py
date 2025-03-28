@@ -1,7 +1,7 @@
 from .data import *
 from core import welcome as wlcm
-async def login(req):
-    return home(req) if auth_ok(req) else login_form(req, wrap=True)
+
+async def login(req): return home(req) if auth_ok(req) else login_form(req, wrap=True)
 async def process_login(req, session, lgn: Login): return lgn.__ft__(req, session)
 def modal(req, step:Step = Step.login): return login_form(req) if step == Step.login else form(step)
 async def forgot_pwd(fgt_pw: ForgotPwdLink): return fgt_pw
