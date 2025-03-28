@@ -65,7 +65,7 @@ lego/
 
 Lego is built on the concept of modular, composable blocks. Each block can:
 
-- All configurations should have defaults unless they are api keys or secrets
+- Can set configuration defaults used by it and can also extend it's config with other configs.
 - Be completely standalone(own config, database, dependencies)
 - Build on top of other blocks(use existing databases, config from one or more components)
 - Partially depend on other blocks(use some of the blocks' config or helper methods)
