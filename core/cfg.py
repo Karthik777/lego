@@ -22,6 +22,7 @@ except Exception:
 
 # TODO: support Postgres using fastsql
 def database(path=cfg.db, wal=True) -> Database:
+    if path.startswith(":memory:"): return Database(":memory:")
     path = Path(path)
     path.parent.mkdir(exist_ok=True)
     tracer = lambda sql, params: print("SQL: {} - params: {}".format(sql, params))

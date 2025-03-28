@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from email_validator import validate_email, EmailNotValidError, EmailSyntaxError, EmailUndeliverableError
 from fasthtml.oauth import OAuth
-from fastlite import Table, threaded, NotFoundError, ifnone, database
+from fastlite import Table, threaded, NotFoundError, ifnone
 import hashlib, hmac, time, jwt, re
-from core import landing, placeholder, send_email, email_template, home
+from core import landing, placeholder, send_email, email_template, home, database
 from .ui import *
 g_oath = git_oath = None
 
