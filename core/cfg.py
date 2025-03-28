@@ -6,7 +6,7 @@ from fasthtml.common import RedirectResponse, Path, Database, threaded, FT, to_x
 
 __all__ = ['cfg', 'database', 'AppErr', 'boss_redirect', 'home', 'send_email']
 
-d = dict(app_nm="Lego", app_id="lego", app_sh="LG",
+d = dict(app_nm="Lego", app_id="lego", app_sh="lego",
          site_description="Build modern performant webapps one block at a time",
          site_keywords="lego, fastHTML, MonsterUI, webapp, python", site_author="Karthik Rajgopal",
          jwt_scrt=secrets.token_urlsafe(32), tkn_exp=691200, mode="production",
