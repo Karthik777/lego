@@ -36,7 +36,7 @@ poetry install
 1. **Start the server**
 
 ```bash
-python app.py
+python main.py
 ```
 
 2. **Visit your application**
@@ -47,7 +47,7 @@ Open your browser and navigate to: http://localhost:5001
 
 ```
 lego/
-├── app.py              # Main application entry point
+├── main.py              # Main application entry point
 ├── auth/               # Authentication module (example block)
 │   ├── app.py          # Auth routes and connections
 │   ├── cfg.py          # Auth configuration
