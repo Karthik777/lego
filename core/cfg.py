@@ -15,7 +15,10 @@ d = dict(app_nm="Lego", app_id="lego", app_sh="LG",
          static="/static", svg="/static/svg", config_file=".env.override")
 
 try: cfg = Config(Path(__file__).parent, d['config_file'], create=d, types=dict(tkn_exp=int), defaults=d)
-except Exception: cfg = AttrDictDefault(d)
+except Exception:
+    # Fix for vercel and aws lambda demos which do not allow you to create files
+    # TODO: read needed secrets from github secrets or environment variables
+    cfg = AttrDictDefault(d)
 
 # TODO: support Postgres using fastsql
 def database(path=cfg.db, wal=True) -> Database:

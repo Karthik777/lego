@@ -10,7 +10,11 @@ try:
     cfg = Config(Path(__file__).parent, ".env.override", create=d,
                  types=dict(want_google=bool, want_github=bool),
                  extra_files=core_cfg.config_file, defaults=d)
-except Exception: cfg = AttrDictDefault(d)
+except Exception:
+    # Fix for vercel and aws lambda demos which do not allow you to create files
+    # TODO: read needed secrets from github secrets or environment variables
+    cfg = AttrDictDefault(d)
+    cfg.update(core_cfg)
 
 cfg.want_google = cfg.want_google and bool(cfg.g_cli_id) and bool(cfg.g_cli_scrt)
 cfg.want_github = bool(cfg.want_github) and bool(cfg.git_cli_id) and bool(cfg.git_cli_scrt)
