@@ -11,7 +11,7 @@ d = dict(app_nm="Lego", app_id="lego", app_sh="LG",
          site_keywords="lego, fastHTML, MonsterUI, webapp, python", site_author="Karthik Rajgopal",
          jwt_scrt=secrets.token_urlsafe(32), tkn_exp=691200, mode="production",
          typwrtr_dyn_txt="Build, Expand, Innovate", typwrtr_stat_txt="like lego",
-         domain="http://localhost:5001", db="db/app.db", resend_api_key="",
+         domain="http://localhost:5001", db=":memory:", resend_api_key="",
          static="/static", svg="/static/svg", config_file=".env.override")
 
 try: cfg = Config(Path(__file__).parent, d['config_file'], create=d, types=dict(tkn_exp=int), defaults=d)
