@@ -1,13 +1,16 @@
 from fasthtml.oauth import GoogleAppClient, GitHubAppClient
-from fasthtml.common import StrEnum, Path
+from fasthtml.common import StrEnum, Path, AttrDictDefault
 from fastcore.foundation import Config
-from core import cfg as core_cfg, AppErr, database, boss_redirect, home
+from core import cfg as core_cfg, AppErr, boss_redirect
 
 
 d = dict(db="db/users.db", want_google='true', want_github='true',
          g_cli_id='', g_cli_scrt='', git_cli_id='', git_cli_scrt='')
-cfg = Config(Path(__file__).parent, ".env.override",
-             create=d, types=dict(want_google=bool, want_github=bool), extra_files=core_cfg.config_file, defaults=d)
+try:
+    cfg = Config(Path(__file__).parent, ".env.override", create=d,
+                 types=dict(want_google=bool, want_github=bool),
+                 extra_files=core_cfg.config_file, defaults=d)
+except Exception: cfg = AttrDictDefault(d)
 
 cfg.want_google = cfg.want_google and bool(cfg.g_cli_id) and bool(cfg.g_cli_scrt)
 cfg.want_github = bool(cfg.want_github) and bool(cfg.git_cli_id) and bool(cfg.git_cli_scrt)

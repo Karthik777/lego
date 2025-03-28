@@ -1,7 +1,7 @@
 import logging
 import secrets
 from starlette.responses import PlainTextResponse
-from fastcore.all import Config
+from fastcore.all import Config, AttrDictDefault
 from fasthtml.common import RedirectResponse, Path, Database, threaded, FT, to_xml
 
 __all__ = ['cfg', 'database', 'AppErr', 'boss_redirect', 'home', 'send_email']
@@ -14,8 +14,8 @@ d = dict(app_nm="Lego", app_id="lego", app_sh="LG",
          domain="http://localhost:5001", db="db/app.db", resend_api_key="",
          static="/static", svg="/static/svg", config_file=".env.override")
 
-cfg = Config(Path(__file__).parent, d['config_file'], create=d, types=dict(tkn_exp=int), defaults=d)
-
+try: cfg = Config(Path(__file__).parent, d['config_file'], create=d, types=dict(tkn_exp=int), defaults=d)
+except Exception: cfg = AttrDictDefault(d)
 
 # TODO: support Postgres using fastsql
 def database(path=cfg.db, wal=True) -> Database:
