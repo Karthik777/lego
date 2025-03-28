@@ -4,7 +4,7 @@ from fastcore.foundation import Config
 from core import cfg as core_cfg, AppErr, boss_redirect
 
 
-d = dict(db="db/users.db", want_google='true', want_github='true',
+d = dict(db=":memory:", want_google='true', want_github='true',
          g_cli_id='', g_cli_scrt='', git_cli_id='', git_cli_scrt='')
 try:
     cfg = Config(Path(__file__).parent, ".env.override", create=d,
