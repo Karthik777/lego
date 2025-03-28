@@ -2,6 +2,8 @@
 
 Build scalable, maintainable, performant webapps one block at a time.
 
+[Live Demo](https://lego-blocks.vercel.app/)
+
 ## Overview
 
 Lego is a modular Python web framework designed to help developers build modern web applications with a component-based approach. It combines the power of FastHTML and MonsterUI with an authentication system and a clean architecture to create performant, maintainable web applications.
