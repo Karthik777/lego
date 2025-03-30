@@ -11,7 +11,7 @@ Lego is a modular Python web framework designed to help developers build modern 
 ## Features
 
 - 🧩 **Modular Architecture**: Build your application block by block, like Lego
-- 🔒 **Built-in Authentication**: Complete auth system with login, registration, password reset
+- 🔒 **Built-in Authentication**: Complete auth system with login, registration, password reset, google and github social auth.
 - 🎨 **Modern UI Components**: Responsive UI components with MonsterUI
 - 🚀 **Fast Rendering**: Optimized HTML rendering with FastHTML
 - 🌓 **Theme Support**: Light/dark mode and customizable themes
