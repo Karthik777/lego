@@ -83,13 +83,14 @@ def otp_form():
 
 
 def login_form(email, g_redirect, git_redirect, err, *args):
+    is_social_on = g_redirect or git_redirect
     return _form(Routes.login, (
         SocialLoginButtons(g_redirect, git_redirect),
         EmailPasswordField(email, err),
         _err_div(err),
         P(A("Resend verification email", hx_get=f"{Routes.resend_verification}?email={email}", cls=f"{LINK_CLS} uk-margin-small-top"))
         if err and err.msg == EmailNotVerified.msg else None,
-        Button("Login", cls=[ButtonT.secondary,ButtonT.sm]),
+        Button("Login", cls=[ButtonT.secondary if is_social_on else ButtonT.primary,ButtonT.sm]),
         P(A("Forgot password", cls=LINK_CLS, hx_get=f"{Routes.auth_modal}?step=forgot-password", hx_target="#auth-container", hx_swap="outerHTML"), cls="uk-text-right uk-margin-remove"),
         P("Don't have an account? ", A("Sign up", cls=LINK_CLS, hx_get=f"{Routes.auth_modal}?step=register", hx_target="#auth-container", hx_swap="outerHTML"), cls="uk-margin-small-top")))
 
