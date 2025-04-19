@@ -1,3 +1,4 @@
+import os
 import logging
 import secrets
 from starlette.responses import PlainTextResponse
@@ -13,12 +14,12 @@ d = dict(app_nm="Lego", app_id="lego", app_sh="lego",
          typwrtr_dyn_txt="Build, Expand, Innovate", typwrtr_stat_txt="like lego",
          domain="http://localhost:5001", db=":memory:", resend_api_key="",
          static="/static", svg="/static/svg", config_file=".env.override")
+d["jwt_scrt"] = os.getenv("JWT_SECRET") or d["jwt_scrt"]
+d["resend_api_key"] = os.getenv("RESEND_API_KEY") or d["resend_api_key"]
 
 try: cfg = Config(Path(__file__).parent, d['config_file'], create=d, types=dict(tkn_exp=int), defaults=d)
-except Exception:
-    # Fix for vercel and aws lambda demos which do not allow you to create files
-    # TODO: read needed secrets from github secrets or environment variables
-    cfg = AttrDictDefault(d)
+except Exception: cfg = AttrDictDefault(d) # Fix for vercel and aws lambda demos which do not allow you to create files
+
 
 # TODO: support Postgres using fastsql
 def database(path=cfg.db, wal=True) -> Database:
