@@ -1,0 +1,6 @@
+ingress:
+  - hostname: ${DOMAIN}
+    service: https://${DOMAIN}:443
+  - hostname: "*.${DOMAIN}"
+    service: https://${DOMAIN}:443
+  - service: http_status:404

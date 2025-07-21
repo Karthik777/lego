@@ -1,0 +1,80 @@
+services:
+  swag:
+    image: lscr.io/linuxserver/swag
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Sydney
+      - URL=${DOMAIN}
+      - SUBDOMAINS=wildcard
+      - VALIDATION=dns
+      - DNSPLUGIN=cloudflare
+      - DOCKER_MODS=linuxserver/mods:universal-cloudflared
+      - CF_ZONE_ID=${CF_ZONE_ID}
+      - CF_ACCOUNT_ID=${CF_ACCOUNT_ID}
+      - CF_API_TOKEN=${CF_API_TOKEN}
+      - CF_TUNNEL_NAME=${APP_NAME:-VedicReader}
+      - CF_TUNNEL_PASSWORD=${CF_TUNNEL_PASSWORD}
+      - FILE__CF_TUNNEL_CONFIG=/config/tunnelconfig.yml
+      - DOMAIN=${DOMAIN}
+      - PORT=${PORT:-5001}
+    volumes:
+      - /etc/swag:/config
+      - /opt/lego/static:/config/static:ro
+    extra_hosts:
+      - ${DOMAIN}:127.0.0.1
+    restart: unless-stopped
+    depends_on:
+      - app
+
+  app:
+    image: ${APP_IMAGE:-lego:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - CF_ACCESS_KEY_ID=${CF_ACCESS_KEY_ID}
+        - CF_SCRT_ACCESS_KEY=${CF_SCRT_ACCESS_KEY}
+        - CF_ENDPOINT=${CF_ENDPOINT}
+        - PORT=${PORT:-5001}
+        - APP_NAME=${APP_NAME:-lego}
+    container_name: lego
+    user: "1000:1000"
+    environment:
+      - APP_NAME=${APP_NAME:-lego}
+      - DOMAIN=${DOMAIN}
+      - JWT_SCRT=${JWT_SCRT}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - GOOGLE_CLI=${GOOGLE_CLI}
+      - GOOGLE_SCRT=${GOOGLE_SCRT}
+      - GIT_CLI=${GIT_CLI}
+      - GIT_SCRT=${GIT_SCRT}
+      - PORT=${PORT:-5001}
+      - WANT_GOOGLE=${WANT_GOOGLE:-true}
+      - WANT_GIT=${WANT_GIT:-false}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PWD=${REDIS_PWD:-16BrpZS6eMdP18r8_dx2tTvP0VvRI_GzrSPaH2qHJZ4}
+#      FOR RCLONE WITH CF. Check Dockerfile for more details.
+      - CF_ACCESS_KEY_ID=${CF_ACCESS_KEY_ID}
+      - CF_SCRT_ACCESS_KEY=${CF_SCRT_ACCESS_KEY}
+      - CF_ENDPOINT=${CF_ENDPOINT}
+    volumes:
+      - /opt/lego/data:/app/data
+      - /opt/lego/static:/app/static
+      - /opt/lego/backups:/app/backups
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:latest
+    container_name: my-redis-instance
+    ports:
+      - "6379:6379"
+    volumes:
+      - /opt/lego/redis:/data
+    command: redis-server --save 20 1 --loglevel warning --requirepass 16BrpZS6eMdP18r8_dx2tTvP0VvRI_GzrSPaH2qHJZ4
+    restart: unless-stopped
