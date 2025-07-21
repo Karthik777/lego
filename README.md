@@ -33,7 +33,9 @@ Lego is a modular Python web framework designed to help developers build modern 
 - **Modern UI Components**: 
   - Responsive UI components with MonsterUI
   - Light/dark mode and customizable themes
-- **SQLite Database**: Simple database integration with WAL mode for performance
+- **Database Support**: 
+  - **SQLite Database**: Simple database integration with WAL mode for performance
+  - **FastSQL Support**: Can replace FastLite to load PostgreSQL or other databases normally loaded through SQLAlchemy
 
 
 ## Installation
@@ -44,7 +46,8 @@ git clone https://github.com/karthik777/lego.git
 cd lego
 
 # Using uv (recommended)
-uv sync
+uv venv
+uv pip install -e .
 ```
 
 ## Quickstart
@@ -377,6 +380,27 @@ cp config-templates/tunnelconfig.yml /etc/swag/
 ```
 
 The Docker Compose setup will automatically mount these directories and use environment variables to populate the configuration files.
+
+## Serverless Deployment
+
+Lego can be deployed on serverless infrastructure by:
+
+1. **Using fsspec for Remote Storage**: Modify the `get_path` function in `core/cfg.py` to point to remote buckets:
+
+```python
+# Example modification of get_path to use fsspec for remote storage
+import fsspec
+
+def get_path(nm, sf='', mk=False):
+    # Use fsspec to point to a remote bucket (S3, GCS, etc.)
+    remote_path = f"s3://my-bucket/{sf}/{nm}" 
+    fs = fsspec.filesystem('s3')
+
+    if mk and not fs.exists(remote_path):
+        fs.touch(remote_path)
+
+    return remote_path
+```
 
 ## Roadmap
 - 🚀 **Deployment to Fly.io**: Native SQLite support
