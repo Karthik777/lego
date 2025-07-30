@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../../tailwind.config.js";
 
 .uk-theme-default {
   --background: 44.00 42.86% 93.14%;
