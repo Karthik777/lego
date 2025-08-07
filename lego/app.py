@@ -1,12 +1,12 @@
 from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P, Redirect
 from monsterui.all import *
 from .core import *
-from lego import auth as a, gun
+from lego import auth as a, gun, ai
 
 __all__ = ['launch', 'lego']
 
 if cfg.purge: clear_cache()
-f = ['Architects+Daughter','Playfair+Display']
+f = ['Playfair+Display', 'DM+Sans', 'Space+Mono']
 fonts= '&'.join(map(lambda x: 'family=%s:wght@300;400;500;600;700' %x, f)) + '&display=swap'
 
 hdrs = [
@@ -34,6 +34,7 @@ kw,exh = {'class': 'neo-brutalism hidden', 'hx-ext': 'preload', 'hx-boost': 'tru
 lego, rt = fast_app(hdrs=hdrs, ftrs=ftrs, bodykw=kw, secret_key=cfg.jwt_scrt, live=not_prod(), title=cfg.app_nm, before=before,
                     exts='preload', exception_handlers=exh, on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
+RouteOverrides.skip.append('/chatbot')
 # connect your blocks
 a.connect(lego)
 
@@ -61,9 +62,11 @@ def showcase(auth):
 
     return landing(Div(txt,btns, id='showcase', cls='w-80 text-center mx-auto'))
 
+def chatbot(): return base(simple_page(Div(ai.chats(), id='chatbot', cls='w-full h-full text-left mx-auto')))
 
 # add default routes. the blocks can override these. the first in line wins.
-lego.get('/')(showcase)
+lego.get('/')(showcase)  # override home route to point to chatbot
+lego.get('/chatbot')(chatbot)
 lego.get('/health')(lambda req: JSONResponse({'status': 'ok'}))
 
 

@@ -8,12 +8,14 @@ from .cache import cache
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
-           'welcome', 'not_found','email_template', 'main']
+           'welcome', 'not_found','email_template', 'main', 'simple_page']
 
 class PresetsT:
     animate_shine = 'shadow-md'
     shine = 'bg-card %s' % animate_shine
     primary = 'bg-primary text-primary-foreground'
+    muted = 'bg-muted text-muted-foreground'
+    secondary = 'bg-secondary text-secondary-foreground'
     transparent = 'bg-transparent backdrop-blur-lg'
     glass = stringify([transparent, animate_shine])
     standout = 'bg-muted muted-border %s relative' % animate_shine
@@ -128,6 +130,11 @@ def welcome_page(img_dir=s.svg, content=None, title=None, cls=None, cont_cls=Non
     ftr = P(s.ftr_txt, cls='text-xs mt-4')
     con = Container(Div(H2(title, cls=PresetsT.shine), typewriter(), content, ftr, cls=cls), cls=cont_cls)
     return t, Section(m, con)
+
+def simple_page(content=None, cls=None, cont_cls=None, **kwargs):
+    cls = ifnone(cls, 'backdrop-blur-xl p-4 sm:p-8 border border-current')
+    cont_cls = ifnone(cont_cls, 'flex items-center justify-center mt-8')
+    return Container(Div( content, cls=cls), cls=cont_cls)
 
 def landing(content, title=s.app_nm, usr=None):
     return base(welcome_page(content=content, title=title), usr=usr, style=NavBarT.glass)
