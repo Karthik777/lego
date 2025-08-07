@@ -25,15 +25,15 @@ hd=[
 
 def btn_ico(icon_cls, txt): return Button(UkIcon(icon_cls), Span(txt), cls=f'{ButtonT.ghost} w-full flex items-left justify-start gap-2 px-1 cursor-pointer')
 def nav_i(*c, cls='', **kw): return Li(*c, cls=f'cursor-pointer {cls}', **kw)
-def search(): return nav_i(Div(A(UkIcon('search'), cls='absolute left-3 top-1/2 -translate-y-1/2'), Input(placeholder='Search', cls='pl-9'), cls='relative mr-4'))
+def search(): return nav_i(Div(A(UkIcon('search'), cls='absolute ml-0 pl-2 top-1/2 -translate-y-1/2'), Input(placeholder='Search', cls='pl-9'), cls='relative mr-4'))
 def new(): return nav_i(btn_ico('square-pen', 'Chat'), cls='mt-2')
 def files(): return nav_i(btn_ico('file-text', 'Files'), cls='mt-1')
 # # TODO: treat projects similar to history, with a list of projects
 
 def projects(pr=get_projects(1001)):
-    hst_pm = lambda chs: L(chs).map(lambda ch: nav_i(A(Span(ch.name, cls='truncate'), href='#', id=ch.id)))
+    hst_pm = lambda chs: L(chs).map(lambda ch: nav_i(A(Div(Span(ch.name, cls='truncate font-bold'), Div(ch.description,cls=f'uk-nav-subtitle truncate {TextT.xs}')), href='#', id=ch.id)))
     hsts = pr.map(lambda c: hst_pm(c)).reduce(lambda x, y: x + y) if pr else L()
-    cnt = NavContainer(*hsts, id='shared-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
+    cnt = NavContainer(*hsts, id='projects-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
     ico = (UkIcon('chevron-down', cls='group-hover:block hidden'), UkIcon('box', cls='group-hover:hidden block'))
     lnk = A(*ico, Span('Projects', cls=TextT.medium), href='#', cls='flex gap-2 px-1 ml-0 group')
     return NavParentLi((lnk, cnt), cls='uk-open')
@@ -45,7 +45,7 @@ def shr(shared:L=hist_shared(2002)):
     cnt = NavContainer(*hsts, id='shared-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
     ico = (UkIcon('chevron-down', cls='group-hover:block hidden'), UkIcon('folder-kanban', cls='group-hover:hidden block'))
     lnk = A(*ico, Span('Shared with me', cls=TextT.medium), href='#', cls='flex gap-2 px-1 ml-0 group')
-    return NavParentLi((lnk, cnt), cls='uk-open')
+    return NavParentLi((lnk, cnt))
 
 def history(hst:L=hist(1001)):
     if not hst: return None
@@ -58,8 +58,8 @@ def history(hst:L=hist(1001)):
 
 def nav():
     con = (search(), new(), files(), projects(), shr(), history())
-    bar = NavContainer(*con, cls=NavT.secondary, id='sidebar-container', uk_nav=True)
-    return Div(bar, cls=f'{PresetsT.shine} overflow-y-auto w-72 min-w-72 m-2 p-2')
+    bar = NavContainer(*con, cls=[NavT.secondary, 'border-none mx-0'], id='sidebar-container', parent=False, data_uk_nav='multiple: true')
+    return Div(bar, cls=f'overflow-y-auto w-72 min-w-72 m-2 p-2 chat-nav h-full border-r muted-border')
 
 def message_bubble(content, is_user=True, timestamp=None):
     """Create a message bubble for user or bot"""
@@ -69,7 +69,7 @@ def message_bubble(content, is_user=True, timestamp=None):
     message_content = Div(
         Div(content, cls='whitespace-pre-wrap break-words'),
         Small(timestamp, cls='text-xs opacity-60 mt-1 block') if timestamp else None,
-        cls=f'max-w-2xl px-4 py-3 rounded-2xl {bubble_cls}'
+        cls=f'max-w-2xl px-4 py-3 rounded-tl-4xl rounded-bl-4xl rounded-tr-3xl rounded-sm {bubble_cls}'
     )
     
     return Div(message_content, cls=f'flex {align_cls} mb-4 mx-4')
@@ -173,5 +173,4 @@ def chats():
     return Card(Div(
         nav(),
         chat_window(),
-        cls='flex gap-0 w-full h-screen'
-    ))
+        cls='flex gap-0 min-h-80'),cls='h-3/4')

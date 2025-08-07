@@ -12,7 +12,7 @@ def get_db():
     chats, msgs, docs, ckpts, proj = _db.t.chats, _db.t.chat_messages, _db.t.documents, _db.t.chat_checkpoints, _db.t.projects
     proj.create(id=int, name=str, description=str, created_at=float, pk='id', if_not_exists=True,
         transform=True, user_id=int, not_null={'name'},defaults=dict(created_at=time()))
-    proj.create_index(['name'], unique=True, if_not_exists=True)
+    proj.create_index(['name'], if_not_exists=True)
 
     chats.create(id=str, user_id=int, name=str, shared_with=str, created_at=float, updated_at=float, project_id=int,
          pk='id', foreign_keys=[('project_id', 'projects', 'id')], if_not_exists=True, transform=True,
@@ -28,7 +28,7 @@ def get_db():
     msgs.create(id=int, sender=str, message=str, document_ids=str, created_at=float, chat_id=str,
         foreign_keys=[('chat_id', 'chats', 'id')], pk='id', if_not_exists=True, transform=True,
         not_null={'chat_id', 'sender', 'message'}, defaults=dict(created_at=time()))
-    msgs.create_index(['chat_id'], unique=True, if_not_exists=True)
+    msgs.create_index(['chat_id'], if_not_exists=True)
 
     docs.create(id=str, user_id=int, name=str, mime_type=str, storage_url=str, created_at=float, pk='id', chat_id=str,
         project_id=int, if_not_exists=True, defaults=dict(created_at=time()),transform=True, not_null={'id', 'user_id', 'name', 'storage_url'},

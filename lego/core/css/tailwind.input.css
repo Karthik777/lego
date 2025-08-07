@@ -375,7 +375,7 @@
   --neo-background: hsl(var(--background));
   --grid-color: rgba(128, 128, 128, 0.1);
   --grid-size: 32px;
-  --muted-border-color: hsl(var(--ring));
+  --muted-border-color: hsl(var(--muted));
   --font-sans: DM Sans,serif;
   --font-serif: Playfair Display, serif;
   --font-mono: Space Mono, monospace;
