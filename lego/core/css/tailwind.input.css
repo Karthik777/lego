@@ -446,7 +446,6 @@ body {
 .slide-up {animation: slide-up 0.3s ease-in-out;}
 .figma-board {
   position: relative;
-  min-height: calc(100vh - 300px);
   background-image: radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   background-position: 0px 0px;
