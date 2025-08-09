@@ -5,27 +5,10 @@ from .data import hist, shared as hist_shared, get_projects
 
 __all__ = ['history', 'chats', 'chat_window', 'message_bubble', 'chat_input']
 
-hd=[
-        ("August", [
-            "FastHTML Chatbot: WebScrapper for Grok-like Chatbots",
-            "Valmiki and Narada: Question Answering with Grok",
-            "Creating Grok-like Chat Bots with FastHTML",
-        ]),
-        ("July", [
-            "Training Model for Ramayana: A Grok-like Chatbot",
-            "Fixing TA-Lib Installation Error on Mac",
-            "Chunking PDFs with Python for Grok-like Chatbots",
-            "Japa Mode Integration in Anthropic API for Grok-like Chatbots",
-            "Understanding Python Glob Module for Grok-like Chatbots",
-            "Asynchronous Anthropic API for Grok-like Chatbots",
-            "Nginx Sticky Sessions with Grok-like Chatbots"
-        ])
-    ]
-
-def btn_ico(ico_nm, txt=None, cls=None, ico_cls=None, **kw):
+def btn_ico(ico_nm, txt=None, cls=None, ico_cls=None, code=None, **kw):
     t, btn_cls=Span(txt, cls='text-center') if txt else None, f'{ButtonT.icon if not txt else ''} {ButtonT.ghost}'
-    c = ('w-full items-left justify-start flex gap-2 px-1 cursor-pointer' if txt else '') + f'{btn_cls} {cls if cls else ''}'
-    return Button(UkIcon(ico_nm, cls=ico_cls), t, cls=c, **kw)
+    c = ('w-full items-left justify-start flex gap-2 px-0.75 cursor-pointer' if txt else '') + f'{btn_cls} {cls if cls else ''}'
+    return Button(UkIcon(ico_nm, cls=ico_cls), code, t, cls=c, **kw)
 
 def nav_i(*c, cls='', **kw): return Li(*c, cls=f'cursor-pointer {cls}', **kw)
 def new(ico=False): return nav_i(btn_ico('square-pen', 'Chat' if not ico else None))
@@ -33,10 +16,10 @@ def files(ico=False): return nav_i(btn_ico('file-text', 'Files' if not ico else 
 
 def search(ico=False):
     if ico: return nav_i(btn_ico('search', cls='mt-2'))
-    return nav_i(Div(A(UkIcon('search'), cls='absolute ml-0 pl-2 top-1/2 -translate-y-1/2'), Input(placeholder='Search', cls='pl-9'),cls='mr-4'))
+    return nav_i(Div(A(UkIcon('search'), cls='absolute ml-0 pl-2 top-1/2 -translate-y-1/2'), Input(placeholder='Search', cls='pl-8'),cls='-ml-1 mr-4'))
 
 def projects(pr=get_projects(1001), ico=False):
-    if ico: return nav_i(btn_ico('box'), cls='mt-1.5')
+    if ico: return nav_i(btn_ico('box'), cls='mt-0.5')
     hst_pm = lambda chs: L(chs).map(lambda ch: nav_i(A(Div(Span(ch.name, cls='truncate font-bold'), Div(ch.description,cls=f'uk-nav-subtitle truncate {TextT.xs} opacity-80')), href='#', id=ch.id, cls='py-0.5')))
     hsts = pr.map(lambda c: hst_pm(c)).reduce(lambda x, y: x + y) if pr else L()
     cnt = NavContainer(*hsts, id='projects-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
@@ -46,7 +29,7 @@ def projects(pr=get_projects(1001), ico=False):
 
 def shr(shared:L=hist_shared(2002), ico=False):
     if not shared: return None
-    if ico: return nav_i(btn_ico('folder-kanban'), cls='mt-1.75')
+    if ico: return nav_i(btn_ico('folder-kanban'), cls='mt-0')
     hst_pm = lambda chs: L(chs).map(lambda ch: nav_i(A(Span(ch.name, cls='truncate group-hover:opacity-30'), UkIcon('book-copy', cls='group-hover:block hidden'), href='#', id=ch.id), cls='group'))
     hsts = shared.map(lambda c: hst_pm(c)).reduce(lambda x, y: x + y) if shared else L()
     cnt = NavContainer(*hsts, id='shared-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
@@ -56,7 +39,7 @@ def shr(shared:L=hist_shared(2002), ico=False):
 
 def history(hst:L=hist(1001), ico=False):
     if not hst: return None
-    if ico: return nav_i(btn_ico('history'), cls='mt-2')
+    if ico: return nav_i(btn_ico('history'), cls='mt-0')
     hst_pm = lambda chs: L(chs).map(lambda ch: nav_i(A(Span(ch[0], cls='truncate opacity-80'), UkIcon('ellipsis-vertical', cls='item-end group-hover:block hidden'), href='#', id=ch[1], cls='pl-2.5'), cls='group'))
     hsts = hst.map(lambda c: (NavHeaderLi(c[0], cls=(TextT.xs,'py-0')),*hst_pm(c[1]))).reduce(lambda x,y: x+y)
     cnt=NavContainer(*hsts, id='history-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
@@ -64,76 +47,28 @@ def history(hst:L=hist(1001), ico=False):
     lnk = A(*icon, Span('History', cls=TextT.medium), href='#', cls='flex gap-2 px-1 ml-0 group')
     return NavParentLi((lnk, cnt), cls='uk-open')
 
-def nav(ico=False):
-    tgl = 'any(".chat-nav").classToggle("hidden");any(".chat-icon").classToggle("hidden");'
-    ign = "if (ev.target.closest('button, a, input, textarea, [data-uk-toggle]')) return;"
-    on_snap, nav_click= On(tgl), On(ign+tgl)
-    btn,d,cls,btn_cls = (btn_ico('chevrons-right'), 'hidden','pl-2 pr-3 pt-0 cursor-e-resize','mt-4') if ico else (btn_ico('chevrons-left'), '', 'w-64 min-w-64 ml-2 p-2 mb-2 cursor-w-resize','')
-    snap = Div(on_snap, btn, cls=f'grow pt-4 chat-icon {d} {btn_cls}')
+def nav(ico=False, mob=False, hide=False):
+    d,cls = 'hidden' if hide else '', ''
+    snap=nav_click=None
+    if not mob:
+        tgl = 'any(".chat-nav",me(".desktop-layout")).classToggle("hidden");any(".chat-icon",me(".desktop-layout")).classToggle("hidden");'
+        ign = "if (ev.target.closest('button, a, input, textarea, [data-uk-toggle]')) return;"
+        on_snap, nav_click, snap_cls = On(tgl), On(ign + tgl), 'grow-1 absolute justify-end items-end'
+        btn = btn_ico('chevrons-right') if ico else btn_ico('chevrons-left')
+        snap = Div(on_snap, btn, cls=f'pt-4 chat-icon {d} {snap_cls}')
+        nav_click = On(ign + tgl)
+        cls = 'pl-2 pr-3 pt-0 cursor-e-resize' if ico else 'w-64 min-w-64 ml-2 p-2 mb-2 cursor-w-resize'
     con = (search(ico=ico), new(ico=ico), files(ico=ico), projects(ico=ico), shr(ico=ico), history(ico=ico))
-    bar = NavContainer(*con, cls=[NavT.secondary, 'border-none mx-0 flex flex-col grow overflow-x-hidden gap-1 overflow-y-auto h-4/5 z-10'], id='sidebar-container', parent=False, data_uk_nav='multiple: true')
-    nav_cls=f'flex flex-col chat-nav border-r muted-border h-screen my-2 {d} {cls} transition-all duration-300 ease-in-out'
-    return Card(bar, snap, nav_click, body_cls=nav_cls, cls='p-0 border-none shadow-none rounded-none', data_uk_overflow_auto=True)
+    nav_cls=f'chat-nav border-r muted-border h-screen my-2 {d} {cls} transition-all duration-300 ease-in-out'
+    bar = NavContainer(*con, cls=[NavT.secondary, 'border-none mx-0 gap-1 z-10'], id='sidebar-container', parent=False, data_uk_nav='multiple: true')
+    return Card(bar, snap, nav_click, body_cls=nav_cls, cls='p-0 border-none shadow-none rounded-none', uk_overflow_auto='selContainer: #chatbot-container; selContent: .chat-window')
 
-def responsive_chat_layout():
-    # Off-canvas for mobile
-    offcanvas_nav = Div(
-        Div(nav(), cls='uk-offcanvas-bar'),
-        id='offcanvas-nav-responsive',
-        data_uk_offcanvas='overlay: true'
-        )
-
-    # Main layout
-    return Div(
-        # Mobile nav toggle
-        Button(
-            UkIcon('menu'),
-            aria_label="Open navigation",
-            data_uk_toggle="target: #offcanvas-nav-responsive",
-            cls='sm:hidden p-2 fixed top-2 left-2 z-10'
-            ),
-
-        # Desktop layout
-        Div(
-            nav(ico=True), nav(),
-            # content_panels(),
-            chat_window(),
-            cls='hidden sm:flex w-full'
-            ),
-
-        # Mobile layout
-        Div(
-            chat_window(),
-            cls='sm:hidden w-full'
-            ),
-
-        offcanvas_nav
-        )
-
-
-def off_canvas_nav():
-    # Button to toggle the off-canvas navigation
-    toggle_btn = Button(
-        UkIcon('menu'), 
-        aria_label="Open navigation",
-        data_uk_toggle="target: #offcanvas-nav",
-        cls=f'{ButtonT.ghost} sm:hidden'  # Visible only on small screens
-    )
-    
-    # Off-canvas container
-    off_canvas_content = Div(
-        nav(),
-        cls='uk-offcanvas-bar'
-    )
-    
-    off_canvas_nav = Div(
-        off_canvas_content,
-        id='offcanvas-nav',
-        data_uk_offcanvas='overlay: true'
-    )
-    
-    return Div(toggle_btn, off_canvas_nav)
-
+def chatbot():
+    mob_nav = Div(Div(nav(False, mob=True), cls='uk-offcanvas-bar'), id='mob-nav',data_uk_offcanvas='overlay: true;')
+    mob_icon = Button(UkIcon('menu'), aria_label="Open navigation", data_uk_toggle="target: #mob-nav", cls=f'lg:hidden p-2 {ButtonT.icon}')
+    desktop_nav = Div(nav(ico=True, hide=True), nav(), chat_window(), cls='hidden lg:flex w-full desktop-layout')
+    chat = Div(chat_window(), cls='lg:hidden w-full')
+    return Div(mob_icon,desktop_nav,chat,mob_nav)
 
 
 def message_bubble(content, is_user=True, timestamp=None):
@@ -244,6 +179,4 @@ def chat_window():
         cls='flex flex-col'
     )
 
-def chats():
-    return responsive_chat_layout()
-    # return Card(responsive_chat_layout(), body_cls='p-0', cls='border-none rounded-none shadow-none')
+def chats(): return chatbot()
