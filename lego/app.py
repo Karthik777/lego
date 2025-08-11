@@ -62,7 +62,7 @@ def showcase(auth):
 
     return landing(Div(txt,btns, id='showcase', cls='w-80 text-center mx-auto'))
 
-def chatbot(): return base(ai.chats())
+def chatbot(): return base(ai.chats(), cls='overflow-y-hidden')
 
 # add default routes. the blocks can override these. the first in line wins.
 lego.get('/')(showcase)  # override home route to point to chatbot

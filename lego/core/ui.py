@@ -139,8 +139,8 @@ def simple_page(content=None, cls=None, cont_cls=None, **kwargs):
 def landing(content, title=s.app_nm, usr=None):
     return base(welcome_page(content=content, title=title), usr=usr, style=NavBarT.glass)
 
-def base(content=None, usr=None, title=s.app_nm, sh=s.app_sh, style=NavBarT.glass, **kwargs):
-    return Title(title), Div(navbar(usr=usr, title=sh, style=style), main(content, **kwargs), cls='min-h-screen figma-board')
+def base(content=None, usr=None, title=s.app_nm, sh=s.app_sh, style=NavBarT.glass, cls='', **kwargs):
+    return Title(title), Div(navbar(usr=usr, title=sh, style=style), main(content, **kwargs), cls=f'min-h-screen figma-board {cls}')
 
 def main(content=None, cls=None, **kw): return Div(content if content else None, cls=stringify(['uk-width-1-1',cls]), id='main-content', **kw)
 

@@ -487,3 +487,12 @@ body {
 .htmx-request .htmx-indicator {
     opacity: 1;
 }
+
+.root-divider {
+    border-inline-style: var(--tw-border-style);
+    border-inline-width: 1px;
+    border-inline-color: var(--muted-border-color);
+    background-image: repeating-linear-gradient(315deg, var(--muted-border-color) 0, var(--muted-border-color) 1px, transparent 0, transparent 50%);
+    background-size: 10px 10px;
+    background-attachment: fixed;
+}
