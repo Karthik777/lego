@@ -89,7 +89,7 @@ def font_size_switcher():
 
 def svg_img(svg_path, cls='', w=16, h=16, outer_cls='', loading='lazy', **kw):
     return Div(
-        Img(src=f'/{svg_path}', cls=cls, width=w, height=h, loading=loading, **kw),
+        Img(src=f'/{svg_path.lstrip('/')}', cls=cls, width=w, height=h, loading=loading, **kw),
         cls=f'inline-flex items-center justify-center {outer_cls}'
     )
 
