@@ -78,9 +78,9 @@ def lg_nav(ico=False, hide=False):
     return Card(bar, snap, nav_click, body_cls=nav_cls, cls=f'{PresetsT.glass} border-none shadow-none rounded-none {d} nav-container')
 
 def lg_chat():
-    d_nav, divider = Div(lg_nav(ico=True, hide=True), lg_nav(), cls='grow-0'), Div(cls='root-divider grow')
-    cls, cw_cls ='hidden lg:flex w-full desktop-layout h-auto', [PresetsT.glass, 'relative', 'w-full flex items-center']
-    return Grid(d_nav, divider, Div(chat_window(), cls=cw_cls), divider, cls=cls, id='lg-chatbot-container', cols=4)
+    d_nav = Div(lg_nav(ico=True, hide=True), lg_nav(), cls='grow-0')
+    cls, cw_cls ='hidden lg:flex w-full desktop-layout h-auto', [PresetsT.glass, 'relative', 'w-full flex items-center lg-chat-window']
+    return Grid(d_nav, Div(chat_window(), cls=cw_cls), cls=cls, id='lg-chatbot-container', cols=4)
 
 def mob_nav():
     con = (search(), new(), files(), projects(), shr(), history())
@@ -121,7 +121,7 @@ def chat_inp(cls=None):
     ta = Textarea(placeholder="What do you want to know?", cls=ta_cls)
     code = "console.log(e);e.style.height = 'auto';if(!e.value){e.style.height = '4rem';} else {e.style.height = `${e.scrollHeight}px';}"
     ip = Div(ta, On(code, 'input', '.chat-text', me=False), opts(), cls=f'relative w-full rounded-2xl shadow-lg {PresetsT.shine}')
-    ch_cls=f'absolute z-50 w-full lg:w-2/3 left-1/2 -translate-x-1/2 items-center px-4 {stringify(cls)}'
+    ch_cls=f'absolute z-50 w-full max-w-[52rem] left-1/2 -translate-x-1/2 items-center px-4 {stringify(cls)}'
     return Div(ip, id='chat-container', cls=ch_cls)
 
 def opts():
