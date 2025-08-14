@@ -1362,6 +1362,9 @@
   .overflow-y-hidden {
     overflow-y: hidden;
   }
+  .overscroll-none {
+    overscroll-behavior: none;
+  }
   .rounded {
     border-radius: 0.25rem;
   }
@@ -2036,6 +2039,11 @@
   .dark\:text-blue-400 {
     &:is(.dark *) {
       color: var(--color-blue-400);
+    }
+  }
+  .dark\:text-gray-200 {
+    &:is(.dark *) {
+      color: var(--color-gray-200);
     }
   }
   .dark\:text-gray-400 {

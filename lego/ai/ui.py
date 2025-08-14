@@ -78,10 +78,9 @@ def lg_nav(ico=False, hide=False):
     return Card(bar, snap, nav_click, body_cls=nav_cls, cls=f'{PresetsT.glass} border-none shadow-none rounded-none {d} nav-container')
 
 def lg_chat():
-    d_nav = Div(lg_nav(ico=True, hide=True), lg_nav(), cls='grow-0')
-    divider = Div(cls='grow')
-    cls='hidden lg:flex w-full desktop-layout h-auto'
-    return Grid(d_nav, divider, Div(chat_window(), cls=[PresetsT.glass,'relative','w-full max-w-[48rem] flex items-center']), divider, cls=cls, id='lg-chatbot-container', cols=4)
+    d_nav, divider = Div(lg_nav(ico=True, hide=True), lg_nav(), cls='grow-0'), Div(cls='root-divider grow')
+    cls, cw_cls ='hidden lg:flex w-full desktop-layout h-auto', [PresetsT.glass, 'relative', 'w-full flex items-center']
+    return Grid(d_nav, divider, Div(chat_window(), cls=cw_cls), divider, cls=cls, id='lg-chatbot-container', cols=4)
 
 def mob_nav():
     con = (search(), new(), files(), projects(), shr(), history())
@@ -115,7 +114,7 @@ def chat_messages():
         ("I'd be happy to help you analyze your documents! Please upload the files you'd like me to review, and I'll provide insights, summaries, and answer any questions you have about the content.", False, "10:31 AM"),
         ("Perfect, let me upload a few files now.", True, "10:32 AM"),
     ]
-    return Div(*(msg(*m) for m in messages*10), Div(cls='h-48'), cls='flex-1 py-4', uk_overflow_auto='selContainer: .chat-window; selContent: .chat-messages;')
+    return Div(Div(*(msg(*m) for m in messages*10), Div(cls='h-48'), cls='mx-auto max-w-[48rem]'), cls='flex-1 py-4', uk_overflow_auto='selContainer: .chat-window; selContent: .chat-messages;')
 
 def chat_inp(cls=None):
     ta_cls = 'w-full p-4 pr-16 min-h-12 max-h-96 resize-none focus:outline-none chat-text h-auto'
@@ -151,7 +150,7 @@ def mode(mdls=m, default=0):
     instr = Div(smpl_navi('Custom Instructions', 'Understand the context and answer appr...', ico='drama', ico_cls='h-4 w-6 nav-ico', cls='p-2',a_cls='hover:bg-background'),rgt, cls='flex items-center border-t muted-border pt-2 mt-1')
     return Div(btn,drop(NavContainer(*its(mdls), instr, cls=('uk-dropdown-nav', NavT.default))),code)
 
-def chat_window(cls='grow-0 w-full h-screen', ip_cls='mt-auto bottom-14', msg_cls='flex-1'):
+def chat_window(cls='grow-0 w-full h-screen', ip_cls='mt-auto bottom-14', msg_cls='w-full'):
     return Div(Div(chat_messages(), cls=f'chat-messages {stringify(msg_cls)}'),chat_inp(ip_cls), cls=[cls, 'chat-window relative'])
 
 def files_history_modal(hst:L=hist(1001)):
