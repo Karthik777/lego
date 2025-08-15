@@ -13,6 +13,8 @@ def _nav_btn(ico_nm, txt=None, cls=None, ico_cls=None, code=None, **kw):
     return Button(UkIcon(ico_nm, cls=ico_cls), code, t, cls=c, **kw)
 
 def _nav_i(*c, cls='', **kw): return Li(*c, cls=f'cursor-pointer {cls}', **kw)
+def new(ico=False): return _nav_i(_nav_btn('square-pen', 'Chat' if not ico else None))
+def files(ico=False): return _nav_i(_nav_btn('file-text', 'Files' if not ico else None))
 
 def smpl_navi(txt, sub_t='', ico=None, cls='', ico_cls='', a_cls='', **kw):
     """Create a navigation item with optional icon, name, and description"""
@@ -20,11 +22,6 @@ def smpl_navi(txt, sub_t='', ico=None, cls='', ico_cls='', a_cls='', **kw):
     nm, dsc = lambda n: Span(n, cls='truncate font-semibold nav-text'), lambda d: NavSubtitle(d, cls='truncate')
     c = A(UkIcon(ico, cls=ico_cls) if ico else None, Div(nm(txt), dsc(sub_t) if sub_t else None, cls='flex flex-col'), href='#', cls=[stringify(a_cls), 'py-0.5 gap-2'])
     return _nav_i(c, cls=cls, **kw)
-
-def new(ico=False): return _nav_i(_nav_btn('square-pen', 'Chat' if not ico else None))
-def files(ico=False):
-    if ico: return _nav_i(_nav_btn('file-text', 'Files' if not ico else None, data_uk_toggle="target: #files-history-modal", onclick="UIkit.tab('#modal-tabs').show(0);"))
-    return _nav_i(_nav_btn('file-text', 'Files' if not ico else None), data_uk_toggle="target: #files-history-modal", onclick="UIkit.tab('#modal-tabs').show(0);")
 
 def search(ico=False):
     if ico: return _nav_i(_nav_btn('search', cls='mt-2'))
@@ -54,12 +51,12 @@ def shr(shared:L=hist_shared(2002), ico=False):
 
 def history(hst:L=hist(1001), ico=False):
     if not hst: return None
-    if ico: return _nav_i(_nav_btn('history'), cls='mt-0', data_uk_toggle="target: #files-history-modal", onclick="UIkit.tab('#modal-tabs').show(1);")
+    if ico: return _nav_i(_nav_btn('history'), cls='mt-0')
     hst_pm = lambda chs: L(chs).map(lambda ch: _nav_i(A(Span(ch[0], cls='truncate opacity-80'), UkIcon('ellipsis-vertical', cls='item-end group-hover:block hidden'), href='#', id=ch[1], cls='pl-2.5'), cls='group'))
     hsts = hst.map(lambda c: (NavHeaderLi(c[0], cls=(TextT.xs,'py-0')),*hst_pm(c[1]))).concat()
     cnt=NavContainer(*hsts, id='history-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
     icon = (UkIcon('chevron-down', cls='group-hover:block hidden'), UkIcon('history', cls='group-hover:hidden block'))
-    hst_modal_trg = Span('History', cls=[TextT.medium, 'w-4/5'], data_uk_toggle="target: #files-history-modal", onclick="UIkit.tab('#modal-tabs').show(1);")
+    hst_modal_trg = Span('History', cls=[TextT.medium, 'w-4/5'])
     lnk = A(*icon, hst_modal_trg, href='#', cls='flex gap-2 px-1 ml-0 group')
     return NavParentLi((lnk, cnt), cls='uk-open')
 
@@ -77,26 +74,11 @@ def lg_nav(ico=False, hide=False):
     bar = NavContainer(*con, cls=[NavT.secondary, 'border-none mx-0 gap-1 z-10'], parent=False, data_uk_nav='multiple: true')
     return Card(bar, snap, nav_click, body_cls=nav_cls, cls=f'{PresetsT.glass} border-none shadow-none rounded-none {d} nav-container')
 
-def lg_chat():
-    d_nav = Div(lg_nav(ico=True, hide=True), lg_nav(), cls='grow-0')
-    cls, cw_cls ='hidden lg:flex w-full desktop-layout h-auto', [PresetsT.glass, 'relative', 'w-full flex items-center lg-chat-window']
-    return Grid(d_nav, Div(chat_window(), cls=cw_cls), cls=cls, id='lg-chatbot-container', cols=4)
-
 def mob_nav():
     con = (search(), new(), files(), projects(), shr(), history())
     nav_cls=f'chat-nav border-r muted-border h-screen mt-0 my-2 transition-all duration-300 ease-in-out relative'
     bar = NavContainer(*con, cls=[NavT.secondary, 'border-none mx-0 gap-1 z-10'], parent=False, data_uk_nav='multiple: true')
     return Card(bar, body_cls=nav_cls, cls=f'border-none shadow-none rounded-none mob-nav-container')
-
-def mob_chat():
-    m_nav = Div(Div(mob_nav(), cls='uk-offcanvas-bar'), id='mob-nav', data_uk_offcanvas='overlay: true; container: false;')
-    m_ico = Button(UkIcon('menu'), aria_label="Open navigation", data_uk_toggle="target: #mob-nav", cls=f'p-2 {ButtonT.icon}')
-    m_chat = Div(chat_window(ip_cls='bottom-8 mt-auto h-1/5'), cls='w-full',id='mob-chat-window')
-    return Div(m_nav, m_ico, m_chat, cls='lg:hidden w-full', id='mob-chatbot-container')
-
-def chatbot():
-    main_modal, preview_drawer = files_history_modal()
-    return Div(mob_chat(),lg_chat(), main_modal, preview_drawer, id='chatbot-container', cls='h-[90vh]')
 
 def msg(c, usr=True, tmstmp=None):
     """Create a message bubble for user or bot"""
@@ -106,15 +88,14 @@ def msg(c, usr=True, tmstmp=None):
     mc=Div(Div(c, cls=['whitespace-pre-wrap break-words',m_cls]), tm, cls='flex flex-col')
     return Div(mc, cls=f'flex {align} mb-4 mx-4')
 
-def chat_messages():
-    """Sample chat messages with Grok-style content"""
-    messages = [
-        ("Hello! I'm your AI assistant. How can I help you today?", False, "10:30 AM"),
-        ("I need help analyzing some documents and understanding the key insights from them.", True, "10:31 AM"),
-        ("I'd be happy to help you analyze your documents! Please upload the files you'd like me to review, and I'll provide insights, summaries, and answer any questions you have about the content.", False, "10:31 AM"),
-        ("Perfect, let me upload a few files now.", True, "10:32 AM"),
-    ]
-    return Div(Div(*(msg(*m) for m in messages*10), Div(cls='h-48'), cls='mx-auto max-w-[48rem]'), cls='flex-1 py-4', uk_overflow_auto='selContainer: .chat-window; selContent: .chat-messages;')
+messages = L([
+    ("Hello! I'm your AI assistant. How can I help you today?", False, "10:30 AM"),
+    ("I need help analyzing some documents and understanding the key insights from them.", True, "10:31 AM"),
+    ("I'd be happy to help you analyze your documents! Please upload the files you'd like me to review, and I'll provide insights, summaries, and answer any questions you have about the content.", False, "10:31 AM"),
+    ("Perfect, let me upload a few files now.", True, "10:32 AM"),
+])
+def chat_messages(msgs=messages):
+    return Div(Div(*(msg(*m) for m in msgs*10), Div(cls='h-48'), cls='mx-auto max-w-[48rem]'), cls='flex-1 py-4', uk_overflow_auto='selContainer: .chat-window; selContent: .chat-messages;')
 
 def chat_inp(cls=None):
     ta_cls = 'w-full p-4 pr-16 min-h-12 max-h-96 resize-none focus:outline-none chat-text h-auto'
@@ -151,88 +132,19 @@ def mode(mdls=m, default=0):
     return Div(btn,drop(NavContainer(*its(mdls), instr, cls=('uk-dropdown-nav', NavT.default))),code)
 
 def chat_window(cls='grow-0 w-full h-screen', ip_cls='mt-auto bottom-14', msg_cls='w-full'):
-    return Div(Div(chat_messages(), cls=f'chat-messages {stringify(msg_cls)}'),chat_inp(ip_cls), cls=[cls, 'chat-window relative'])
+    c = Div(chat_messages(), cls=f'chat-messages {stringify(msg_cls)}'), chat_inp(ip_cls)
+    return Div(*c, cls=[cls, 'chat-window relative'])
 
-def files_history_modal(hst:L=hist(1001)):
-    files = [
-        {'name': 'document-1.pdf', 'content': 'This is the content of document-1.pdf'},
-        {'name': 'document-2.docx', 'content': 'This is the content of document-2.docx'},
-        {'name': 'presentation.pptx', 'content': 'This is the content of presentation.pptx'},
-    ]
+def lg_chat():
+    d_nav = Div(lg_nav(ico=True, hide=True), lg_nav(), cls='grow-0')
+    cls, cw_cls ='hidden lg:flex w-full desktop-layout h-auto', [PresetsT.glass, 'relative', 'w-full flex items-center lg-chat-window']
+    return Grid(d_nav, Div(chat_window(), cls=cw_cls), cls=cls, id='lg-chatbot-container', cols=4)
 
-    preview_drawer = Modal(
-        Div(P(), id='mobile-preview-content'),
-        header=ModalTitle("Preview"),
-        footer=ModalCloseButton("Close", cls=ButtonT.default, submit=False),
-        id="item-preview-drawer-mobile",
-        dialog_cls="uk-margin-auto-vertical"
-    )
+def mob_chat():
+    m_nav = Div(Div(mob_nav(), cls='uk-offcanvas-bar'), id='mob-nav', data_uk_offcanvas='overlay: true; container: false;')
+    m_ico = Button(UkIcon('menu'), aria_label="Open navigation", data_uk_toggle="target: #mob-nav", cls=f'p-2 {ButtonT.icon}')
+    m_chat = Div(chat_window(ip_cls='bottom-8 mt-auto h-1/5'), cls='w-full',id='mob-chat-window')
+    return Div(m_nav, m_ico, m_chat, cls='lg:hidden w-full', id='mob-chatbot-container')
 
-    def file_list_item(f):
-        onclick_js = f"document.getElementById('desktop-preview-content').innerHTML='<p>{f['content']}</p>'; document.getElementById('mobile-preview-content').innerHTML='<p>{f['content']}</p>';"
-        return Li(A(
-            Span(f['name']),
-            href="#",
-            onclick=onclick_js,
-            data_uk_toggle="target: #item-preview-drawer-mobile",
-            cls="lg:!p-0"
-        ))
-
-    def history_list_item(item):
-        content = f"Preview for {item[0]}"
-        onclick_js = f"document.getElementById('desktop-preview-content').innerHTML='<p>{content}</p>'; document.getElementById('mobile-preview-content').innerHTML='<p>{content}</p>';"
-        return Li(A(
-            item[0],
-            href="#",
-            onclick=onclick_js,
-            data_uk_toggle="target: #item-preview-drawer-mobile",
-            cls="lg:!p-0"
-        ))
-
-    file_list = Ul(*[file_list_item(f) for f in files], cls='uk-list uk-list-divider')
-
-    history_list_items = []
-    if hst:
-        for group, items in hst:
-            history_list_items.append(NavHeaderLi(group, cls=(TextT.xs, 'py-0')))
-            for item in items:
-                history_list_items.append(history_list_item(item))
-    history_list = Ul(*history_list_items, cls='uk-list uk-list-divider')
-
-    list_pane_files = Div(file_list, cls='w-full lg:w-1/3 p-4 overflow-y-auto border-r muted-border')
-    list_pane_history = Div(history_list, cls='w-full lg:w-1/3 p-4 overflow-y-auto border-r muted-border')
-
-    preview_pane = Div(
-        Div(P("Select an item to see a preview."), id="desktop-preview-content"),
-        cls='hidden lg:block w-2/3 p-4'
-    )
-
-    files_tab_content = Div(list_pane_files, preview_pane, cls='flex h-[calc(100vh-70px)]')
-    history_tab_content = Div(list_pane_history, preview_pane, cls='flex h-[calc(100vh-70px)]')
-
-    main_modal = Modal(
-        Ul(
-            Li(A("Files", href="#")),
-            Li(A("History", href="#")),
-            data_uk_tab=True,
-            id="modal-tabs",
-            cls='w-full'
-        ),
-        Ul(
-            Li(files_tab_content),
-            Li(history_tab_content),
-            cls='uk-switcher'
-        ),
-        header=ModalHeader(
-            ModalTitle("Workspace"),
-            ModalCloseButton(UkIcon('x'), cls='uk-modal-close-full uk-close-large', submit=False)
-        ),
-        id="files-history-modal",
-        cls="uk-modal-full",
-        body_cls="p-0",
-        dialog_cls="!p-0 !m-0 !w-full !max-w-full !h-screen"
-    )
-
-    return main_modal, preview_drawer
-
+def chatbot(): return Div(mob_chat(),lg_chat(), id='chatbot-container', cls='h-[90vh]')
 def chats(): return chatbot()
