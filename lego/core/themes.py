@@ -3,7 +3,6 @@ from fastcore.xtras import flexicache, mtime_policy
 from fasthtml.common import Path, Script, AttrDict, Link, Surreal, Style
 from monsterui.core import ThemeRadii, ThemeShadows, ThemeFont
 from .utils import loadX
-from .cache import cache
 
 __all__ = ['themes']
 

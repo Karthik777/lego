@@ -8,7 +8,7 @@ from .cache import cache
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
-           'welcome', 'not_found','email_template', 'main']
+           'welcome', 'not_found','email_template', 'main','NavBarT']
 
 class PresetsT:
     animate_shine = 'shadow-md'
@@ -132,8 +132,8 @@ def welcome_page(img_dir=s.svg, content=None, title=None, cls=None, cont_cls=Non
 def landing(content, title=s.app_nm, usr=None):
     return base(welcome_page(content=content, title=title), usr=usr, style=NavBarT.glass)
 
-def base(content=None, usr=None, title=s.app_nm, sh=s.app_sh, style=NavBarT.glass, **kwargs):
-    return Title(title), Div(navbar(usr=usr, title=sh, style=style), main(content, **kwargs), cls='min-h-screen figma-board')
+def base(content=None, usr=None, title=s.app_nm, sh=s.app_sh, style=NavBarT.glass, base_cls='min-h-screen figma-board', **kw):
+    return Title(title), Div(navbar(usr=usr, title=sh, style=style), main(content, **kw), cls=base_cls)
 
 def main(content=None, cls=None, **kw): return Div(content if content else None, cls=stringify(['uk-width-1-1',cls]), id='main-content', **kw)
 
