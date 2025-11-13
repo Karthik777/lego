@@ -8,7 +8,8 @@ from .cache import cache
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
-           'welcome', 'not_found','email_template', 'main']
+           'welcome', 'not_found','email_template', 'main', 'adaptive_layout', 'adaptive_layout_responsive',
+           'layout_with_featured']
 
 class PresetsT:
     animate_shine = 'shadow-md'
@@ -143,6 +144,156 @@ def email_template(content, title=s.app_nm, usr=None):
     body = Div(cls='p-4')(content)
     footer = Div(cls='bg-secondary p-2 text-white text-xs')('This email was sent by our team.')
     return Div(cls='border border-muted rounded-md overflow-hidden')(header, body, footer)
+
+def adaptive_layout(divs, layout_spec, gap='gap-4', cls=''):
+    """Create flexible, responsive layouts from a list of divs based on specified layout patterns.
+    
+    Args:
+        divs: List of div components to layout
+        layout_spec: List specifying number of columns per row (e.g., [1, 3, 2, 1, 1])
+        gap: Tailwind gap class for spacing between items (default: 'gap-4')
+        cls: Additional CSS classes to apply to the container
+    
+    Returns:
+        Div containing the arranged components in rows
+    
+    Example:
+        divs = [Div('Item 1'), Div('Item 2'), Div('Item 3'), Div('Item 4')]
+        adaptive_layout(divs, [1, 3], gap='gap-6')
+        # Creates: 1 item in first row, 3 items in second row
+    """
+    rows = []
+    idx = 0
+    
+    for cols in layout_spec:
+        if idx >= len(divs): break
+        row_items = divs[idx:idx+cols]
+        if not row_items: break
+        
+        # Create responsive grid for each row
+        if cols == 1:
+            row_cls = 'grid grid-cols-1 w-full'
+        elif cols == 2:
+            row_cls = 'grid grid-cols-1 sm:grid-cols-2'
+        elif cols == 3:
+            row_cls = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+        elif cols == 4:
+            row_cls = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+        else:  # 5 or more
+            row_cls = f'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-{min(cols, 6)}'
+        
+        rows.append(Div(*row_items, cls=f'{row_cls} {gap}'))
+        idx += cols
+    
+    return Div(*rows, cls=stringify(['flex flex-col', gap, cls]))
+
+def adaptive_layout_responsive(divs, layout_specs, gap='gap-4', cls=''):
+    """Advanced responsive layout with breakpoint-specific layout specifications.
+    
+    Args:
+        divs: List of div components to layout
+        layout_specs: Dict with breakpoint keys ('sm', 'md', 'lg', 'xl') and layout spec values
+                     e.g., {'sm': [1, 2], 'md': [2, 3], 'lg': [1, 3, 2]}
+        gap: Tailwind gap class for spacing (default: 'gap-4')
+        cls: Additional CSS classes
+    
+    Returns:
+        Div with responsive layout that adapts to different screen sizes
+    
+    Example:
+        adaptive_layout_responsive(
+            divs,
+            {'sm': [1, 1, 1], 'lg': [1, 3, 2]},
+            gap='gap-6'
+        )
+    """
+    # Use the largest breakpoint layout as base
+    breakpoints = ['xl', 'lg', 'md', 'sm']
+    base_spec = None
+    for bp in breakpoints:
+        if bp in layout_specs:
+            base_spec = layout_specs[bp]
+            break
+    
+    if not base_spec:
+        # Fallback to equal distribution
+        base_spec = [3] * (len(divs) // 3) + ([len(divs) % 3] if len(divs) % 3 else [])
+    
+    rows = []
+    idx = 0
+    
+    for cols in base_spec:
+        if idx >= len(divs): break
+        row_items = divs[idx:idx+cols]
+        if not row_items: break
+        
+        # Build responsive classes based on provided breakpoints
+        responsive_classes = []
+        
+        # Base mobile
+        responsive_classes.append('grid grid-cols-1')
+        
+        # Add responsive breakpoints
+        if 'sm' in layout_specs and cols <= len(layout_specs['sm']):
+            responsive_classes.append(f'sm:grid-cols-{min(cols, 4)}')
+        elif cols >= 2:
+            responsive_classes.append('sm:grid-cols-2')
+            
+        if 'md' in layout_specs and cols <= len(layout_specs['md']):
+            responsive_classes.append(f'md:grid-cols-{min(cols, 6)}')
+        elif cols >= 3:
+            responsive_classes.append(f'md:grid-cols-{min(cols, 3)}')
+            
+        if 'lg' in layout_specs and cols <= len(layout_specs['lg']):
+            responsive_classes.append(f'lg:grid-cols-{cols}')
+        elif cols >= 3:
+            responsive_classes.append(f'lg:grid-cols-{cols}')
+        
+        row_cls = ' '.join(responsive_classes)
+        rows.append(Div(*row_items, cls=f'{row_cls} {gap}'))
+        idx += cols
+    
+    return Div(*rows, cls=stringify(['flex flex-col', gap, cls]))
+
+def layout_with_featured(featured_div, grid_divs, featured_cls='', grid_cols=3, gap='gap-4', cls=''):
+    """Create a layout with a featured/hero section followed by a grid.
+    
+    Args:
+        featured_div: Featured/hero component to display at the top (full width)
+        grid_divs: List of components for the grid section
+        featured_cls: Additional CSS classes for the featured section
+        grid_cols: Number of columns in the grid (default: 3)
+        gap: Tailwind gap class for spacing (default: 'gap-4')
+        cls: Additional CSS classes for the container
+    
+    Returns:
+        Div with featured section on top and grid below
+    
+    Example:
+        layout_with_featured(
+            Div('Hero Content', cls='h-64 bg-primary'),
+            [Div(f'Card {i}') for i in range(6)],
+            grid_cols=3
+        )
+    """
+    # Featured section - full width
+    featured_section = Div(featured_div, cls=stringify(['w-full', featured_cls]))
+    
+    # Grid section - responsive based on grid_cols
+    if grid_cols == 1:
+        grid_cls = 'grid grid-cols-1'
+    elif grid_cols == 2:
+        grid_cls = 'grid grid-cols-1 sm:grid-cols-2'
+    elif grid_cols == 3:
+        grid_cls = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+    elif grid_cols == 4:
+        grid_cls = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+    else:  # 5 or more
+        grid_cls = f'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-{min(grid_cols, 6)}'
+    
+    grid_section = Div(*grid_divs, cls=f'{grid_cls} {gap}')
+    
+    return Div(featured_section, grid_section, cls=stringify(['flex flex-col', gap, cls]))
 
 def welcome(usr=None): return landing(placeholder(f'Welcome to {s.app_nm}'),usr=usr)
 def not_found(): return landing(placeholder("The page you're looking for doesn't exist or has been moved."))
