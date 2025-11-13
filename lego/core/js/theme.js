@@ -59,12 +59,13 @@ function setFont(font,fn=null, ...args) {
     storeState('font', font);
     if (typeof fn === 'function') {fn(...args);}
 }
-setTimeout(() => {
-    setTheme('{{__theme__}}');
-    setMode(__VR__.mode);
-    setRadii(__VR__.radii);
-    setShadows(__VR__.shadows);
-    setFont(__VR__.font);}, 50);
+
+setTheme('{{__theme__}}');
+setMode(__VR__.mode);
+setRadii(__VR__.radii);
+setShadows(__VR__.shadows);
+setFont(__VR__.font);
+
 mediaQuery.addEventListener('change', (event) => {if (!htmlElement.classList.contains('auto')) return;setMode('auto');});
 document.addEventListener('uk-theme-switcher:change', (e) => {
 _.each(e.detail.value, (v,k) => {

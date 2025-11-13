@@ -4,7 +4,8 @@ from email_validator import validate_email, EmailNotValidError, EmailSyntaxError
 from fasthtml.oauth import *
 from fastlite import Table, threaded, NotFoundError
 import hashlib, hmac, time, jwt, re
-from lego.core import landing, placeholder, send_email, email_template, database, home
+from lego.core import landing, placeholder, email_template, database, home
+from ..core.utils import send_email
 from .ui import *
 from .cfg import *
 g_oath = git_oath = None

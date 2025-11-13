@@ -2,7 +2,7 @@ from fasthtml.common import *
 from itertools import islice, cycle
 from monsterui.all import *
 from monsterui.foundations import *
-from .cfg import cfg as s, RouteOverrides as r, not_prod
+from .cfg import cfg as s, RouteOverrides as r, is_prod
 from .icons import icon_auto
 from .cache import cache
 
@@ -54,7 +54,7 @@ class NavBarT:
 
 def navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobile_cls=''):
     usr_ok = bool(usr)
-    inc_fnt_sz, inc_mode_sw, inc_th_sw, inc_avtr = True, True, not_prod(), usr_ok
+    inc_fnt_sz, inc_mode_sw, inc_th_sw, inc_avtr = True, True, not is_prod(), usr_ok
     sep = Div('|', cls=f'{ButtonT.icon} {ButtonT.sm} {TextT.gray} {TextT.xl}')
     cmps = [(font_size_switcher(), inc_fnt_sz), (mode_switcher(), inc_mode_sw),(theme_switcher(), inc_th_sw),
             (sep, True), (logout(usr), inc_avtr), (login(), not inc_avtr)]
@@ -66,7 +66,7 @@ def navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobil
 def theme_switcher(cls='uk-position-relative', heading='Customise', sub_heading='theme selection'):
     h = H3(heading, cls='m-2')
     sub = P(sub_heading, cls=(TextT.muted, 'mt-2 p-2'))
-    con= [h,sub,ThemePicker(custom_themes=[('default','#c0a080'), ('vintage','#c0a080'), ('starry','#3a5ba0')])]
+    con= [h,sub,ThemePicker(custom_themes=[('default','#000')])]
     return Div(Div(
         Div(UkIcon('palette'), cls=(ButtonT.icon, ButtonT.sm)),
             CardBody(*con,cls='dropdown-content w-96',data_uk_dropdown='mode: click; pos: bottom-right; offset: 8')),
@@ -99,8 +99,8 @@ def placeholder(message='placeholder text', back_link='/', back_text='Go Back Ho
 def montage(svg_paths, cols_sm=3, cols_md=5, cols_lg=6, rows=8, fill_screen=True, cls=BackgroundT.primary, svg_cls=None):
     l=len(svg_paths or [])
     if not l: return None
-    svg_cls = ifnone(svg_cls, f'size-4/6 border-2 border-current border-dotted m-2 {PresetsT.shine}')
-    svgs = islice(cycle(svg_paths.map(svg_img, cls=svg_cls)), int(l*rows) if fill_screen else l)
+    svg_cls, outer_cls = ifnone(svg_cls, f'size-4/6 {BadgeT.invert}'), f'border-2 border-current border-dotted m-2 {PresetsT.standout}'
+    svgs = islice(cycle(svg_paths.map(svg_img, cls=svg_cls, outer_cls=outer_cls)), int(l * rows) if fill_screen else l)
     return Grid(*svgs, cols_sm=cols_sm, cols_md=cols_md, cols_lg=cols_lg, cols_min=2, cols_xl=cols_lg, cls=cls)
 
 @cache()

@@ -1,9 +1,9 @@
 import hashlib as hl
-from fasthtml.common import Redirect, Path, Database, FT, to_xml, threaded, dataclass, AttrDictDefault, str2bool, str2int, get_key
+from fasthtml.common import Redirect, Path, Database, dataclass, AttrDictDefault, str2bool, str2int, get_key
 import os
 
-__all__ = ['cfg', 'database', 'AppErr', 'home', 'send_email', 'RouteOverrides', 'get_pth','get_db_pth',
-           'in_static', 'get_log_pth', 'get_db_dir', 'not_prod', 'get_caller_fn']
+__all__ = ['cfg', 'database', 'AppErr', 'home', 'RouteOverrides', 'get_pth', 'get_db_pth',
+           'in_static', 'get_log_pth', 'get_db_dir', 'get_caller_fn', 'is_prod']
 
 data_root, backups, static=Path('data'), Path('backups'), Path('static')
 def get_pth(nm, sf='',mk=False):
@@ -39,7 +39,7 @@ cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
                       db=get_db_pth(), static=static,
                       svg=in_static('svg'), log_file=get_log_pth())
 
-def not_prod(): return cfg.mode != 'production'
+def is_prod(): return cfg.mode == 'production'
 def get_db_dir(): return Path(cfg.db).parent if cfg.db else Path(data_root) / 'db'
 
 # TODO: support Postgres using fastsql
@@ -55,14 +55,6 @@ class AppErr(Exception):
     def __init__(self, msg=None, fields=None):
         super().__init__(msg)
         self.msg, self.fields = msg, fields or []
-
-@threaded
-def send_email(to, subject, html: FT):
-    if isinstance(html, FT): html = to_xml(html)
-    import resend
-    resend.api_key = cfg.resend_api_key
-    print(f'Resend Result: {html}')
-    r = resend.Emails.send({'from': 'accounts@vedicreader.com', 'to': to, 'subject': subject, 'html': html})
 
 def home(): return Redirect(RouteOverrides.home)
 

@@ -1,4 +1,5 @@
 import ujson as json
+from fastcore.xtras import flexicache, mtime_policy
 from fasthtml.common import Path, Script, AttrDict, Link, Surreal, Style
 from monsterui.core import ThemeRadii, ThemeShadows, ThemeFont
 from .utils import loadX
@@ -7,8 +8,8 @@ from .cache import cache
 __all__ = ['themes']
 
 css, js = Path(__file__).parent / 'css/theme.css', Path(__file__).parent / 'js/theme.js'
-@cache(p='theme',ttl=3600*24*7)
-def themes(color='slate', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.sm):
+@flexicache(mtime_policy(css), mtime_policy(js))
+def themes(color='default', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.sm):
     d=AttrDict(mode='auto', theme='uk-theme-%s' % color, radii=radii.value, shadows=shadows, font=font)
     j = loadX(js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')
     return [
