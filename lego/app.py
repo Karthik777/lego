@@ -1,4 +1,4 @@
-from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P, Redirect
+from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P
 from monsterui.all import *
 from .core import *
 from lego import auth as a, gun, ai

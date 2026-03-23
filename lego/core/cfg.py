@@ -3,7 +3,7 @@ from fasthtml.common import Redirect, Path, Database, FT, to_xml, threaded, data
 import os
 
 __all__ = ['cfg', 'database', 'AppErr', 'home', 'send_email', 'RouteOverrides', 'get_pth','get_db_pth',
-           'in_static', 'get_log_pth', 'get_db_dir', 'not_prod', 'get_caller_fn']
+           'in_static', 'get_log_pth', 'get_db_dir', 'not_prod', 'caller_path']
 
 data_root, backups, static=Path('data'), Path('backups'), Path('static')
 def get_pth(nm, sf='',mk=False):
@@ -69,7 +69,7 @@ def home(): return Redirect(RouteOverrides.home)
 @dataclass
 class RouteOverrides: lgt,home,skip='/lgt',cfg.domain,['/health']
 
-def get_caller_fn(skip=None):
+def caller_path(skip=None):
     """Get the path of the outermost non-library script in the call stack."""
     import inspect
     skip = skip or set(); skip.add(__file__)

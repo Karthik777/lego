@@ -1,6 +1,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
-from .cfg import cfg, get_log_pth, get_caller_fn
+from .cfg import cfg, get_log_pth, caller_path
 
 __all__ = ['rot_log', 'get_logger', 'quick_lgr']
 
@@ -20,5 +20,5 @@ def get_logger(fn=cfg.log_file, lvl=logging.INFO, rot=True):
 
 def quick_lgr(p=None):
     from fastcore.all import Path
-    lgr=get_logger(fn=get_log_pth(p or get_caller_fn({__file__}) or Path(__file__).stem), lvl=logging.INFO, rot=False)
+    lgr=get_logger(fn=get_log_pth(p or caller_path({__file__}) or Path(__file__).stem), lvl=logging.INFO, rot=False)
     return lgr.info, lgr.error, lgr.warning

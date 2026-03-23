@@ -2,11 +2,11 @@ from fasthtml.common import *
 from monsterui.franken import *
 from monsterui.foundations import stringify
 from lego.core.ui import *
+from lego.core.utils import loadX
 from .cfg import AIPresetsT
 from .data import hist, shared as hist_shared, get_projects
 
 __all__ = ['chats']
-
 def _nav_btn(ico_nm, txt=None, cls=None, ico_cls=None, code=None, **kw):
     t, btn_cls=Span(txt, cls='text-center') if txt else None, f'{ButtonT.icon if not txt else ''} {ButtonT.ghost}'
     c = ('w-full items-left justify-start flex gap-2 px-0.75 cursor-pointer' if txt else '') + f'{btn_cls} {cls if cls else ''}'
@@ -94,13 +94,14 @@ messages = L([
     ("I'd be happy to help you analyze your documents! Please upload the files you'd like me to review, and I'll provide insights, summaries, and answer any questions you have about the content.", False, "10:31 AM"),
     ("Perfect, let me upload a few files now.", True, "10:32 AM"),
 ])
+
 def chat_messages(msgs=messages):
     return Div(Div(*(msg(*m) for m in msgs*10), Div(cls='h-48'), cls='mx-auto max-w-[48rem]'), cls='flex-1 py-4', uk_overflow_auto='selContainer: .chat-window; selContent: .chat-messages;')
 
 def chat_inp(cls=None):
-    ta_cls = 'w-full p-4 pr-16 min-h-12 max-h-96 resize-none focus:outline-none chat-text h-auto'
+    ta_cls = 'w-full p-4 pr-16 min-h-12 max-h-96 overflow-y-auto focus:outline-none chat-text h-auto'
     ta = Textarea(placeholder="What do you want to know?", cls=ta_cls)
-    code = "console.log(e);e.style.height = 'auto';if(!e.value){e.style.height = '4rem';} else {e.style.height = `${e.scrollHeight}px';}"
+    code = "console.log(e.scrollHeight); e.style.height = 'auto';if(!e.value){e.style.height = '4rem';} else {e.style.height = `${Math.max(e.scrollHeight/16, 4)}rem`;}"
     ip = Div(ta, On(code, 'input', '.chat-text', me=False), opts(), cls=f'relative w-full rounded-2xl shadow-lg {PresetsT.shine}')
     ch_cls=f'absolute z-50 w-full max-w-[52rem] left-1/2 -translate-x-1/2 items-center px-4 {stringify(cls)}'
     return Div(ip, id='chat-container', cls=ch_cls)
@@ -128,8 +129,29 @@ def mode(mdls=m, default=0):
     drop = lambda *c: Div(cls='uk-drop uk-dropdown w-96 rounded-xl shadow-lg border muted-border bg-background', uk_dropdown='mode: click')(*c)
     code=On('''const [mi,mn,ams,ms]=[me(".model-icon",m),me(".model-name",m),any(".mode-select"),me(".mode-select",e)]; mi.attribute("icon",me(".nav-ico",e).attribute("icon"));
     mi.innerHTML=me(".nav-ico",e).innerHTML;mn.text(me(".nav-text",e).text());ams.classAdd("hidden");ms.classRemove("hidden");''', me=False, sel='.mode-option')
-    instr = Div(smpl_navi('Custom Instructions', 'Understand the context and answer appr...', ico='drama', ico_cls='h-4 w-6 nav-ico', cls='p-2',a_cls='hover:bg-background'),rgt, cls='flex items-center border-t muted-border pt-2 mt-1')
+    instr = smpl_navi('Custom Instructions', 'Understand the context and answer appr...', ico='drama', ico_cls='h-4 w-6 nav-ico', cls='p-2', a_cls='hover:bg-background')
+    instr = Div(instr, rgt, cls='flex items-center border-t muted-border pt-2 mt-1', data_uk_toggle='target: #customise')
     return Div(btn,drop(NavContainer(*its(mdls), instr, cls=('uk-dropdown-nav', NavT.default))),code)
+
+def customise():
+    tabs = Ul(Li(A('General', href='#')),Li(A('Developer Settings', href='#')),cls='uk-tab',uk_tab=True)
+    panels = Ul(Li(sp()),Li(dev_set()),cls='uk-switcher uk-margin')
+    body = Div(tabs, panels, cls='p-2 space-y-2')
+    return Modal(body, id='customise', dialog_cls='uk-margin-auto-vertical')
+
+def sp():
+    hdr = H3("Customize Response", cls='mb-2')
+    lbl = LabelTextArea('Custom Instructions', value='Understand the context and answer appropriately', id='fs-custom-instr', input_cls='h-48')
+    x = Button('Discard', cls=(ButtonT.ghost, ButtonT.sm)), Button('Save', id='dev-cb-save', cls=(ButtonT.primary, ButtonT.sm))
+    ftr = Div(*x, cls='flex justify-end gap-2')
+    return Div(hdr, lbl, ftr, cls='space-y-4')
+
+def dev_set():
+    hdr = H3('Developer Settings', cls='mb-2')
+    desc = P('Write a JavaScript callback to post-process messages on the client. It will be embedded in your frontend.', cls=TextPresets.muted_sm)
+    mnt = Div(id='dev-cb-editor', cls='w-full min-h-64 h-[50vh] border rounded muted-border')
+    hdn, code = Textarea('', id='fs-dev-cb', cls='hidden'), Script(loadX(Path(__file__).parent / 'js' / 'dev.js'))
+    return Div(hdr, desc, mnt, hdn, code, cls='space-y-3')
 
 def chat_window(cls='grow-0 w-full h-screen', ip_cls='mt-auto bottom-14', msg_cls='w-full'):
     c = Div(chat_messages(), cls=f'chat-messages {stringify(msg_cls)}'), chat_inp(ip_cls)
@@ -146,5 +168,5 @@ def mob_chat():
     m_chat = Div(chat_window(ip_cls='bottom-8 mt-auto h-1/5'), cls='w-full',id='mob-chat-window')
     return Div(m_nav, m_ico, m_chat, cls='lg:hidden w-full', id='mob-chatbot-container')
 
-def chatbot(): return Div(mob_chat(),lg_chat(), id='chatbot-container', cls='h-[90vh]')
+def chatbot(): return Div(mob_chat(), lg_chat(), customise(), id='chatbot-container', cls='h-[90vh]')
 def chats(): return chatbot()
