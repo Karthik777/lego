@@ -1,128 +1,3 @@
-@import "tailwindcss";
-@config "../../../tailwind.config.js";
-
-.uk-theme-default {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
-    --primary: 0 0% 0%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 96.8627%;
-    --secondary-foreground: 0 0% 0%;
-    --muted: 0 0% 100%;
-    --muted-foreground: 0 0% 34.1176%;
-    --accent: 0 0% 96.8627%;
-    --accent-foreground: 0 0% 0%;
-    --destructive: 338.4706 89.4737% 62.7451%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 94.1176%;
-    --input: 0 0% 96.8627%;
-    --ring: 0 0% 0%;
-    --chart-1: 20.5063 100% 53.5294%;
-    --chart-2: 203.8863 100% 58.6275%;
-    --chart-3: 0 0% 67.8431%;
-    --chart-4: 0 0% 94.1176%;
-    --chart-5: 0 0% 47.8431%;
-    --sidebar: 0 0% 100%;
-    --sidebar-foreground: 0 0% 0%;
-    --sidebar-primary: 0 0% 0%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 96.8627%;
-    --sidebar-accent-foreground: 0 0% 0%;
-    --sidebar-border: 0 0% 96.8627%;
-    --sidebar-ring: 0 0% 0%;
-    --radius: 0.5rem;
-    --shadow-x: 0px;
-    --shadow-y: 1px;
-    --shadow-blur: 2px;
-    --shadow-spread: 0px;
-    --shadow-opacity: 0.18;
-    --shadow-color: #1a1a1a;
-    --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 10.1961% / 0.09);
-    --shadow-xs: 0px 1px 2px 0px hsl(0 0% 10.1961% / 0.09);
-    --shadow-sm:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 1px 2px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 1px 2px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-md:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 2px 4px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-lg:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 4px 6px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-xl:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 8px 10px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 10.1961% / 0.45);
-    --tracking-normal: 0em;
-    --spacing: 0.25rem;
-}
-
-.dark.uk-theme-default {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-    --card: 180 1.9608% 10%;
-    --card-foreground: 0 0% 100%;
-    --popover: 180 1.9608% 10%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 0 0% 100%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 0 0% 13.7255%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 11.7647%;
-    --muted-foreground: 0 0% 67.8431%;
-    --accent: 0 0% 20.7843%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 339.863 100% 71.3725%;
-    --destructive-foreground: 0 0% 0%;
-    --border: 0 0% 14.902%;
-    --input: 0 0% 20.7843%;
-    --ring: 0 0% 67.8431%;
-    --chart-1: 20.5063 100% 53.5294%;
-    --chart-2: 198.1395 100% 57.8431%;
-    --chart-3: 0 0% 47.8431%;
-    --chart-4: 0 0% 34.1176%;
-    --chart-5: 0 0% 94.1176%;
-    --sidebar: 180 1.9608% 10%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 0 0% 20.7843%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 20.7843%;
-    --sidebar-ring: 0 0% 67.8431%;
-    --radius: 0.5rem;
-    --shadow-x: 0px;
-    --shadow-y: 1px;
-    --shadow-blur: 2px;
-    --shadow-spread: 0px;
-    --shadow-opacity: 0.18;
-    --shadow-color: #1a1a1a;
-    --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 10.1961% / 0.09);
-    --shadow-xs: 0px 1px 2px 0px hsl(0 0% 10.1961% / 0.09);
-    --shadow-sm:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 1px 2px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 1px 2px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-md:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 2px 4px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-lg:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 4px 6px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-xl:
-        0px 1px 2px 0px hsl(0 0% 10.1961% / 0.18),
-        0px 8px 10px -1px hsl(0 0% 10.1961% / 0.18);
-    --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 10.1961% / 0.45);
-}
-
 :root {
   --neo-shadow-offset: 1px;
   --neo-border-width: 1px;
@@ -135,7 +10,7 @@
   --grid-size: 32px;
   --muted-border-color: hsl(var(--ring));
   --font-sans: Playfair Display,serif;
-  --font-serif: Libre Baskerville, serif;
+  --font-serif: Libre Baskerville, Noto Sans Tamil, Noto Serif Telugu, Noto Serif Kannada, Noto Serif Malayalam, Noto Serif Devanagari, serif;
   --font-mono: Fira Code, monospace;
 }
 
@@ -145,7 +20,8 @@
   }
 
 body {
-  font-family: var(--font-serif), serif;
+    font-family: var(--font-serif), serif;
+    letter-spacing: var(--tracking-normal);
 }
 
 /* Neo-brutalism Theme */
@@ -162,8 +38,11 @@ body {
     }
     &.selected {box-shadow: 0 0 0 var(--neo-shadow-color);border-width: var(--neo-border-width);}
   }
-  .uk-btn-icon {border-radius: 100px; border: none !important; box-shadow: none !important}
-
+  .uk-btn-icon {
+    &.selected {border: var(--neo-border-width) solid var(--neo-border-color);}
+    border-radius: 100px;
+    box-shadow: none !important;
+  }
   /* Form inputs */
   .uk-input,.uk-select, .uk-textarea {
     border: var(--neo-border-width) solid var(--neo-border-color);
@@ -222,6 +101,11 @@ body {
   color: hsl(var(--accent-foreground));
 }
 
+.uk-nav > li.uk-active > a {
+  --uk-nav-item-bg: hsl(var(--accent));
+  --uk-nav-item-color: hsl(var(--accent-foreground));
+}
+
 /* Command: alternate background for even items */
 .uk-nav-secondary > li:nth-child(even) > a {background: hsl(var(--muted) / 0.7);}
 #trans-select div.uk-modal-dialog {margin: 0 auto !important;}
@@ -275,11 +159,12 @@ body {
 
 /* Custom classes for lyrics lines */
 .lyrics-line {
-  @apply w-full transition-all font-light;
+  @apply w-full transition-all;
+  font-weight: 400;
 }
 
 .lyrics-line.active .line{
-  @apply font-extrabold;
+  font-weight: 800;
   background-color: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
 }
@@ -294,4 +179,8 @@ body {
 
 .lyrics-line.audio-mode.viewed {
   @apply opacity-95;
+}
+
+.hide {
+  display: none !important;
 }

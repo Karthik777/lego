@@ -1,8 +1,8 @@
-from fasthtml.common import *
+from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P
+from contextlib import asynccontextmanager
 from monsterui.all import *
-from lego import auth as a
-from lego import gun
 from .core import *
+from lego import auth as a
 
 __all__ = ['launch', 'lego']
 
@@ -27,25 +27,24 @@ hdrs = [
     *Socials(title=cfg.app_nm, description=cfg.site_description, site_name=cfg.domain, image='/static/favicon.svg', url=cfg.domain),
     *themes(),
 ]
-track = Script(src='https://cloud.umami.is/script.js',data_website_id='04fffb06-484c-4c59-b6e0-72e522c54837', defer=True)
-ftrs = [track if is_prod() else None]
-def before(req, sess): req.scope['auth'] = sess['auth'] if 'auth' in sess else None
+
+def before(req, sess): req.scope['auth'] = sess['auth'] if 'auth' in sess else None# add auth to request scope
 def nf(req, exc): return not_found()
-kw, exh = ({'class': 'neo-brutalism hidden', 'hx-ext': 'preload', 'hx-boost': 'true'},
-           {404: nf, 500: nf, 403: nf})
-lego, rt = fast_app(hdrs=hdrs, ftrs=ftrs, bodykw=kw, secret_key=cfg.jwt_scrt, live=not is_prod(),
-                    title=cfg.app_nm, before=before, exts='preload', exception_handlers=exh,
-                    on_startup=start_scheduler, on_shutdown=stop_scheduler)
+kw,exh = {'class': 'neo-brutalism hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
+lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, before=before,
+                  exts='preload', exception_handlers=exh, on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
 # connect your blocks
 a.connect(lego)
 
 # optionally add a scheduled backup of data folders
-if cfg.need_backup and is_prod():
-    run_backup(get_db_dir()); clone(); clone(cfg.backup_path, sync=False)  # initial clone to ensure backups are in place
-    scheduler.add_job(run_backup, args=[get_db_dir()], trigger='cron', hour='8,20', minute=0)
-    scheduler.add_job(clone, trigger='cron', hour='10,22', minute=0)
-    scheduler.add_job(clone, args=[cfg.backup_path], kwargs=dict(sync=False), trigger='interval', hours=24, id='daily_backup')
+if cfg.need_backup and not not_prod():
+    run_backup(get_db_dir())
+    clone(cfg.static)
+    clone(cfg.backup_path, sync=False)  # initial clone to ensure backups are in place
+    scheduler.add_job(run_backup,args=[get_db_dir()],trigger='cron',hour='8,20',minute=0)
+    scheduler.add_job(clone,trigger='cron', hour='10,22',minute=0)
+    scheduler.add_job(clone,args=[cfg.backup_path],kwargs=dict(sync=False),trigger='interval',hours=24, id='daily_bkp')
 
 @cache('showcase', ttl=3600 * 24 * 30)
 def showcase(auth):
@@ -67,5 +66,5 @@ def showcase(auth):
 lego.get('/')(showcase)
 lego.get('/health')(lambda req: JSONResponse({'status': 'ok'}))
 
-def launch(): serve('lego', 'lego', port=cfg.port) if not is_prod() else gun.launch(lego)
+def launch(): serve('lego', 'lego', port=cfg.port)
 if __name__ == '__main__': launch()

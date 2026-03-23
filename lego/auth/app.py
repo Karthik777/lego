@@ -14,16 +14,14 @@ async def verify_em(ver: VerEmailReq): return ver
 async def resend_ver_link(res: ResendVerLink): return res
 async def error(req): return home(req) if auth_ok(req) else form(err=OathError)
 
-def connect(app, prefix='/a/'):
-    if prefix: Routes.base = prefix
+def connect(app):
     setup_oath(app)
-    Routes.base = prefix
     app.get(Routes.auth_ok)(ok)
     app.get(Routes.login)(login)
     app.post(Routes.login)(process_login)
     app.post(Routes.forgot_pw)(forgot_pwd)
     app.get(Routes.reset_pw)(reset_pwd_link)
-    app.post(Routes.reset_pw)(change_pwd)
+    app.post(Routes.process_reset_pw)(change_pwd)
     app.post(Routes.register)(register)
     app.get(Routes.verify_email)(verify_em)
     app.get(Routes.resend_verification)(resend_ver_link)
