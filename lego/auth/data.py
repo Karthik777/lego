@@ -1,11 +1,10 @@
-from fasthtml.common import Beforeware, Redirect
+from fasthtml.common import Beforeware, Redirect, threaded, NotFoundError
 import ujson as json
 from email_validator import validate_email, EmailNotValidError, EmailSyntaxError, EmailUndeliverableError
 from fasthtml.oauth import *
-from fastlite import Table, threaded, NotFoundError
+from fastlite import Table
 import hashlib, hmac, time, jwt, re
-from lego.core import landing, placeholder, email_template, database, home
-from ..core.utils import send_email
+from lego.core import landing, placeholder, send_email, email_template, database, home
 from .ui import *
 from .cfg import *
 g_oath = git_oath = None
@@ -29,17 +28,15 @@ class TokenT(StrEnum): em_verify, pwd_reset, access_tkn = 'email_verification', 
 def get_db():
     _db = database(cfg.db)
     u,ct = _db.t.users, _db.t.confirmation_tokens
-
+    CT = 'CURRENT_TIMESTAMP'
     u.create(id=int, email=str, password_hash=bytes, phone_number=str, status=str, display_name=str,
-                 avatar_url=str, auth_provider=str, provider_user_id=str, last_active_at=float, preferences=str,
-                 created_at=float, updated_at=float, pk='id', if_not_exists=True, transform=True,
-                 not_null={'email', 'status', 'display_name', 'auth_provider'},
-                 defaults=dict(status=Status.pending, created_at=time.time(), updated_at=time.time(),
-                               last_active_at=time.time(), preferences=json.dumps(dict()), auth_provider='local'))
+             avatar_url=str, auth_provider=str, provider_user_id=str, last_active_at=float, preferences=str,
+             created_at=float, updated_at=float, pk='id', if_not_exists=True, transform=True,
+             not_null={'email', 'status', 'display_name', 'auth_provider'},
+             defaults=dict(status=Status.pending, created_at=CT, updated_at=CT, last_active_at=CT, preferences=json.dumps(dict()), auth_provider='local'))
 
-    ct.create(user_id=int, token=str, type=str, validated=bool, created_at=float, transform=True,
-                               pk=['user_id', 'type'], if_not_exists=True, not_null={'user_id', 'token', 'type'},
-                               defaults={'type': TokenT.em_verify, 'created_at': time.time()})
+    ct.create(user_id=int, token=str, type=str, validated=bool, created_at=float, transform=True, pk=['user_id', 'type'], if_not_exists=True,
+              not_null={'user_id', 'token', 'type'}, defaults={'type': TokenT.em_verify, 'created_at': time.time()})
 
     u.create_index(['email'], unique=True, if_not_exists=True)
     u.create_index(['provider_user_id', 'auth_provider'], unique=True, if_not_exists=True)
@@ -124,7 +121,7 @@ def tok_chk(tok) -> AppErr | Table:
         confirmation_tokens.update(dict(user_id=uid, type=typ, validated=True))
         return users[uid]
     except (NotFoundError, StopIteration): return InvalidToken
-    except Exception as e: print(e);return DefaultError
+    except Exception: return DefaultError
 
 def login_form(req, email='', err=None, wrap=False):
     global g_oath, git_oath
@@ -142,7 +139,7 @@ def send_ver_em(u, ver_link):
 
 def send_pw_ch_em(u, pw_chng_lnk):
     content = Div(P(f'Hi {u.display_name},', cls='p-1'),
-               P(A('Click here', href=f'{pw_chng_lnk}') + ' to reset your pwd.'))
+                  P(A('Click here', href=f'{pw_chng_lnk}') + ' to reset your pwd.'))
     sub = f'{cfg.app_nm} - Password Change Request'
     send_email(u.email, sub, email_template(content))
 
@@ -223,7 +220,7 @@ class ResetPwdReq:
     def __ft__(self):
         if isinstance(self.catch(), AppErr):
             return landing(placeholder('This link is invalid. Please hit forgot password again.'))
-        return landing(form(Step.reset_pw, token=self.token))
+        return form(Step.reset_pw, token=self.token)
 
     def catch(self): return tok_chk(self.token)
 
@@ -294,7 +291,7 @@ class GoogleAuth(OAuth):
             if not u.avatar_url: users.update(dict(id=u.id, avatar_url=info.picture, updated_at=time.time()))
         except (NotFoundError, StopIteration):
             try: users.insert(dict(email=info.email, display_name=info.name, avatar_url=info.picture,
-                              auth_provider=self.pr, provider_user_id=ident, status=Status.active))
+                                   auth_provider=self.pr, provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
         return home()

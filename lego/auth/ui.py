@@ -53,7 +53,7 @@ def register_form(name, email, err, *args):
         if err and err.msg == EmailNotVerified.msg else None,
         Button('Sign up', cls=[ButtonT.primary, ButtonT.sm]),
         _back_to_login('Already have an account?'),
-    ))
+        ))
 
 def phone_form():
     return _form(Routes.ver_ph, (
@@ -92,7 +92,7 @@ def forgot_password_form(email, err, *args):
         _back_to_login()))
 
 def reset_password_form(token, check, *args):
-    return _form(Routes.reset_pw, (
+    return _form(Routes.process_reset_pw, (
         H3('Set New Password', cls='uk-text-center text-xl font-semibold'),
         P('Please enter your new password', cls='uk-text-muted text-center'),
         LabelInput('New Password', id='new_password', type='password', placeholder='Enter new password', cls=TextT.left),
@@ -142,8 +142,7 @@ def resend_verify_form(email, err, *args):
         _back_to_login()))
 
 @cache('auth_form', ttl=3600*24*7)
-def form(step=Step.login, email='', name='', token='', g_redirect=None, git_redirect=None, err=None):
-    # Call the appropriate form based on the step
+def form(step=Step.login, email='', name='', token='', g_redirect=None, git_redirect=None, err=None, contained=False):
     f = None
     match step:
         case Step.login: f = login_form(email, g_redirect, git_redirect, err),
@@ -159,4 +158,6 @@ def form(step=Step.login, email='', name='', token='', g_redirect=None, git_redi
         case Step.ver_err: f = verify_error_form(email, err),
         case Step.resend_ver: f = resend_verify_form(email, err)
         case _: f = login_form(email, g_redirect, git_redirect, err)
-    return Div(f, id='auth-container', cls='w-full')
+    cls = 'w-full max-w-sm mx-auto text-center'
+    if contained: cls += ' p-6 border border-muted rounded-lg backdrop-blur-xl'
+    return Div(f, id='auth-container', cls=cls)

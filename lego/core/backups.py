@@ -1,9 +1,9 @@
 import shutil
-from fastcore.all import Path
+from fastcore.all import Path, patch
+from fastlite import Database, database
 from fastcore.xtras import globtastic
 from datetime import datetime
-from .logging import get_logger
-from .cfg import cfg, get_log_pth
+from .cfg import cfg, get_log_pth, get_logger
 
 __all__ = ['create_backup', 'clean_dates', 'run_backup', 'compress', 'clone', 'get_date', 'conv_date']
 def get_date(): return datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -11,12 +11,12 @@ def conv_date(d): return datetime.strptime(d, '%Y%m%d_%H%M%S') if isinstance(d, 
 lgr = get_logger(get_log_pth('backup'))
 info,err,warn=lgr.info,lgr.error,lgr.warning
 
-def create_backup(src,dest_dir,dry_run=False,**kwargs):
+def create_backup(src, dest_dir, dry_run=False, **kw):
     sp = Path(src)
     dp = Path(dest_dir) / get_date()
     if not dry_run: dp.mkdir(parents=True, exist_ok=True)
     if sp.is_file():files_to_copy = [sp]
-    else: files_to_copy = globtastic(sp,func=Path, **kwargs)
+    else: files_to_copy = globtastic(sp, func=Path, **kw)
     for f in files_to_copy:
         if f.is_file():
             df = dp / f.relative_to(sp)
@@ -52,7 +52,9 @@ def clean_old_backups(dest, dry_run, max_ages):
     to_keep = clean_dates(bkps, max_ages=max_ages)
     for bkp in bkps:
         if bkp in to_keep: continue
-        try: shutil.rmtree(Path(dest) / bkp) if dry_run else print('Remove', Path(dest) / bkp); info(f"Removed old backup: {bkp}")
+        try:
+            shutil.rmtree(Path(dest) / bkp) if not dry_run else print('Remove', Path(dest) / bkp)
+            info(f"Removed old backup: {bkp}")
         except Exception as e: err(f"Removing old backup failed: {str(e)}", exc_info=True)
 
 
@@ -89,3 +91,20 @@ def clone(src=cfg.static, remote=cfg.app_nm, bucket=cfg.app_nm.lower(), sync=Tru
             info(f'Compressing {src} before copying to {d}')
             try: rclone.copy(str(src.absolute()), d, show_progress=True)
             except: err(f'Failed to copy {src} to {d} on remote {remote}')
+
+@patch
+def backup(self:Database, dir='backup', suffix='', v=False):
+    path = Path(dir)/('%s%s.db'%(Path(self.conn.filename).stem, suffix))
+    if not path.parent.exists(): path.parent.mkdir(parents=True, exist_ok=True)
+    with database(path).conn.backup('main', self.conn, 'main') as bkp:
+        while not bkp.done:
+            bkp.step(10)
+            if v: print('Backup Remaining: ', bkp.remaining, ', Page Count: ', bkp.page_count)
+        return path
+
+@patch
+def restore(self:Database, src, force=False):
+    'Restore shlokas dbs from backups/shl_bkp/ if empty, or force overwrite.'
+    if not Path(src).exists(): return
+    if self.t.files.count > 0 and not force: return
+    return database(src).backup(Path(self.conn.filename).parent)
