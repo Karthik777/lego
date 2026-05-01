@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# App data (runtime — not source)
+data/cache/
+data/db/
+data/logs/
+data/dialogs/
+.sesskey
+
+# Mirrored static (auto-generated at startup)
+static/solv/*
+!static/solv/.gitignore
+
+# Test scratch
+/tmp/

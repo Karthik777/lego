@@ -267,13 +267,28 @@ def list_dir(path: str = '.') -> list:
 # ===== web tools =====
 @tool
 def url2note(url: str) -> str:
-    """Fetch a URL and add its content (HTML stripped to text) as a new note message.
+    """Fetch a public http(s) URL and add its content (HTML stripped to text) as a new note message.
 
-    Returns the new cell id.
+    Returns the new cell id. Refuses non-http(s) URLs and any host that resolves to a
+    loopback / private / link-local / multicast address (basic SSRF protection).
     """
-    import urllib.request
+    import urllib.request, urllib.parse, ipaddress, socket
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ('http', 'https'):
+        raise ValueError(f'unsupported scheme: {parsed.scheme!r} (only http/https allowed)')
+    host = parsed.hostname
+    if not host: raise ValueError('url has no host')
+    # Resolve and reject private / loopback / link-local / multicast / reserved.
+    try: addrs = {ai[4][0] for ai in socket.getaddrinfo(host, None)}
+    except socket.gaierror as e: raise ValueError(f'could not resolve host: {e}')
+    for a in addrs:
+        try: ip = ipaddress.ip_address(a)
+        except ValueError: continue
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+            raise ValueError(f'refused: {host} resolves to non-public address {a}')
     req = urllib.request.Request(url, headers={'User-Agent': 'solv/0.1'})
-    with urllib.request.urlopen(req, timeout=30) as resp:  # nosec - user-initiated tool call
+    # Only http(s) is allowed; the scheme check + IP check above mitigate SSRF/file://.
+    with urllib.request.urlopen(req, timeout=30) as resp:  # nosec B310 - scheme + host validated
         ctype = resp.headers.get('Content-Type', '')
         body = resp.read(2 * 1024 * 1024).decode('utf-8', 'replace')
     text = body if 'text/html' not in ctype.lower() else _strip_html(body)
