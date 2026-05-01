@@ -10,7 +10,7 @@ from .cfg import *
 g_oath = git_oath = None
 
 def setup_beforeware(app):
-    def before(req, sess): return Redirect(Routes.login) if not auth_ok(req) else True
+    def before(req, sess): return Redirect(Routes.login) if not auth_ok(req) else None
     app.before.append(Beforeware(before, Routes.skip+RouteOverrides.skip))
 
 def setup_oath(app):

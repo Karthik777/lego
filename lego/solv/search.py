@@ -26,20 +26,22 @@ def get_db():
     if _db is None:
         cfg.solv_db.parent.mkdir(parents=True, exist_ok=True)
         _db = database(str(cfg.solv_db))
-        _dialogs = _db.get_store(name='solv_dialogs')
+        _dialogs = _db.get_store(name='solv_dialogs', hash=True)
         _messages = _db.get_store(name='solv_messages', hash=True)
     return _db
 
 
 def _encoder():
-    'Return a function that maps text -> bytes (vector). None if unavailable.'
+    'Return a function that maps text -> bytes (vector). None if encoder unavailable.'
     try:
         from litesearch.utils import FastEncode  # type: ignore
         enc = FastEncode()
-        def _e(s): return enc.encode([s or '']).ravel().tobytes()
+        def _e(s):
+            try: v = enc.encode([s or ''])
+            except Exception: return None
+            return v.ravel().tobytes() if v is not None else None
         return _e
-    except Exception:
-        return None
+    except Exception: return None
 
 
 def index_dialog(user_id, name, nb):
@@ -50,8 +52,10 @@ def index_dialog(user_id, name, nb):
     desc = nb.metadata.get('solv', {}).get('description', '')
     blob = f'{title}\n{desc}'
     row = dict(content=blob, metadata=json.dumps(dict(user_id=user_id, name=name, title=title)))
-    if enc: row['embedding'] = enc(blob)
-    _dialogs.insert_all([row], upsert=True)
+    if enc:
+        v = enc(blob)
+        if v: row['embedding'] = v
+    _dialogs.insert_all([row], upsert=True, hash_id='id')
     rows = []
     for c in nb.cells:
         cid = D.cid_of(c)
@@ -59,7 +63,9 @@ def index_dialog(user_id, name, nb):
         body = c.source or ''
         meta = dict(user_id=user_id, dialog=name, cell_id=cid, type=D.cell_type(c))
         r = dict(content=body, metadata=json.dumps(meta))
-        if enc: r['embedding'] = enc(body)
+        if enc:
+            v = enc(body)
+            if v: r['embedding'] = v
         rows.append(r)
     if rows: _messages.insert_all(rows, upsert=True, hash_id='id')
 
