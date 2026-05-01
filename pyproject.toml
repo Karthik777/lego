@@ -28,6 +28,13 @@ dependencies = [
     "rjsmin>=1.2.5",
     "starlette-bridge>=0.3.0",
     "ujson>=5.11.0",
+    "nbformat>=5.10",
+    "execnb>=0.1.7",
+    "lisette>=0.0.10",
+    "toolslm>=0.0.5",
+    "litesearch>=0.0.3",
+    "markdown-it-py>=3.0",
+    "ansi2html>=1.9",
 ]
 
 [project.urls]

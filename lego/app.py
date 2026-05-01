@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from monsterui.all import *
 from .core import *
 from lego import auth as a
+from lego import solv
 
 __all__ = ['launch', 'lego']
 
@@ -36,6 +37,7 @@ lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, bef
 
 # connect your blocks
 a.connect(lego)
+solv.connect(lego)
 
 # optionally add a scheduled backup of data folders
 if cfg.need_backup and not not_prod():
