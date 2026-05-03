@@ -3,7 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastcore.all import patch, ifnone, Path, L
 from functools import wraps
 from time import time
-from .cfg import get_lock, quick_lgr
+from .cfg import cfg, get_lock, quick_lgr
 
 __all__ = ['init_js_then_use', 'get_usr_ini', 'start_scheduler', 'stop_scheduler', 'scheduler', 'loadX',
            'timeit', 'clean_dev', 'rm_special', 'arun']
@@ -18,8 +18,13 @@ def get_usr_ini(usr=None, default='A'):
     return usr.get('display_name', default)[0] or default
 
 scheduler = AsyncIOScheduler()
-async def start_scheduler(): scheduler.start() if get_lock(ttl=60) else None
-async def stop_scheduler(): scheduler.shutdown() if scheduler and scheduler.running else None
+async def start_scheduler():
+    if cfg.serverless: return
+    scheduler.start() if get_lock(ttl=60) else None
+
+async def stop_scheduler():
+    if cfg.serverless: return
+    scheduler.shutdown() if scheduler and scheduler.running else None
 
 @patch
 def with_name_add(self:Path, add="_1", suffix=None, force=False):

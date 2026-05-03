@@ -1,6 +1,6 @@
 import shutil
 from fastcore.all import Path, patch
-from fastlite import Database, database
+from fastsql import Database, database
 from fastcore.xtras import globtastic
 from datetime import datetime
 from .cfg import cfg, get_log_pth, get_logger
@@ -92,19 +92,27 @@ def clone(src=cfg.static, remote=cfg.app_nm, bucket=cfg.app_nm.lower(), sync=Tru
             try: rclone.copy(str(src.absolute()), d, show_progress=True)
             except: err(f'Failed to copy {src} to {d} on remote {remote}')
 
+def _is_sqlite(db: Database) -> bool:
+    return str(db.conn_str).startswith('sqlite')
+
 @patch
 def backup(self:Database, dir='backup', suffix='', v=False):
-    path = Path(dir)/('%s%s.db'%(Path(self.conn.filename).stem, suffix))
+    if not _is_sqlite(self): return None
+    raw = self.engine.raw_connection()
+    path = Path(dir)/('%s%s.db'%(Path(raw.filename).stem, suffix))
     if not path.parent.exists(): path.parent.mkdir(parents=True, exist_ok=True)
-    with database(path).conn.backup('main', self.conn, 'main') as bkp:
+    dest_raw = database(path).engine.raw_connection()
+    with dest_raw.backup('main', raw, 'main') as bkp:
         while not bkp.done:
             bkp.step(10)
             if v: print('Backup Remaining: ', bkp.remaining, ', Page Count: ', bkp.page_count)
-        return path
+    return path
 
 @patch
 def restore(self:Database, src, force=False):
-    'Restore shlokas dbs from backups/shl_bkp/ if empty, or force overwrite.'
+    'Restore db from a backup file. SQLite only.'
+    if not _is_sqlite(self): return None
     if not Path(src).exists(): return
     if self.t.files.count > 0 and not force: return
-    return database(src).backup(Path(self.conn.filename).parent)
+    raw = self.engine.raw_connection()
+    return database(src).backup(Path(raw.filename).parent)

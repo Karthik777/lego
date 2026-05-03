@@ -1,10 +1,10 @@
 from fasthtml.oauth import GoogleAppClient, GitHubAppClient
 from fasthtml.common import StrEnum, dataclass, AttrDictDefault, str2bool
 import os
-from lego.core import cfg as core_cfg, AppErr, get_db_pth, RouteOverrides
+from lego.core import cfg as core_cfg, AppErr, get_db_url, RouteOverrides
 
 cfg = core_cfg
-cfg.update(AttrDictDefault(db=get_db_pth('auth'),
+cfg.update(AttrDictDefault(auth_db_url=get_db_url('auth'),
                            want_google=str2bool(os.getenv('WANT_GOOGLE', 'true')),
                            want_github=str2bool(os.getenv('WANT_GIT', 'false')),
                            g_cli_id=os.getenv('GOOGLE_CLI',''),

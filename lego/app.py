@@ -32,13 +32,14 @@ def before(req, sess): req.scope['auth'] = sess['auth'] if 'auth' in sess else N
 def nf(req, exc): return not_found()
 kw,exh = {'class': 'neo-brutalism hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
 lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, before=before,
-                  exts='preload', exception_handlers=exh, on_startup=start_scheduler, on_shutdown=stop_scheduler)
+                  exts='preload', exception_handlers=exh, on_startup=start_scheduler, on_shutdown=stop_scheduler,
+                  secret_key=cfg.secret_key)
 
 # connect your blocks
 a.connect(lego)
 
 # optionally add a scheduled backup of data folders
-if cfg.need_backup and not not_prod():
+if cfg.need_backup and not not_prod() and not cfg.serverless:
     run_backup(get_db_dir())
     clone(cfg.static)
     clone(cfg.backup_path, sync=False)  # initial clone to ensure backups are in place

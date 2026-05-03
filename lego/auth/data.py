@@ -2,7 +2,7 @@ from fasthtml.common import Beforeware, Redirect, threaded, NotFoundError
 import ujson as json
 from email_validator import validate_email, EmailNotValidError, EmailSyntaxError, EmailUndeliverableError
 from fasthtml.oauth import *
-from fastlite import Table
+from fastsql import DBTable as Table
 import hashlib, hmac, time, jwt, re
 from lego.core import landing, placeholder, send_email, email_template, database, home
 from .ui import *
@@ -26,7 +26,7 @@ class Status(StrEnum): pending, active, suspended, deleted = 'pending', 'active'
 class TokenT(StrEnum): em_verify, pwd_reset, access_tkn = 'email_verification', 'password_reset', 'access_token'
 
 def get_db():
-    _db = database(cfg.db)
+    _db = database(cfg.auth_db_url)
     u,ct = _db.t.users, _db.t.confirmation_tokens
     CT = 'CURRENT_TIMESTAMP'
     u.create(id=int, email=str, password_hash=bytes, phone_number=str, status=str, display_name=str,
