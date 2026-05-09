@@ -10,12 +10,15 @@ try:
 except ImportError:  # pragma: no cover
     CaptureShell = None
 
+from .varmeta import VarMeta, var_meta, assigned_lines
+
 
 class KernelPool:
     def __init__(self):
         self._shells = {}      # sid -> CaptureShell
         self._touched = {}     # sid -> last-used timestamp
         self._locks = {}       # sid -> threading.Lock (CaptureShell.run is sync)
+        self._baselines = {}   # sid -> set[str] of names present at shell init
         self._guard = threading.Lock()
 
     def get(self, sid):
@@ -27,6 +30,9 @@ class KernelPool:
                 sh = CaptureShell()
                 self._shells[sid] = sh
                 self._locks[sid] = threading.Lock()
+                # Capture IPython's startup namespace so user-var diffs can
+                # exclude In/Out/exit/get_ipython/etc.
+                self._baselines[sid] = set((getattr(sh, 'user_ns', {}) or {}).keys())
             self._touched[sid] = time.time()
             return sh
 
@@ -43,6 +49,63 @@ class KernelPool:
 
     async def arun(self, sid, code):
         return await asyncio.to_thread(self.run, sid, code)
+
+    # ---------- variable-metadata aware execution ----------
+
+    def _snapshot_ns(self, sid):
+        """Return ``{name: id(value)}`` for non-baseline, non-underscore names."""
+        sh = self._shells.get(sid)
+        if sh is None: return {}
+        ns = getattr(sh, 'user_ns', {}) or {}
+        baseline = self._baselines.get(sid, set())
+        out = {}
+        for k, v in list(ns.items()):
+            if k.startswith('_') or k in baseline: continue
+            try: out[k] = id(v)
+            except Exception: pass
+        return out
+
+    def _build_var_metas(self, sid, source, pre, post):
+        sh = self._shells.get(sid)
+        ns = getattr(sh, 'user_ns', {}) if sh is not None else {}
+        lines = assigned_lines(source) if source else {}
+        metas = []
+        _MISSING = object()
+        for name, new_id in post.items():
+            old_id = pre.get(name)
+            if old_id is not None and old_id == new_id:
+                continue  # unchanged
+            line = lines.get(name)
+            if line is None:
+                # name changed but does not appear as an assignment target in
+                # this cell (e.g. mutated in place via a function call). We
+                # cannot place a badge on a specific source line, so skip.
+                continue
+            value = ns.get(name, _MISSING)
+            if value is _MISSING:
+                # Raced — name vanished between snapshot and inspection.
+                continue
+            metas.append(var_meta(name, value, line, changed=(old_id is not None)))
+        # Stable-sort by line then name for deterministic rendering.
+        metas.sort(key=lambda m: (m.line, m.name))
+        return metas
+
+    def run_meta(self, sid, code):
+        """Run `code` and return ``(outputs, var_metas)``. ``var_metas`` is
+        derived state — never persisted."""
+        # Ensure shell exists and baseline is captured BEFORE the snapshot.
+        self.get(sid)
+        pre = self._snapshot_ns(sid)
+        outs = self.run(sid, code)
+        post = self._snapshot_ns(sid)
+        try:
+            metas = self._build_var_metas(sid, code, pre, post)
+        except Exception:
+            metas = []
+        return outs, metas
+
+    async def arun_meta(self, sid, code):
+        return await asyncio.to_thread(self.run_meta, sid, code)
 
     def get_vars(self, sid, max_repr=200):
         sh = self._shells.get(sid)
@@ -65,6 +128,7 @@ class KernelPool:
             self._shells.pop(sid, None)
             self._touched.pop(sid, None)
             self._locks.pop(sid, None)
+            self._baselines.pop(sid, None)
         return self.get(sid)
 
     def close(self, sid):
@@ -72,6 +136,7 @@ class KernelPool:
             self._shells.pop(sid, None)
             self._touched.pop(sid, None)
             self._locks.pop(sid, None)
+            self._baselines.pop(sid, None)
 
     def gc(self, idle_seconds):
         cutoff = time.time() - idle_seconds

@@ -14,7 +14,7 @@ from lego.auth.cfg import Routes as AuthRoutes
 
 from . import data as D, kernel, llm as L, tools as T, search as S, ui as U
 from .cfg import cfg, MsgT, Mode, Routes, MODELS, model_for, STATIC_DIR
-from .render import render_outputs
+from .render import render_outputs, render_run_result
 
 __all__ = ['connect']
 
@@ -172,10 +172,10 @@ async def run_cell(req, name: str, cid: str):
     if new_src is not None and new_src != (c.source or ''):
         D.update_msg(nb, cid, content=new_src)
     sid = kernel.session_id(uid, name)
-    outs = await kernel.pool.arun(sid, c.source or '')
+    outs, var_metas = await kernel.pool.arun_meta(sid, c.source or '')
     D.set_outputs(nb, cid, outs)
     D.save(p, nb)
-    return render_outputs(outs, cell_id=cid)
+    return render_run_result(c.source or '', outs, var_metas, cell_id=cid)
 
 
 async def stream_chat(req, name: str, cid: str):

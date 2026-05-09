@@ -6,7 +6,7 @@ from monsterui.all import (UkIcon, ButtonT, TextT, ContainerT, Container, Card, 
                             CardHeader, Grid, LabelInput)
 from . import data as D
 from .cfg import cfg, MsgT, Mode, MODELS, Routes
-from .render import render_outputs, render_markdown, render_response
+from .render import render_outputs, render_markdown, render_response, render_annotated_source
 
 
 # ---------- helpers ----------
@@ -64,20 +64,22 @@ def _flag_row(c):
 def code_cell(name, c):
     cid = D.cid_of(c)
     src = c.source or ''
+    annotated = render_annotated_source(src, [], cell_id=cid)
     outputs = render_outputs(getattr(c, 'outputs', []) or [], cell_id=cid)
+    runres = Div(annotated, outputs, id=f'runres-{cid}', cls='solv-runres')
     editor = Div(
         Textarea(src, name='content', cls='solv-monaco', data_monaco='python', spellcheck='false',
                   hx_post=Routes.msg(name, cid), hx_trigger='blur changed', hx_swap='none', hx_include='this'),
         cls='solv-editor-wrap')
     run_btn = Button(_icon('play'), 'Run', title='Run (Shift+Enter)',
-                     hx_post=Routes.run(name, cid), hx_target=f'#out-{cid}', hx_swap='outerHTML',
+                     hx_post=Routes.run(name, cid), hx_target=f'#runres-{cid}', hx_swap='outerHTML',
                      hx_include=f'#cell-{cid} textarea[name=content]',
                      cls=f'{ButtonT.primary} {ButtonT.xs}')
     head = Div(_badge('code', 'solv-type-code'), _flag_row(c), Div(cls='flex-1'),
                Span(f"{c.metadata['solv'].get('tokens', 0)}t", cls='text-xs text-muted-foreground'),
                run_btn, _toolbar(name, c),
                cls='flex items-center gap-2 solv-cell-head')
-    return Div(head, editor, outputs, id=f'cell-{cid}', cls='solv-cell solv-cell-code', **_data_attrs(c))
+    return Div(head, editor, runres, id=f'cell-{cid}', cls='solv-cell solv-cell-code', **_data_attrs(c))
 
 
 def note_cell(name, c):

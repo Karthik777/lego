@@ -1,5 +1,5 @@
 """Render nbformat outputs and notebook cells to FastHTML FT components."""
-from fasthtml.common import Pre, Div, Img, NotStr, Details, Summary
+from fasthtml.common import Pre, Div, Img, NotStr, Details, Summary, Span
 
 try:
     from ansi2html import Ansi2HTMLConverter
@@ -78,3 +78,41 @@ def render_response(text, tool_calls=None):
                             Pre(str(tc.get('result', '')), cls='solv-tc-result'),
                             cls='solv-tool-call'))
     return Div(*body, cls='solv-response')
+
+
+# ---------- inline variable badges (PyCharm-style) ----------
+
+def render_annotated_source(source, var_metas, cell_id=None):
+    """PyCharm-style read-only source view with one badge per assigned name.
+
+    `var_metas` is an iterable of `lego.solv.varmeta.VarMeta`. Each line is
+    rendered as a `Div(cls='solv-code-line')`; matching badges are appended
+    inside that div in the order they appear in `var_metas`. Returns an empty
+    container when there's nothing to show so it can be safely swapped in.
+    """
+    from .varmeta import badge_text
+
+    cid = f'annot-{cell_id}' if cell_id else None
+    if not source or not var_metas:
+        return Div(id=cid, cls='solv-annot-src')
+
+    by_line = {}
+    for m in var_metas:
+        by_line.setdefault(m.line, []).append(m)
+
+    lines = []
+    for i, line in enumerate((source or '').splitlines() or [''], start=1):
+        children = [Span(line or ' ', cls='solv-code-text')]
+        for m in by_line.get(i, []):
+            cls = 'solv-var-badge' + (' changed' if m.changed else '')
+            children.append(Span(badge_text(m), title=m.repr_short, cls=cls))
+        lines.append(Div(*children, cls='solv-code-line'))
+    return Div(*lines, id=cid, cls='solv-annot-src')
+
+
+def render_run_result(source, outputs, var_metas, cell_id):
+    """Combined annotated source + outputs container, swapped as a unit."""
+    return Div(
+        render_annotated_source(source, var_metas, cell_id=cell_id),
+        render_outputs(outputs, cell_id=cell_id),
+        id=f'runres-{cell_id}', cls='solv-runres')

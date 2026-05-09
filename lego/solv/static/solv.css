@@ -32,3 +32,21 @@
 .solv-cell.editing .solv-editor-wrap { display:block; }
 .solv-cell.editing > :not(.solv-editor-wrap):not(.solv-cell-head):not(.solv-output):not(.solv-response) { display:none; }
 .solv-stop-btn { color:hsl(var(--destructive)); }
+
+/* PyCharm-style inline variable annotations */
+.solv-runres { }
+.solv-annot-src { padding:.25rem .5rem; border-top:1px dashed hsl(var(--muted));
+    font-family:'Fira Code', ui-monospace, monospace; font-size:.8rem; }
+.solv-annot-src:empty { display:none; }
+.solv-code-line { white-space:pre; line-height:1.4; }
+.solv-code-text { white-space:pre; }
+.solv-var-badge {
+    font-family:'Fira Code', ui-monospace, monospace;
+    font-size:.72em;
+    color:#2c7a7b;            /* muted teal */
+    margin-left:1.5em;
+    opacity:.85;
+    cursor:help;
+}
+.solv-var-badge.changed { color:#b7791f; }   /* amber for mutated */
+.solv-var-badge:hover  { opacity:1; }
