@@ -52,7 +52,7 @@ class KernelPool:
 
     # ---------- variable-metadata aware execution ----------
 
-    def _snapshot_ns(self, sid):
+    def snapshot_ns(self, sid):
         """Return ``{name: id(value)}`` for non-baseline, non-underscore names."""
         sh = self._shells.get(sid)
         if sh is None: return {}
@@ -95,9 +95,9 @@ class KernelPool:
         derived state — never persisted."""
         # Ensure shell exists and baseline is captured BEFORE the snapshot.
         self.get(sid)
-        pre = self._snapshot_ns(sid)
+        pre = self.snapshot_ns(sid)
         outs = self.run(sid, code)
-        post = self._snapshot_ns(sid)
+        post = self.snapshot_ns(sid)
         try:
             metas = self._build_var_metas(sid, code, pre, post)
         except Exception:

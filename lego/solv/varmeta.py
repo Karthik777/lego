@@ -73,6 +73,11 @@ def _walk_excluding_comprehensions(root):
                 children.append(gen.iter)
                 children.extend(gen.ifs)
             stack.extend(reversed(children))
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            # The def/class statement itself binds a top-level name, but names
+            # assigned inside its body are scoped locally and must not steal the
+            # badge line for an outer/user namespace variable.
+            continue
         else:
             stack.extend(reversed(list(ast.iter_child_nodes(node))))
 

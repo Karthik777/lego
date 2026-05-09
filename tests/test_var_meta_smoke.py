@@ -95,6 +95,16 @@ def test_class_and_function_def_recorded():
     assert lines['foo'] == 3
 
 
+def test_function_body_assignments_do_not_override_top_level():
+    src = "x = 1\ndef f():\n    x = 2"
+    assert assigned_lines(src) == {'x': 1, 'f': 2}
+
+
+def test_class_body_assignments_do_not_leak():
+    src = "class Foo:\n    x = 1\nfoo = Foo()"
+    assert assigned_lines(src) == {'Foo': 1, 'foo': 3}
+
+
 def test_import_aliases():
     src = "import numpy as np\nfrom os.path import join as j"
     lines = assigned_lines(src)

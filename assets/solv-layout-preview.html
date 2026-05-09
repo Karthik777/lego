@@ -1,0 +1,191 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>solv layout preview</title><style>
+:root { --muted: 215 16% 86%; --card: 0 0% 100%; --primary: 30 96% 58%; --muted-foreground: 215 12% 42%; --destructive: 0 72% 51%; }
+* { box-sizing: border-box; } body { margin:0; background:#f6f4ef; color:#1f2937; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+a { color: inherit; text-decoration:none; } ul { list-style:none; padding:0; margin:0; } h3,h4 { font-weight:700; }
+.flex { display:flex; } .flex-col { flex-direction:column; } .flex-1 { flex:1; } .items-center { align-items:center; } .gap-1 { gap:.25rem; } .gap-2 { gap:.5rem; } .gap-3 { gap:.75rem; }
+.p-1 { padding:.25rem; } .p-2 { padding:.5rem; } .m-0 { margin:0; } .ml-2 { margin-left:.5rem; } .rounded { border-radius:.375rem; }
+.w-64 { width:16rem; } .w-56 { width:14rem; } .h-full { height:100%; } .min-w-0 { min-width:0; } .overflow-y-auto { overflow-y:auto; }
+.border-r { border-right:1px solid hsl(var(--muted)); } .border-l { border-left:1px solid hsl(var(--muted)); } .border-b { border-bottom:1px solid hsl(var(--muted)); } .border-t { border-top:1px solid hsl(var(--muted)); }
+.bg-muted { background:hsl(var(--muted)); } .text-muted-foreground { color:hsl(var(--muted-foreground)); } .text-xs { font-size:.75rem; } .font-mono { font-family:'Fira Code', ui-monospace, monospace; }
+.inline-flex { display:inline-flex; } .px-1\.5 { padding-left:.375rem; padding-right:.375rem; } .py-0\.5 { padding-top:.125rem; padding-bottom:.125rem; }
+#solv-app { height: calc(100vh - 1rem); margin:.5rem; border:1px solid hsl(var(--muted)); border-radius:10px; overflow:hidden; background:#fff; box-shadow:0 12px 40px rgba(0,0,0,.08); }
+.solv-sidebar, .solv-symbols { background:#fbfaf7; } .solv-dialog-head { background:#fffdf8; }
+.solv-cell-list { padding:1rem; } .btn { border:1px solid hsl(var(--muted)); border-radius:6px; background:#fff; padding:.25rem .5rem; font-size:.75rem; } .btn.primary { background:#f59e0b; color:#111827; border-color:#d97706; }
+.uk-input { border:1px solid hsl(var(--muted)); border-radius:6px; padding:.25rem .4rem; min-width:0; }
+.solv-output { background:#fcfcfb; } .solv-annot-src { background:#fbfffe; } textarea { font-family:'Fira Code', ui-monospace, monospace; }
+@media (max-width: 700px) { #solv-app { height:auto; display:block; } .solv-sidebar,.solv-symbols { width:100%; max-height:10rem; border:0; border-bottom:1px solid hsl(var(--muted)); } .solv-cell-list { padding:.5rem; } }
+
+/* solv block — cell layout + state styling */
+.solv-cell { border:1px solid hsl(var(--muted)); border-radius:6px; background:hsl(var(--card)); position:relative; }
+.solv-cell[data-pinned="true"] { border-left:3px solid hsl(var(--primary)); }
+.solv-cell[data-hidden="true"] { opacity:.5; }
+.solv-cell[data-export="false"] { border-style:dashed; }
+.solv-cell-head { padding:.25rem .5rem; border-bottom:1px solid hsl(var(--muted)); font-size:.75rem; }
+.solv-cell-toolbar { opacity:.4; }
+.solv-cell:hover .solv-cell-toolbar { opacity:1; }
+.solv-cell-code .solv-monaco { font-family:'Fira Code',monospace; }
+.solv-editor-wrap textarea { width:100%; min-height:5rem; padding:.5rem; font-size:.85rem; resize:vertical;
+    background:transparent; border:none; outline:none; }
+.solv-editor-wrap.hidden { display:none; }
+.solv-output { padding:.5rem; border-top:1px dashed hsl(var(--muted)); font-size:.8rem; }
+.solv-output-empty { color:hsl(var(--muted-foreground)); font-style:italic; font-size:.7rem; }
+.solv-stream { white-space:pre-wrap; margin:0; }
+.solv-stderr { color:hsl(var(--destructive)); }
+.solv-err { background: rgba(239,68,68,.05); padding:.5rem; border-radius:4px; }
+.solv-err-head { color:hsl(var(--destructive)); cursor:pointer; }
+.solv-traceback { white-space:pre-wrap; font-size:.75rem; }
+.solv-img { max-width:100%; }
+.solv-md { line-height:1.5; }
+.solv-md pre { background:hsl(var(--muted)); padding:.5rem; border-radius:4px; overflow-x:auto; }
+.solv-md code { background:hsl(var(--muted)); padding:0 .2rem; border-radius:3px; font-family:'Fira Code',monospace; }
+.solv-response { padding:.5rem; border-top:1px solid hsl(var(--muted)); }
+.solv-tool-call { margin-top:.5rem; padding:.25rem; background:hsl(var(--muted)); border-radius:4px; font-size:.7rem; }
+.solv-flag-h { background:rgba(234,179,8,.15); }
+.solv-flag-p { background:rgba(99,102,241,.15); }
+.solv-flag-e { background:rgba(34,197,94,.15); }
+.solv-type-code, .solv-type-note, .solv-type-prompt { font-weight:600; }
+.solv-cell-list { max-width:64rem; margin:0 auto; width:100%; }
+.solv-dialog-item.active a { background:hsl(var(--muted)); }
+.solv-cell.editing .solv-editor-wrap { display:block; }
+.solv-cell.editing > :not(.solv-editor-wrap):not(.solv-cell-head):not(.solv-output):not(.solv-response) { display:none; }
+.solv-stop-btn { color:hsl(var(--destructive)); }
+
+/* PyCharm-style inline variable annotations */
+.solv-runres { }
+.solv-annot-src { padding:.25rem .5rem; border-top:1px dashed hsl(var(--muted));
+    font-family:'Fira Code', ui-monospace, monospace; font-size:.8rem; }
+.solv-annot-src:empty { display:none; }
+.solv-code-line { white-space:pre; line-height:1.4; }
+.solv-code-text { white-space:pre; }
+.solv-var-badge {
+    font-family:'Fira Code', ui-monospace, monospace;
+    font-size:.72em;
+    color:#2c7a7b;            /* muted teal */
+    margin-left:1.5em;
+    opacity:.85;
+    cursor:help;
+}
+.solv-var-badge.changed { color:#b7791f; }   /* amber for mutated */
+.solv-var-badge:hover  { opacity:1; }
+</style></head><body><div id="solv-app" class="flex h-[calc(100vh-3.5rem)]">
+  <aside class="solv-sidebar w-64 border-r border-muted h-full overflow-y-auto">
+    <div class="flex flex-col gap-1">
+      <h4 class="p-2 m-0">Dialogs</h4>
+      <div class="flex gap-1 p-2">
+        <input value="inline-badges-review" class="uk-input uk-form-small">
+<button class="btn primary">+</button>      </div>
+      <ul class="solv-dialog-list space-y-1 p-1">
+        <li>
+<a href="#" class="block p-2 hover:bg-muted rounded bg-muted">inline-badges-review</a>        </li>
+      </ul>
+    </div>
+  </aside>
+  <section class="flex flex-col flex-1 min-w-0">
+    <div class="flex items-center gap-2 p-2 border-b border-muted solv-dialog-head">
+      <h3 class="m-0 p-2">inline-badges-review</h3>
+      <div class="flex-1"></div>
+<button class="btn">Restart kernel</button>    </div>
+    <div id="cell-list-wrap" class="flex-1 overflow-y-auto">
+      <div class="solv-cell-list flex flex-col gap-3 p-2">
+        <div data-pinned="false" data-hidden="false" data-export="true" data-type="note" class="solv-cell solv-cell-note">
+          <div class="flex items-center gap-2 solv-cell-head">
+<span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground solv-type-note">note</span>            <div class="flex-1"></div>
+<span class="text-xs text-muted-foreground">0t</span><button class="btn primary">Run</button>          </div>
+          <div class="solv-md"><h3>Review note</h3>
+<p>This preview shows the read-only annotated source block above outputs. Badges are derived from the live kernel and are not persisted.</p>
+</div>
+        </div>
+        <div data-pinned="false" data-hidden="false" data-export="true" data-type="code" id="cell-cell-data" class="solv-cell solv-cell-code">
+          <div class="flex items-center gap-2 solv-cell-head">
+<span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground solv-type-code">code</span>            <div class="flex-1"></div>
+<span class="text-xs text-muted-foreground">0t</span><button class="btn primary">Run</button>          </div>
+          <div class="solv-editor-wrap">
+<textarea name="content" spellcheck="false" class="solv-monaco">import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({'a': range(5), 'b': range(5), 'c': list('abcde')})
+arr = np.zeros((3, 3), dtype=np.float64)
+x = 42</textarea>          </div>
+          <div id="runres-cell-data" class="solv-runres">
+            <div id="annot-cell-data" class="solv-annot-src">
+              <div class="solv-code-line">
+<span class="solv-code-text">import pandas as pd</span><span class="solv-var-badge" title="&lt;module 'pandas' from '/home/runner/.local/lib/python3.12/s…">module</span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text">import numpy as np</span><span class="solv-var-badge" title="&lt;module 'numpy' from '/home/runner/.local/lib/python3.12/si…">module</span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text"> </span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text">df = pd.DataFrame({'a': range(5), 'b': range(5), 'c': list('abcde')})</span><span class="solv-var-badge" title="   a  b  c
+0  0  0  a
+1  1  1  b
+2  2  2  c
+3  3  3  d
+4  4…">DataFrame (5, 3)</span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text">arr = np.zeros((3, 3), dtype=np.float64)</span><span class="solv-var-badge" title="array([[0., 0., 0.],
+       [0., 0., 0.],
+       [0., 0., 0…">ndarray (3, 3) f64</span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text">x = 42</span><span class="solv-var-badge" title="42">int 42</span>              </div>
+            </div>
+            <div id="out-cell-data" class="solv-output">
+              <div class="solv-output-empty"></div>
+            </div>
+          </div>
+        </div>
+        <div data-pinned="false" data-hidden="false" data-export="true" data-type="code" id="cell-cell-change" class="solv-cell solv-cell-code">
+          <div class="flex items-center gap-2 solv-cell-head">
+<span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground solv-type-code">code</span>            <div class="flex-1"></div>
+<span class="text-xs text-muted-foreground">0t</span><button class="btn primary">Run</button>          </div>
+          <div class="solv-editor-wrap">
+<textarea name="content" spellcheck="false" class="solv-monaco">x = 'hello solv'
+xs = [1, 2, 3, 4]
+items = [n*n for n in range(4)]
+print('preview output from solv')</textarea>          </div>
+          <div id="runres-cell-change" class="solv-runres">
+            <div id="annot-cell-change" class="solv-annot-src">
+              <div class="solv-code-line">
+<span class="solv-code-text">x = 'hello solv'</span><span class="solv-var-badge changed" title="'hello solv'">str 'hello solv'</span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text">xs = [1, 2, 3, 4]</span><span class="solv-var-badge" title="[1, 2, 3, 4]">list len=4</span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text">items = [n*n for n in range(4)]</span><span class="solv-var-badge" title="[0, 1, 4, 9]">list len=4</span>              </div>
+              <div class="solv-code-line">
+<span class="solv-code-text">print('preview output from solv')</span>              </div>
+            </div>
+            <div id="out-cell-change" class="solv-output">
+<pre class="solv-stream solv-stdout">preview output from solv
+</pre>            </div>
+          </div>
+        </div>
+        <div data-pinned="false" data-hidden="false" data-export="true" data-type="prompt" class="solv-cell solv-cell-prompt">
+          <div class="flex items-center gap-2 solv-cell-head">
+<span class="inline-flex items-center text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground solv-type-prompt">prompt</span>            <div class="flex-1"></div>
+<span class="text-xs text-muted-foreground">0t</span><button class="btn primary">Run</button>          </div>
+          <div class="solv-editor-wrap">
+<textarea class="solv-monaco">Summarize the dataframe and array.</textarea>          </div>
+          <div id="resp-prompt">
+            <div class="solv-response">
+              <div class="solv-md"><p>The notebook has <code>df</code> with shape <code>(5, 3)</code>, <code>arr</code> with shape <code>(3, 3)</code>, and scalar/list examples for badge inspection.</p>
+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-2 p-2 border-t border-muted">
+<button class="btn">+ Code</button><button class="btn">+ Note</button><button class="btn">+ Prompt</button>    </div>
+  </section>
+  <div class="solv-symbols border-l border-muted w-56 h-full overflow-y-auto p-1">
+    <h4 class="m-0 p-2">Symbols</h4>
+    <ul id="solv-vars" class="solv-var-list">
+      <li class="solv-var-row p-1">
+<span class="font-mono text-xs">df</span><span class="text-xs text-muted-foreground ml-2">DataFrame</span>      </li>
+      <li class="solv-var-row p-1">
+<span class="font-mono text-xs">arr</span><span class="text-xs text-muted-foreground ml-2">ndarray</span>      </li>
+      <li class="solv-var-row p-1">
+<span class="font-mono text-xs">x</span><span class="text-xs text-muted-foreground ml-2">str</span>      </li>
+    </ul>
+  </div>
+</div>
+</body></html>
