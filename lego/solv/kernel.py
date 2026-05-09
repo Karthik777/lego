@@ -13,6 +13,9 @@ except ImportError:  # pragma: no cover
 from .varmeta import VarMeta, var_meta, assigned_lines
 
 
+_MISSING = object()
+
+
 class KernelPool:
     def __init__(self):
         self._shells = {}      # sid -> CaptureShell
@@ -70,7 +73,6 @@ class KernelPool:
         ns = getattr(sh, 'user_ns', {}) if sh is not None else {}
         lines = assigned_lines(source) if source else {}
         metas = []
-        _MISSING = object()
         for name, new_id in post.items():
             old_id = pre.get(name)
             if old_id is not None and old_id == new_id:

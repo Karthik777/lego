@@ -19,9 +19,12 @@ import ast
 from dataclasses import dataclass
 from typing import Any
 
-REPR_MAX = 60                # truncated repr length kept on VarMeta
-BADGE_MAX = 24               # short badge label length cap
-SMALL_STR_LEN = 32           # str shorter than this gets rendered as full repr
+# Keep tooltips useful without dumping large object reprs into the DOM.
+REPR_MAX = 60
+# Match the codenb/PyCharm-style compact inline label budget.
+BADGE_MAX = 24
+# Short strings read well inline; longer strings are more useful as len=N.
+SMALL_STR_LEN = 32
 
 
 @dataclass
@@ -76,7 +79,8 @@ def _walk_excluding_comprehensions(root):
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             # The def/class statement itself binds a top-level name, but names
             # assigned inside its body are scoped locally and must not steal the
-            # badge line for an outer/user namespace variable.
+            # badge line for an outer/user namespace variable. The node is
+            # still yielded above so assigned_lines() can record the def name.
             continue
         else:
             stack.extend(reversed(list(ast.iter_child_nodes(node))))

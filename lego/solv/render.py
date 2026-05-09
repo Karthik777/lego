@@ -100,8 +100,12 @@ def render_annotated_source(source, var_metas, cell_id=None):
     for m in var_metas:
         by_line.setdefault(m.line, []).append(m)
 
+    src_lines = (source or '').splitlines()
+    if not src_lines:
+        src_lines = ['']
+
     lines = []
-    for i, line in enumerate((source or '').splitlines() or [''], start=1):
+    for i, line in enumerate(src_lines, start=1):
         children = [Span(line or ' ', cls='solv-code-text')]
         for m in by_line.get(i, []):
             cls = 'solv-var-badge' + (' changed' if m.changed else '')
