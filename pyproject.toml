@@ -41,3 +41,11 @@ packages = ["lego"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "cfeasy>=0.0.3",
+    "gheasy>=0.0.2",
+    "koshas>=0.0.16",
+    "vpseasy>=0.0.6",
+]
