@@ -12,7 +12,7 @@ async def change_pwd(chng_pwd: ChangePwd): return chng_pwd
 async def register(reg: Register): return reg
 async def verify_em(ver: VerEmailReq): return ver
 async def resend_ver_link(res: ResendVerLink): return res
-async def error(req): return home(req) if auth_ok(req) else form(err=OathError)
+async def error(req): return home(req) if auth_ok(req) else landing(login_form(req, err=OathError))
 
 def connect(app):
     setup_oath(app)

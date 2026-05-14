@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from fastcore.all import Path
+from fastcore.all import Path, AttrDict
 
 @dataclass(frozen=True)
 class Routes:
@@ -9,4 +9,4 @@ class Routes:
     post = '/blog/{slug}'
     skip = ['/blog', r'/blog/.*']
 
-posts_dir = Path(__file__).parent / 'posts'
+cfg = AttrDict(posts_seed_force=True, posts_dir=Path(__file__).parent / 'posts')

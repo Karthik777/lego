@@ -1,6 +1,6 @@
 from fastcore.all import L
 from lego.core.cfg import database, get_db_pth
-from lego.blog.cfg import posts_dir
+from lego.blog.cfg import cfg
 
 __all__ = ['blog_db', 'posts', 'seed_posts']
 
@@ -36,8 +36,8 @@ def _parse_md(path):
          updated_at=path.stat().st_mtime,
          )
 
-_seeds = L(posts_dir.glob('*.md')).sorted().map(_parse_md)
+_seeds = L(cfg.posts_dir.glob('*.md')).sorted().map(_parse_md)
 
-def seed_posts():
+def seed_posts(force=False):
     ex = L(posts(select='slug')).map(lambda r: r['slug'])
-    [posts.insert(p) for p in _seeds if p['slug'] not in ex]
+    [posts.insert(p, replace=True) for p in _seeds if force or p['slug'] not in ex]

@@ -5,7 +5,8 @@ from lego.core import slug, base, landing, placeholder, not_found, RouteOverride
 from lego.auth import Routes as AR, Step
 from lego.blog.data import posts, seed_posts
 from lego.blog.ui import blog_hero, post_list, post_detail, new_post_form, showcase_cta
-from .cfg import Routes
+from .cfg import Routes, cfg
+
 __all__ = ['connect']
 
 @dataclass
@@ -16,8 +17,7 @@ def _scaf(req, it, title='The Obsession Journal'):
     return it if is_full_page(req, None) else base(it, _get_usr(req), title=title)
 
 def _login_redirect():
-    href = f'{AR.auth_modal}?step={Step.login}'
-    return landing(placeholder('Sign in to write a post', back_link=href, back_text='Sign in'))
+    return landing(placeholder('Sign in to write a post', back_link=RouteOverrides.lgn, back_text='Sign in'))
 
 def blog_index(req, auth=None):
     auth = auth or _get_usr(req)
@@ -43,7 +43,7 @@ def blog_post_get(req, slug: str, auth):
     return _scaf(req, post_detail(post, auth), title=post['title'])
 
 def connect(app):
-    seed_posts()
+    seed_posts(cfg.posts_seed_force)
     app.get(Routes.base)(blog_index)
     app.get('/')(blog_index)
     RouteOverrides.skip += Routes.skip
