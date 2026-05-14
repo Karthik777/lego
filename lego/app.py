@@ -2,7 +2,7 @@ from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONRes
 from contextlib import asynccontextmanager
 from monsterui.all import *
 from .core import *
-from lego import auth as a
+from lego import auth as a, blog as b
 
 __all__ = ['launch', 'lego']
 
@@ -30,12 +30,13 @@ hdrs = [
 
 def before(req, sess): req.scope['auth'] = sess['auth'] if 'auth' in sess else None# add auth to request scope
 def nf(req, exc): return not_found()
-kw,exh = {'class': 'neo-brutalism hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
+kw,exh = {'class': 'hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
 lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, before=before,
                   exts='preload', exception_handlers=exh, on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
 # connect your blocks
-a.connect(lego)
+b.connect(lego)
+a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 
 # optionally add a scheduled backup of data folders
 if cfg.need_backup and not not_prod():
@@ -63,7 +64,7 @@ def showcase(auth):
     return landing(c)
 
 # add default routes. the blocks can override these. the first in line wins.
-lego.get('/')(showcase)
+# lego.get('/')(showcase)
 lego.get('/health')(lambda req: JSONResponse({'status': 'ok'}))
 
 def launch(): serve('lego', 'lego', port=cfg.port)

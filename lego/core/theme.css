@@ -184,3 +184,5 @@ body {
 .hide {
   display: none !important;
 }
+
+html.dark{.inout{filter: invert(1) hue-rotate(180deg);}}

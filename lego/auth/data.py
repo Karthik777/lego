@@ -12,6 +12,10 @@ g_oath = git_oath = None
 def setup_beforeware(app):
     def before(req, sess): return Redirect(Routes.login) if not auth_ok(req) else True
     app.before.append(Beforeware(before, Routes.skip+RouteOverrides.skip))
+    @app.get(Routes.logout)
+    async def logout(session):
+        session.pop('auth', None)
+        return Redirect('/')
 
 def setup_oath(app):
     if not cfg.git_cli and not cfg.g_cli: setup_beforeware(app); return
@@ -109,7 +113,7 @@ def pw_chk(pwd, conf_pwd) -> AppErr | None:
     if not re.search('[!@#$%^&*(),.?\":{}|<>]', pwd): errs.append('Password must contain a special character')
     return AppErr(', '.join(errs), ['password', 'confirm_password']) if errs else None
 
-def tok_chk(tok) -> AppErr | Table:
+def tok_chk(tok, consume=True) -> AppErr | Table:
     if not tok: return InvalidToken
     try:
         ct = confirmation_tokens.selectone(where='token=?', where_args=[tok])
@@ -118,7 +122,7 @@ def tok_chk(tok) -> AppErr | Table:
         uid, typ = data.get('uid'), data.get('typ')
         if not (uid and typ and users[uid]): return InvalidToken
         if not (ct.user_id == uid and ct.type == typ and ct.created_at + int(cfg.tkn_exp) > time.time() and ct.validated != True): return InvalidToken
-        confirmation_tokens.update(dict(user_id=uid, type=typ, validated=True))
+        if consume: confirmation_tokens.update(dict(user_id=uid, type=typ, validated=True))
         return users[uid]
     except (NotFoundError, StopIteration): return InvalidToken
     except Exception: return DefaultError
@@ -220,9 +224,9 @@ class ResetPwdReq:
     def __ft__(self):
         if isinstance(self.catch(), AppErr):
             return landing(placeholder('This link is invalid. Please hit forgot password again.'))
-        return form(Step.reset_pw, token=self.token)
+        return landing(form(Step.reset_pw, token=self.token))
 
-    def catch(self): return tok_chk(self.token)
+    def catch(self): return tok_chk(self.token, consume=False)
 
 @dataclass
 class ResendVerLink:

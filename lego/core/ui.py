@@ -89,14 +89,14 @@ def font_size_switcher():
         Div(UkIcon('case-lower', height=28, width=28), On('setFont("%s");' % ThemeFont.sm), cls=[btn_cls], id='xl-font-btn'))
 
 def svg_img(svg_path, cls='', w=16, h=16, outer_cls='', loading='lazy', **kw):
-    return Div(Img(src=f'/{svg_path}', cls=cls, width=w, height=h, loading=loading, **kw),
+    return Div(Img(src=f'/{svg_path}', cls=f'inout {cls}', width=w, height=h, loading=loading, **kw),
                cls=f'inline-flex items-center justify-center {outer_cls}')
 
 def placeholder(message='placeholder text', back_link='/', back_text='Go Back Home'):
     btn_cls, txt_cls = f'{ButtonT.primary} {ButtonT.sm} uk-btn', f'{TextT.lead} mb-4'
     return Div(P(message, cls=txt_cls), A(back_text, href=back_link, cls=btn_cls), cls=TextT.center)
 
-@cache(ttl=3600*24*30)
+@timed_cache(seconds=3600)
 def montage(svg_paths, cols_sm=3, cols_md=5, cols_lg=6, rows=8, fill_screen=True, cls=BackgroundT.primary, svg_cls=None):
     l=len(svg_paths or [])
     if not l: return None
@@ -104,7 +104,7 @@ def montage(svg_paths, cols_sm=3, cols_md=5, cols_lg=6, rows=8, fill_screen=True
     svgs = islice(cycle(svg_paths.map(svg_img, cls=svg_cls, outer_cls=outer_cls)), int(l*rows) if fill_screen else l)
     return Grid(*svgs, cols_sm=cols_sm, cols_md=cols_md, cols_lg=cols_lg, cols_min=2, cols_xl=cols_lg, cls=cls)
 
-@cache()
+@timed_cache(seconds=3600)
 def typewriter(stat_txt=None, dyn_txt_lst=None, type_sp=250, del_sp=100, pause_end=1000,
                pause_start=500, txt_cls=None, cls=f'm-4 p-4 min-w-64 active'):
     stat_txt = ifnone(stat_txt, f' {s.typwrtr_stat_txt}')
@@ -119,7 +119,7 @@ def typewriter(stat_txt=None, dyn_txt_lst=None, type_sp=250, del_sp=100, pause_e
            '}w();'
     return Div(P(dyn_con, Span(stat_txt), cls=txt_cls), Now(code, sel='#typewriter'), cls=cls)
 
-@cache()
+@timed_cache(seconds=3600)
 def welcome_page(img_dir=s.svg, content=None, title=None, cls=None, cont_cls=None):
     img_paths = globtastic(img_dir, file_re='.svg|.png|.jpg')
     cls = ifnone(cls, 'text-center backdrop-blur-xl p-4 sm:p-8 border border-current')
@@ -168,7 +168,7 @@ def _franken(): return [
 
 _css, _js = Path(__file__).parent / 'theme.css', Path(__file__).parent / 'theme.js'
 
-@cache(p='theme', ttl=3600*24*7)
+@timed_cache(seconds=3600)
 def themes(color='zinc', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
     d = AttrDict(mode='auto', theme='uk-theme-%s' % color, radii=radii.value, shadows=shadows, font=font)
     j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')

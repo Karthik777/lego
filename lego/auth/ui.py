@@ -152,7 +152,7 @@ def form(step=Step.login, email='', name='', token='', g_redirect=None, git_redi
         case Step.forgot_pw: f = forgot_password_form(email, err),
         case Step.reset_pw: f = reset_password_form(token, err),
         case Step.pw_reset_sent: f = password_reset_sent_form(email),
-        case Step.pw_reset_ok: f = password_reset_success_form,
+        case Step.pw_reset_ok: f = password_reset_success_form(),
         case Step.em_ver: f = email_verify_form(email),
         case Step.em_ok: f = email_verified_form(),
         case Step.ver_err: f = verify_error_form(email, err),
