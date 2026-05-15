@@ -1,8 +1,10 @@
-from fasthtml.common import A, Div, P, Span, Br
+from fasthtml.common import A, Div, P, Span, Br, Input
 from fasthtml.components import Uk_input_pin
+from monsterui.all import Modal
 from monsterui.franken import H3, Button, Form, LabelInput, H4, UkIcon, TextT, ButtonT
 from .cfg import Routes, AppErr, Step, EmailNotVerified
-from lego.core import cache
+from lego.core import cache, typewriter
+from lego.core.cfg import cfg as s
 
 FORM_CLS = 'uk-form-stacked space-y-6 uk-form-sm'
 LINK_CLS = 'uk-btn-text'
@@ -71,9 +73,10 @@ def otp_form():
         P(A('Resend OTP', cls=LINK_CLS, hx_post=Routes.resend_verification, hx_target='#auth-container'), cls=f'{TextT.center} uk-margin-small-top')))
 
 @cache('login_form', ttl=3600*24*30)
-def login_form(email, g_redirect, git_redirect, err, *args):
+def login_form(email, g_redirect, git_redirect, err, next='', *args):
     is_social_on = g_redirect or git_redirect
     return _form(Routes.login, (
+        Input(type='hidden', name='next', value=next),
         SocialLoginButtons(g_redirect, git_redirect),
         EmailPasswordField(email, err),
         _err_div(err),
@@ -133,6 +136,11 @@ def verify_error_form(email, err, *args):
                     hx_target='#auth-container'), cls='uk-text-center uk-margin-medium-top'),
                 _back_to_login(), cls=FORM_CLS)
 
+def amodal(content, title=s.app_sh):
+    ftr = P(s.ftr_txt, cls='text-xs mt-4')
+    ds = 'max-w-80 uk-margin-auto-vertical text-center'
+    return Modal(H3(title), typewriter(), content, ftr, dialog_cls=ds, id='auth-modal', hx_open=True)
+
 def resend_verify_form(email, err, *args):
     return _form(Routes.resend_verification, (
         H4('Resend Verification Email', cls='uk-text-center text-xl font-semibold uk-margin-medium-top'),
@@ -142,10 +150,9 @@ def resend_verify_form(email, err, *args):
         _back_to_login()))
 
 @cache('auth_form', ttl=3600*24*7)
-def form(step=Step.login, email='', name='', token='', g_redirect=None, git_redirect=None, err=None, contained=False):
-    f = None
+def form(step=Step.login,email='',name='',token='',g_redirect=None,git_redirect=None,err=None,contained=False,next=''):
     match step:
-        case Step.login: f = login_form(email, g_redirect, git_redirect, err),
+        case Step.login: f = login_form(email, g_redirect, git_redirect, err, next),
         case Step.reg: f = register_form(name, email, err),
         case Step.ph: f = phone_form(),
         case Step.otp: f = otp_form(),

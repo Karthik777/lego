@@ -48,7 +48,8 @@ cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
                       typwrtr_stat_txt='like lego',
                       data_root=data_root, backup_path=backups,
                       db=get_db_pth(), static=static,
-                      svg=in_static('svg'), log_file=get_log_pth())
+                      svg=in_static('svg'), log_file=get_log_pth(),
+                      github_repo=os.getenv('GITHUB_REPO', 'Karthik777/lego'))
 
 def not_prod(): return cfg.mode != 'production'
 def get_db_dir(): return Path(cfg.db).parent if cfg.db else Path(data_root) / 'db'
@@ -67,7 +68,7 @@ def send_email(to, subject, html: FT, from_='accounts@lego.com'):
     r = resend.Emails.send({'from': from_, 'to': to, 'subject': subject, 'html': html})
     print(f'Resend Result: {r}')
 
-def home(): return Redirect(RouteOverrides.home)
+def home(next=None): return Redirect(next or RouteOverrides.home)
 
 @dataclass
 class RouteOverrides: lgn, lgt, home, skip = '/lgn', '/lgt', cfg.domain, ['/health']

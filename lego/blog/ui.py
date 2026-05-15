@@ -1,10 +1,11 @@
 from collections import Counter
+from datetime import datetime
 from fasthtml.common import *
 from monsterui.all import *
 from monsterui.franken import render_md, FrankenRenderer
-from lego.auth.cfg import Routes as AR, Step
 from lego.blog.data import posts
 from lego.core import RouteOverrides
+from lego.blog.cfg import Routes
 
 class BlogRenderer(FrankenRenderer):
     def __init__(self, *args, **kwargs):
@@ -23,8 +24,36 @@ class BlogRenderer(FrankenRenderer):
                 f'<figcaption class="text-xs text-center mt-1 text-muted-foreground">{alt}</figcaption>'
                 f'</figure>')
 
-__all__ = ['blog_hero', 'post_card', 'post_list', 'locked_teaser', 'post_detail',
-           'new_post_form', 'showcase_cta']
+    def render_inline_code(self, token):
+        import html as _html
+        code = _html.escape(token.children[0].content if token.children else '')
+        return f'<code class="font-mono text-sm bg-zinc-100 dark:bg-zinc-800 text-primary px-1.5 py-0.5 rounded not-prose">{code}</code>'
+
+    def render_block_code(self, token):
+        import html as _html
+        lang = (token.language or 'text').strip()
+        code = _html.escape(token.children[0].content if token.children else '')
+        copy_btn = (
+            '<button onclick="blogCopyCode(this)" '
+            'class="copy-btn absolute top-3 right-3 opacity-0 group-hover:opacity-100 '
+            'transition-opacity text-xs text-zinc-400 hover:text-white '
+            'flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 px-2.5 py-1 rounded">'
+            '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" '
+            'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<rect width="14" height="14" x="8" y="8" rx="2"/>'
+            '<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>'
+            '</svg>Copy</button>'
+        )
+        return (
+            f'<div class="relative group my-6">'
+            f'<pre class="!bg-zinc-950 !rounded-xl !p-5 !overflow-x-auto !text-sm !leading-relaxed !m-0">'
+            f'<code class="language-{lang}">{code}</code>'
+            f'</pre>'
+            f'{copy_btn}'
+            f'</div>'
+        )
+
+__all__ = ['blog_hero', 'post_card', 'post_list', 'locked_teaser', 'post_detail', 'new_post_form', 'showcase_cta']
 
 # ── UI helpers ────────────────────────────────────────────────────────────────
 
@@ -33,24 +62,15 @@ _ACCENT_BG = 'bg-primary/10 border border-primary/20'
 _LOCK_CLS  = 'absolute inset-0 backdrop-blur-sm flex flex-col items-center justify-center rounded-md z-10'
 
 # Strip hardcoded size/weight from the default franken_class_map so uk-* and theme control sizing.
-_MD_MODS = {
-    'h1': 'uk-h1 mt-12 mb-6',
-    'h2': 'uk-h2 mt-10 mb-5',
-    'h3': 'uk-h3 mt-8 mb-4',
-    'h4': 'uk-h4 mt-6 mb-3',
-    'p':  'leading-relaxed mb-6',
-    'ul': 'uk-list uk-list-bullet space-y-2 mb-6 ml-6',
-    'ol': 'uk-list uk-list-decimal space-y-2 mb-6 ml-6',
-    'hr': 'clear-both my-8 border-border',
-}
+_MD_MODS = {'h1': 'uk-h1 mt-12 mb-6','h2': 'uk-h2 mt-10 mb-5','h3': 'uk-h3 mt-8 mb-4','h4': 'uk-h4 mt-6 mb-3',
+            'p':  'leading-relaxed mb-6', 'ul': 'uk-list uk-list-bullet space-y-2 mb-6 ml-6',
+            'ol': 'uk-list uk-list-decimal space-y-2 mb-6 ml-6', 'hr': 'clear-both my-8 border-border'}
 
-def _fmt_date(ts):
-    import datetime
-    return datetime.datetime.fromtimestamp(ts).strftime('%b %d, %Y')
+def _fmt_date(ts): datetime.fromtimestamp(ts).strftime('%b %d, %Y')
 
 def _author_chip(name, date_ts):
-    return ArticleMeta(Span(name, cls=f'font-medium {_ACCENT}'), Span('·', cls='mx-1 opacity-40'),
-        Span(_fmt_date(date_ts), cls='font-mono'), cls='flex items-center')
+    return ArticleMeta(Span(name, cls=f'font-medium {_ACCENT}'),
+        Span('·', cls='mx-1 opacity-40'), Span(_fmt_date(date_ts), cls='font-mono'), cls='flex items-center')
 
 def _visibility_badge(v):
     if v != 'members': return ''
@@ -65,7 +85,8 @@ def _first_image(body):
 def _sign_in_cta(_slug):
     return Div(UkIcon('lock', width=16, height=16, cls='text-muted-foreground'),
         P('Members only', cls=f'{TextT.sm} m-0'),
-        A('Sign in to read', href=RouteOverrides.lgn, cls=f'uk-btn {ButtonT.primary} {ButtonT.xs}'),
+        A('Sign in to read', hx_get=f'{RouteOverrides.lgn}?next=/blog/{_slug}',
+          hx_target='body', hx_swap='beforeend', cls=f'uk-btn {ButtonT.primary} {ButtonT.xs}'),
         cls=_LOCK_CLS)
 
 
@@ -75,7 +96,8 @@ _CODE_PEEK = '''\
 @rt('/blog/{slug}')
 def blog_post(req, auth, slug:str):
     post = posts[slug]
-    if post.visibility != 'members': return post_detail(post, auth)
+    if post.visibility != 'members': 
+        return post_detail(post, auth)
     return locked_teaser(post)
 '''
 
@@ -88,9 +110,8 @@ def blog_hero(usr=None):
             cls='flex items-center gap-2 mb-4'),
         H1('The Obsession Journal', cls='mb-3 tracking-tight'),
         P('Side projects. Package maintenance. The slow accumulation of taste.', cls='mb-6 leading-relaxed'),
-        Div((A('Write a post', href='/blog/new', hx_get='/blog/new', hx_target='#main-content',
-               hx_push_url='true', cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}') if usr else
-             A('Sign in to write', href=RouteOverrides.lgn, cls=f'uk-btn {ButtonT.default} {ButtonT.sm}')),
+        Div(A('Write a post' if usr else 'Sign in to write', href=Routes.new,
+              cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}'),
             A('Read the story', href='#blog-posts', cls=f'uk-btn {ButtonT.ghost} {ButtonT.sm}'),
             cls='flex gap-3'), cls='flex flex-col justify-center')
 
@@ -104,12 +125,13 @@ def blog_hero(usr=None):
                 Span('blog.py', cls='text-xs text-zinc-400 font-mono ml-2'),
                 Span(f'{len(_CODE_PEEK.splitlines())} lines', cls='text-xs text-zinc-600 font-mono ml-auto'),
                 cls='flex items-center gap-1.5 mb-3 pb-2 border-b border-zinc-800'),
-            Pre(Code(_CODE_PEEK, cls='text-xs leading-relaxed text-zinc-300 whitespace-pre-wrap break-all'),
-                cls='overflow-x-auto'),
+            Pre(Code(_CODE_PEEK, cls='language-python text-xs leading-relaxed'),
+                cls='overflow-x-auto !bg-transparent !m-0 !p-0'),
             cls='bg-zinc-950 rounded-xl p-4 font-mono text-xs shadow-xl ring-1 ring-zinc-800 overflow-hidden'),
         cls='flex items-center min-w-0')
 
     return Section(
+        *_prism(),
         Div(left, right,
             cls='grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-8 md:gap-16 items-center [&>*]:min-w-0'),
         cls='px-4 py-12 md:py-20 max-w-5xl mx-auto')
@@ -191,13 +213,14 @@ def post_list(all_posts, usr=None):
         Div(*[_grid_card(p, usr) for p in grid_posts],
             cls='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-2'))
 
-    return Div(top, Div(cls='border-t border-border mb-8'), grid_section,
-               id='blog-posts', cls='max-w-5xl mx-auto px-4 py-8')
+    return Div(top, grid_section, id='blog-posts', cls='max-w-5xl mx-auto px-4 py-8')
 
 
 # ── Post detail ───────────────────────────────────────────────────────────────
 
 def locked_teaser(post):
+    _next = f'/blog/{post["slug"]}'
+    _hx = dict(hx_get=f'{RouteOverrides.lgn}?next={_next}', hx_target='body', hx_swap='beforeend')
     return Section(
         Div(
             _author_chip(post['author_name'], post['created_at']),
@@ -207,26 +230,45 @@ def locked_teaser(post):
         P(post['summary'], cls='mb-8 leading-relaxed'),
         Div(Div(cls='absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background'),
             Div(Div(UkIcon('lock', width=24, height=24, cls=_ACCENT),
-                    H3('Members only', cls='m-0 tracking-tight'),
-                    P('Sign in to read the full post.', cls=f'{TextT.sm} m-0'),
-                    A('Sign in with Google', href=RouteOverrides.lgn, cls=f'uk-btn {ButtonT.primary} {ButtonT.sm} mt-2'),
-                    A('or create a free account', href=RouteOverrides.lgn, cls=f'{_ACCENT} text-xs underline-offset-2 hover:underline'),
+                H3('Members only', cls='m-0 tracking-tight'),
+                P('Sign in to read the full post.', cls=f'{TextT.sm} m-0'),
+                A('Sign in with Google', **_hx, cls=f'uk-btn {ButtonT.primary} {ButtonT.sm} mt-2'),
+                A('or create a free account', **_hx, cls=f'{_ACCENT} text-xs underline-offset-2 hover:underline'),
                     cls='flex flex-col items-center gap-2 text-center'),
-                cls='absolute bottom-8 left-0 right-0 flex justify-center'),
-            cls='relative min-h-[200px] overflow-hidden rounded-lg'),
-        cls='max-w-2xl mx-auto px-4 py-12')
+            cls='absolute bottom-8 left-0 right-0 flex justify-center'),
+        cls='relative min-h-[200px] overflow-hidden rounded-lg'),
+    cls='max-w-2xl mx-auto px-4 py-12')
+
+_PRISM_VER = '1.29.0'
+def _prism():
+    base = f'https://cdn.jsdelivr.net/npm/prismjs@{_PRISM_VER}'
+    return [
+        Link(rel='stylesheet', href=f'{base}/themes/prism-okaidia.min.css'),
+        Script(src=f'{base}/components/prism-core.min.js'),
+        Script(src=f'{base}/plugins/autoloader/prism-autoloader.min.js'),
+        Script("""
+function blogCopyCode(btn) {
+    const code = btn.closest('.group').querySelector('code');
+    navigator.clipboard.writeText(code.innerText).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied';
+        btn.classList.add('!opacity-100','text-green-400');
+        setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('!opacity-100','text-green-400'); }, 2000);
+    });
+}
+"""),
+    ]
 
 def post_detail(post, usr=None):
     if post['visibility'] == 'members' and not usr: return locked_teaser(post)
     back = A('← All posts', href='/blog',
          cls=f'{_ACCENT} text-xs font-mono hover:underline mb-8 block transition-opacity opacity-70 hover:opacity-100')
-    meta = Div(
-        _author_chip(post['author_name'], post['created_at']),
+    meta = Div(_author_chip(post['author_name'], post['created_at']),
         _visibility_badge(post['visibility']), cls='flex items-center gap-3 mb-6')
     title = ArticleTitle(post['title'], cls='mb-4 tracking-tight')
     body = Article(render_md(post['body'], class_map_mods=_MD_MODS, img_dir='/static/blog', renderer=BlogRenderer),
                    cls='overflow-auto')
-    return Section(back, meta, title, body, cls='max-w-3xl mx-auto px-4 py-12')
+    return *_prism(), Section(back, meta, title, body, cls='max-w-3xl mx-auto px-4 py-12')
 
 
 # ── New post form ─────────────────────────────────────────────────────────────
@@ -269,13 +311,14 @@ def showcase_cta(usr=None):
         cta = Div(
             P(f'You\'re signed in as {usr["display_name"]}. This is your blog now.',
               cls=f'{TextT.sm} mb-4'),
-            A('Write your first post', href='/blog/new', cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}'),
+            A('Write your first post', href=Routes.new, cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}'),
             cls='text-center')
     else:
         cta = Div(
             P('Sign in with Google and this becomes your blog. Same code, your content.',
               cls=f'{TextT.sm} mb-4'),
-            A('Sign in with Google', href=RouteOverrides.lgn, cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}'),
+            A('Sign in with Google', hx_get=f'{RouteOverrides.lgn}?next=/blog',
+              hx_target='body', hx_swap='beforeend', cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}'),
             cls='text-center')
 
     return Section(

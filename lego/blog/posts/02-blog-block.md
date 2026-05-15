@@ -6,7 +6,8 @@ visibility: members
 author_name: Karthik
 ---
 
-The blog block has four files: `cfg.py` for route strings, `data.py` for the database, `ui.py` for components, `app.py` for route handlers. Same structure as the auth block.
+The blog block has four files: `cfg.py` for route strings, `data.py` for the database, `ui.py` for components, `app.py` for route handlers.
+Same structure as any lego block.
 
 ## The table
 
@@ -19,21 +20,17 @@ db.t.posts.create(
     created_at=float, updated_at=float,
     pk='id', if_not_exists=True, transform=True,
 )
+posts = db.t.posts
 ```
 
 The `visibility` column is either `'public'` or `'members'`. The route handler checks it. Members-only without auth returns the teaser. That is the entire content-gating implementation: one string comparison in one route handler.
 
-## No migrations
-
-`if_not_exists=True` means the `create()` call is safe to run on every startup. `transform=True` means adding a column to the schema definition causes fastlite to run `ALTER TABLE` automatically on next start. No migration files, no migration runner, no version tracking. For a blog with one table and one developer, Alembic is solving a problem that does not exist here.
-
 ## Seeding
 
 ```python
-def seed_posts(tbl=None):
-    tbl = tbl or posts
-    ex = {p['slug'] for p in tbl(select='slug')}
-    [tbl.insert(p) for p in _SEED if p['slug'] not in ex]
+def seed_posts(force=False):
+	ex = [r['slug'] for r in posts(select='slug')]
+	[posts.insert(p, replace=True) for p in _seeds if force or p['slug'] not in ex]
 ```
 
 Two lines. Idempotent. Runs on every `connect()` call.

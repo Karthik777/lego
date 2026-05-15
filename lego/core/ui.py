@@ -1,16 +1,17 @@
 import ujson as json
 from fasthtml.common import *
+from fastcore.net import urlread
 from itertools import islice, cycle
 from monsterui.all import *
 from monsterui.foundations import *
 from monsterui.core import ThemeRadii, ThemeShadows
-from .cfg import cfg as s, RouteOverrides as r, not_prod, cache
+from .cfg import cfg as s, RouteOverrides as r, not_prod
 from .icons import icon_auto
 from .utils import loadX
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
-           'welcome', 'not_found', 'email_template', 'main', 'themes', 'auth_page']
+           'welcome', 'not_found', 'email_template', 'main', 'themes', 'github_star']
 
 class PresetsT:
     animate_shine = 'shadow-md'
@@ -49,7 +50,24 @@ def logout(usr=None):
     btn_cls = f'{ButtonT.ghost} {ButtonT.sm} text-destructive'
     return Div(A(UkIcon('log-out'), href=r.lgt, cls=btn_cls, id='logout-btn'))
 
-def login(): return Div(A('Login', href=r.lgn, cls=f'uk-btn {ButtonT.primary} {ButtonT.xs} lgn-btn'))
+def login(): return Div(A('Login', hx_get=r.lgn, hx_target='body', hx_swap='beforeend', cls=f'uk-btn {ButtonT.primary} {ButtonT.xs} lgn-btn'))
+
+_GH_SVG = '<svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
+
+@timed_cache(seconds=3600)
+def _fetch_stars(repo):
+    n = urlread(f'https://api.github.com/repos/{repo}', return_json=True, timeout=3).get('stargazers_count', 0)
+    print(n)
+    return f'{n / 1000:.1f}k' if n >= 1000 else str(n)
+
+def github_star(repo=None):
+    repo = ifnone(repo, s.github_repo)
+    if not repo: return None
+    stars = _fetch_stars(repo)
+    pill_cls = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-200 text-xs hover:bg-zinc-800 transition-colors no-underline'
+    inner = [NotStr(_GH_SVG)]
+    if stars: inner.append(Span(stars))
+    return A(*inner, href=f'https://github.com/{repo}', target='_blank', rel='noopener noreferrer', cls=pill_cls)
 
 class NavBarT:
     default = 'top-0 right-0 left-0 z-50 border-b border-muted bg-background'
@@ -61,7 +79,7 @@ def navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobil
     inc_fnt_sz, inc_mode_sw, inc_th_sw, inc_avtr = True, True, not_prod(), usr_ok
     sep = Div('|', cls=f'{ButtonT.icon} {ButtonT.sm} {TextT.gray} {TextT.xl}')
     cmps = [(font_size_switcher(), inc_fnt_sz), (mode_switcher(), inc_mode_sw), (theme_switcher(), inc_th_sw),
-            (sep, True), (logout(usr), inc_avtr), (login(), not inc_avtr)]
+            (sep, True), (github_star(), True), (logout(usr), inc_avtr), (login(), not inc_avtr)]
     lft = A(H4(title, cls='m-0'), href='/')
     rgt = Div(*[c for c, inc in cmps if inc], cls='flex items-center gap-1')
     return Div(Nav(lft, rgt, cls=f'pl-4 pr-2 py-1 justify-between flex items-center {mobile_cls}'), cls=[style, cls])
@@ -133,17 +151,11 @@ def welcome_page(img_dir=s.svg, content=None, title=None, cls=None, cont_cls=Non
 def landing(content, title=s.app_nm, usr=None):
     return base(welcome_page(content=content, title=title), usr=usr, style=NavBarT.glass)
 
-def auth_page(content, title=s.app_nm):
-    card_cls = 'text-center backdrop-blur-xl p-4 sm:p-8 border border-muted rounded-lg'
-    cont_cls = 'min-h-screen flex items-center justify-center max-w-80'
-    ftr = P(s.ftr_txt, cls='text-xs mt-4')
-    card = Div(H2(title, cls=PresetsT.shine), content, ftr, cls=card_cls)
-    return Section(Container(card, cls=cont_cls), cls='bg-background')
-
 def base(content=None, usr=None, title=s.app_nm, sh=s.app_sh, style=NavBarT.glass, **kwargs):
     return Title(title), Div(navbar(usr=usr, title=sh, style=style), main(content, **kwargs))
 
-def main(content=None, cls=None, **kw): return Div(content if content else None, cls=stringify(['uk-width-1-1', cls]), id='main-content', **kw)
+def main(content=None, cls=None, **kw):
+    return Div(content if content else None, cls=stringify(['uk-width-1-1', cls]), id='main-content', **kw)
 
 def email_template(content, title=s.app_nm, usr=None):
     if isinstance(usr, dict): content = f'Hello {usr.get("usr_name", "Vedic Reader Patron")} \n\n {content}'

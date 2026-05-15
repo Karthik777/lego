@@ -17,7 +17,8 @@ def connect(app):
     app.get('/blog/{slug}')(blog_post_get)
 ```
 
-No decorators. No class inheritance. No framework scanning for annotated functions. You call it in `app.py` and the block registers its routes, creates its table, and seeds its data. The app does not need to know the block exists beyond that one call.
+You call it in `app.py` and the block registers its routes, creates its table, and seeds its data. 
+The app does not need to know the block exists beyond that one call.
 
 Auth works the same way. The full wiring in `app.py` is two lines:
 
@@ -48,7 +49,3 @@ The `cache()` decorator wraps diskcache's `memoize_stampede`:
 def showcase(auth):
     ...
 ```
-
-I could use Redis. Redis has cluster mode, better pub/sub, and years of production hardening. It also requires a separate process, a connection pool, and something to restart it when it crashes. For VedicReader running on one Hetzner CAX11, that is three more things to operate. diskcache gives TTL, LRU eviction, and stampede protection using SQLite on disk. When I need Redis, I swap the backend. The `cache()` decorator API does not change.
-
-One process, one SQLite file for the app DB, one for the cache, one for the blog. Backups run via cfeasy to Cloudflare R2 on a cron. The whole thing fits comfortably on a 4-euro VPS.

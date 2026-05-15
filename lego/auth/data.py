@@ -127,13 +127,13 @@ def tok_chk(tok, consume=True) -> AppErr | Table:
     except (NotFoundError, StopIteration): return InvalidToken
     except Exception: return DefaultError
 
-def login_form(req, email='', err=None, wrap=False):
+def login_form(req, email='', err=None, wrap=False, next=''):
     global g_oath, git_oath
     g_redirect = git_redirect = None
     if g_oath: g_redirect = g_oath.login_link(req)
     if git_oath: git_redirect = git_oath.login_link(req)
-    c = form(git_redirect=git_redirect, g_redirect=g_redirect, email=email, err=err)
-    return landing(c) if wrap else c
+    c = form(git_redirect=git_redirect, g_redirect=g_redirect, email=email, err=err, next=next)
+    return amodal(c) if wrap else c
 
 def send_ver_em(u, ver_link):
     link = A('Verify Your Account', href=ver_link, cls='text-blue-600 underline p-1')
@@ -149,12 +149,12 @@ def send_pw_ch_em(u, pw_chng_lnk):
 
 @dataclass
 class Login:
-    email: str = None; password: str = None
+    email: str = None; password: str = None; next: str = ''
 
     def __ft__(self, req, session):
         err = self.catch()
-        if not err: set_auth(self.email, req); return home()
-        return login_form(req, self.email, err)
+        if not err: set_auth(self.email, req); return Redirect(self.next or '/')
+        return login_form(req, self.email, err, next=self.next)
 
     def catch(self):
         err = reqd_chk(vars(self))
@@ -286,9 +286,7 @@ class ChangePwd:
 
 class GoogleAuth(OAuth):
     pr = 'google'
-    def check_invalid(self, req, session, auth):
-        return login_form(req, wrap=True) if not auth_ok(req) else False
-
+    def check_invalid(self, req, session, auth): return login_form(req, wrap=True) if not auth_ok(req) else False
     def get_auth(self, info, ident, session, state):
         try:
             u = usr_by_oa(self.pr, ident)
@@ -298,13 +296,11 @@ class GoogleAuth(OAuth):
                                    auth_provider=self.pr, provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return home()
+        return Redirect(state) if state else home()
 
 class GithubAuth(OAuth):
     pr = 'github'
-    def check_invalid(self, req, session, auth):
-        return login_form(req, wrap=True) if not auth_ok(req) else False
-
+    def check_invalid(self, req, session, auth): return login_form(req, wrap=True) if not auth_ok(req) else False
     def get_auth(self, info, ident, session, state):
         try: u=usr_by_oa(self.pr, ident)
         except (NotFoundError, StopIteration):
@@ -314,4 +310,4 @@ class GithubAuth(OAuth):
                                   provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return home()
+        return Redirect(state) if state else home()
