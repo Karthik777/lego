@@ -9,9 +9,9 @@ def blog_db(path=None):
     from fastcore.all import ifnone
     path = ifnone(path, get_db_pth('blog'))
     db = database(path)
-    db.t.posts.create(id=int, slug=str, title=str, summary=str, body=str,author_id=int, author_name=str, visibility=str,
-        created_at=float, updated_at=float, pk='id', if_not_exists=True, transform=True,
-        not_null={'slug', 'title', 'body', 'visibility'}, defaults=dict(visibility='public'))
+    db.t.posts.create(slug=str, title=str, summary=str, body=str, author_id=int, author_name=str, visibility=str,
+        created_at=float, updated_at=float, layout=str, pk='slug', if_not_exists=True, transform=True,
+        not_null={'title', 'body', 'visibility'}, defaults=dict(visibility='public', layout='single'))
     db.t.posts.create_index(['slug'], unique=True, if_not_exists=True)
     return db
 
@@ -36,6 +36,7 @@ def _parse_md(path):
          author_id=0,
          author_name=meta.get('author_name', 'Karthik'),
          visibility=meta.get('visibility', 'public'),
+         layout=meta.get('layout', 'single'),
          created_at=ts,
          updated_at=ts,
          )

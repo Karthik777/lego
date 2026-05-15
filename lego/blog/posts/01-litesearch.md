@@ -5,6 +5,7 @@ title: litesearch: hybrid search that fits in a file
 summary: SQLite FTS5 meets vector similarity in one library. No Postgres, no Elasticsearch, no servers. Keyword precision and semantic recall, merged with reciprocal rank fusion.
 visibility: public
 author_name: Karthik
+layout: newspaper
 ---
 
 Search has two modes that both fall short alone.
@@ -28,8 +29,9 @@ enc   = FastEncode()
 
 embs = enc.encode_document([doc for doc, name in docs])
 store.insert_all([
-    {'content': doc, 'embedding': e.tobytes(), 'metadata': json.dumps({'file': name})}
-    for (doc, name), e in zip(docs, embs)
+    dict(content=d,embedding=e.tobytes(),
+         metadata=json.dumps({'file': n}))
+    for (d, n), e in zip(docs, embs)
 ])
 ```
 

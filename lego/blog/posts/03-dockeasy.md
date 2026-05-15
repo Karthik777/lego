@@ -44,7 +44,8 @@ df = detect_app('.')                              # sniffs go.mod, Cargo.toml, p
 from dockeasy import drun, containers, logs, stop, rm
 
 tag = df.build(tag='myapp:latest', path='.')      # builds via docker compose build
-cid = drun(tag, detach=True, ports={5001: 5001}, name='myapp', check=True)
+cid = drun(tag, detach=True, ports={5001: 5001},
+           name='myapp', check=True)
 print(logs('myapp', n=20))
 stop('myapp'); rm('myapp')
 ```

@@ -29,8 +29,10 @@ The `visibility` column is either `'public'` or `'members'`. The route handler c
 
 ```python
 def seed_posts(force=False):
-	ex = [r['slug'] for r in posts(select='slug')]
-	[posts.insert(p, replace=True) for p in _seeds if force or p['slug'] not in ex]
+    ex = [r['slug'] for r in posts(select='slug')]
+    for p in seeds:
+        if force or p['slug'] not in ex:
+            posts.insert(p, replace=True)
 ```
 
 Two lines. Idempotent. Runs on every `connect()` call.

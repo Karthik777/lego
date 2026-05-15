@@ -32,24 +32,13 @@ class BlogRenderer(FrankenRenderer):
     def render_block_code(self, token):
         import html as _html
         lang = (token.language or 'text').strip()
+        if lang == 'col': return '<div style="break-after:column"></div>'
         code = _html.escape(token.children[0].content if token.children else '')
-        copy_btn = (
-            '<button onclick="blogCopyCode(this)" '
-            'class="copy-btn absolute top-3 right-3 opacity-0 group-hover:opacity-100 '
-            'transition-opacity text-xs text-zinc-400 hover:text-white '
-            'flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 px-2.5 py-1 rounded">'
-            '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" '
-            'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-            '<rect width="14" height="14" x="8" y="8" rx="2"/>'
-            '<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>'
-            '</svg>Copy</button>'
-        )
         return (
-            f'<div class="relative group my-6">'
-            f'<pre class="!bg-zinc-950 !rounded-xl !p-5 !overflow-x-auto !text-sm !leading-relaxed !m-0">'
+            f'<div class="my-6" style="break-inside:avoid">'
+            f'<pre class="!m-0">'
             f'<code class="language-{lang}">{code}</code>'
             f'</pre>'
-            f'{copy_btn}'
             f'</div>'
         )
 
@@ -96,7 +85,7 @@ _CODE_PEEK = '''\
 @rt('/blog/{slug}')
 def blog_post(req, auth, slug:str):
     post = posts[slug]
-    if post.visibility != 'members': 
+    if post.visibility == 'public': 
         return post_detail(post, auth)
     return locked_teaser(post)
 '''
@@ -131,9 +120,9 @@ def blog_hero(usr=None):
         cls='flex items-center min-w-0')
 
     return Section(
-        *_prism(),
+        *_hljs(),
         Div(left, right,
-            cls='grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-8 md:gap-16 items-center [&>*]:min-w-0'),
+            cls='grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center [&>*]:min-w-0'),
         cls='px-4 py-12 md:py-20 max-w-5xl mx-auto')
 
 
@@ -239,36 +228,51 @@ def locked_teaser(post):
         cls='relative min-h-[200px] overflow-hidden rounded-lg'),
     cls='max-w-2xl mx-auto px-4 py-12')
 
-_PRISM_VER = '1.29.0'
-def _prism():
-    base = f'https://cdn.jsdelivr.net/npm/prismjs@{_PRISM_VER}'
+def _hljs():
+    base = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@latest/build'
+    hjc  = 'https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy@latest/dist'
+    dark_href  = f'{base}/styles/atom-one-dark.min.css'
+    light_href = f'{base}/styles/atom-one-light.min.css'
     return [
-        Link(rel='stylesheet', href=f'{base}/themes/prism-okaidia.min.css'),
-        Script(src=f'{base}/components/prism-core.min.js'),
-        Script(src=f'{base}/plugins/autoloader/prism-autoloader.min.js'),
-        Script("""
-function blogCopyCode(btn) {
-    const code = btn.closest('.group').querySelector('code');
-    navigator.clipboard.writeText(code.innerText).then(() => {
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Copied';
-        btn.classList.add('!opacity-100','text-green-400');
-        setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('!opacity-100','text-green-400'); }, 2000);
-    });
-}
-"""),
+        Link(id='hljs-theme', rel='stylesheet', href=dark_href),
+        Script(src=f'{base}/highlight.min.js'),
+        Script(src=f'{base}/languages/python.min.js'),
+        Script(src=f'{hjc}/highlightjs-copy.min.js'),
+        Link(rel='stylesheet', href=f'{hjc}/highlightjs-copy.min.css'),
+        Style('code.hljs{display:block;padding:1.25rem;border-radius:.75rem;font-size:.875rem;line-height:1.625;overflow-x:auto}'
+              'pre:has(>code.hljs){background:transparent!important;padding:0!important;margin:0!important}'),
+        Script(f"""
+const _hd='{dark_href}',_hl='{light_href}',_he=document.getElementById('hljs-theme');
+function _st(){{if(_he)_he.href=document.documentElement.classList.contains('dark')?_hl:_hd;}}
+_st();
+new MutationObserver(_st).observe(document.documentElement,{{attributes:true,attributeFilter:['class']}});
+hljs.addPlugin(new CopyButtonPlugin());
+htmx.onLoad(hljs.highlightAll);
+""", type='module'),
     ]
+
+_NP_STYLE = Style(
+    '.np-body{column-count:1}'
+    '@media(min-width:768px){'
+    '  .np-body{column-count:2;column-gap:2.5rem}'
+    '  .np-body p,.np-body h2,.np-body h3,.np-body h4,.np-body ul,.np-body ol{break-inside:avoid}'
+    '  .np-body h2,.np-body h3,.np-body h4{break-before:avoid}'
+    '}'
+)
 
 def post_detail(post, usr=None):
     if post['visibility'] == 'members' and not usr: return locked_teaser(post)
+    newspaper = post.get('layout', 'single') == 'newspaper'
     back = A('← All posts', href='/blog',
          cls=f'{_ACCENT} text-xs font-mono hover:underline mb-8 block transition-opacity opacity-70 hover:opacity-100')
     meta = Div(_author_chip(post['author_name'], post['created_at']),
         _visibility_badge(post['visibility']), cls='flex items-center gap-3 mb-6')
     title = ArticleTitle(post['title'], cls='mb-4 tracking-tight')
     body = Article(render_md(post['body'], class_map_mods=_MD_MODS, img_dir='/static/blog', renderer=BlogRenderer),
-                   cls='overflow-auto')
-    return *_prism(), Section(back, meta, title, body, cls='max-w-3xl mx-auto px-4 py-12')
+                   cls='np-body overflow-auto' if newspaper else 'overflow-auto')
+    section_cls = 'max-w-5xl mx-auto px-4 py-12' if newspaper else 'max-w-3xl mx-auto px-4 py-12'
+    extras = _hljs() + ([_NP_STYLE] if newspaper else [])
+    return *extras, Section(back, meta, title, body, cls=section_cls)
 
 
 # ── New post form ─────────────────────────────────────────────────────────────
@@ -324,7 +328,7 @@ def showcase_cta(usr=None):
     return Section(
         Card(CardBody(
             H2('lego is the template', cls='mb-2 text-center tracking-tight'),
-            P('8 packages. 4 years. One side project that kept growing.',
+            P('8 packages. 2 years. One side project that kept growing.',
               cls=f'{TextT.sm} text-center'),
             pkg_badges,
             P('Each package started as a problem in a side project. lego wraps the ones you need for a '

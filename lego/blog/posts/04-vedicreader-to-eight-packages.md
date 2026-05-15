@@ -8,7 +8,7 @@ author_name: Karthik
 
 VedicReader started as a practical problem. I wanted a good interface for Vedic texts in Tamil, Sanskrit, and Malayalam, 
 something I could use on a phone while reading. Nothing available did what I wanted, so I built it. 
-The stack is FastHTML,MonsterUI,SQLite.
+The stack is FastHTML, MonsterUI, SQLite.
 
 The first real problem was search. The texts are long, the queries are specific, and standard FTS5 was not good enough on its own. 
 So litesearch happened: hybrid search over SQLite using FTS5 and vector similarity with reciprocal rank fusion reranking. 

@@ -5,6 +5,7 @@ title: kosha: what a coding agent should know before it types
 summary: A dev-time knowledge base that indexes your repo and installed packages into a hybrid search database and builds a call graph. Agents query it to understand patterns before writing code.
 visibility: public
 author_name: Karthik
+layout: newspaper
 ---
 
 The problem with coding agents is not that they write bad code. It is that they write code without knowing what already exists.
@@ -29,7 +30,7 @@ k.sync()     # only re-embeds what changed
 The main query is `k.context()`. It returns the most relevant code from both your project and your packages, with graph metadata attached.
 
 ```python
-results = k.context('atomic write temp file', limit=8)
+r = k.context('atomic write temp file', limit=8)
 # → surfaces fastcore.xtras.atomic_save before you write your own
 ```
 
@@ -38,6 +39,9 @@ results = k.context('atomic write temp file', limit=8)
 ```python
 k.env_context('package:fastcore path:xtras atomic', limit=5)
 ```
+
+```col                                                                                                                                                                                                                             
+``` 
 
 ## The call graph
 

@@ -6,6 +6,7 @@ from lego.blog.data import posts, seed_posts
 from lego.blog.ui import blog_hero, post_list, post_detail, new_post_form, showcase_cta
 from .cfg import Routes, cfg
 
+
 __all__ = ['connect']
 
 @dataclass
@@ -13,7 +14,14 @@ class NewPost: title: str; summary: str; body: str; visibility: str = 'public'
 
 def _get_usr(req): return req.scope.get('auth') or req.scope.get('session', {}).get('auth')
 def _scaf(req, it, auth=None, title=''): return it if 'hx-request' in req.headers else base(it, auth, title=title)
-def _blog(usr=None): return Div(blog_hero(usr),post_list(posts(order_by='created_at desc'), usr),showcase_cta(usr))
+def _ordered_posts():
+    all_posts = posts(order_by='created_at desc')
+    pin = cfg.pinned_slug
+    pinned = [p for p in all_posts if p['slug'] == pin]
+    rest   = [p for p in all_posts if p['slug'] != pin]
+    return pinned + rest
+
+def _blog(usr=None): return Div(blog_hero(usr), post_list(_ordered_posts(), usr), showcase_cta(usr))
 def blog_index(req, auth=None): return base(_blog(auth), auth, title='The Obsession Journal')
 def blog_new_get(req, auth):
     if auth: return _scaf(req, new_post_form(), auth, title='Write a post')
@@ -28,7 +36,7 @@ def blog_new_post(req, auth, p: NewPost):
     return Redirect(f'/blog/{s}')
 
 def blog_post_get(req, slug: str, auth):
-    try: post = dict(posts.selectone(where='slug=:s', where_args=dict(s=slug)))
+    try: post = posts[slug]
     except (NotFoundError, StopIteration): return not_found()
     v = post_detail(post, auth)
     return _scaf(req, v, auth, title=post['title'])

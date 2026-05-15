@@ -5,11 +5,13 @@ title: cfeasy: Cloudflare tunnels without the ID management
 summary: A thin, idempotent wrapper around the Cloudflare Python SDK. Create DNS records and Zero Trust tunnels from Python. One call to set up a tunnel, wire the DNS, and get the token back.
 visibility: public
 author_name: Karthik
+layout: newspaper
 ---
 
 The Cloudflare API does everything you need. It is also the kind of API that makes you keep a notes file of IDs.
 
-Zone ID. Account ID. Tunnel ID. Record ID. Every operation requires one of them. Create a DNS record manually once and it works. Write a script that runs twice and you have two identical records.
+Zone ID. Account ID. Tunnel ID. Record ID. Every operation requires one of them. Create a DNS record manually once and it works. 
+Write a script that runs twice and you have two identical records.
 
 cfeasy is a wrapper that handles the ID bookkeeping and makes operations idempotent. The code is at [github.com/vedicreader/cfeasy](https://github.com/vedicreader/cfeasy).
 
@@ -30,6 +32,8 @@ c.upsert_record('myapp.com', 'api', '1.2.3.4', type='A', proxied=True)
 
 `upsert_record` checks whether the record already exists with the same content before creating anything. If it matches, it skips. If there is a conflicting record with different content, it deletes the old one and creates the new one. Running it three times produces the same result as running it once.
 
+```col                                                                                                                                                                                                                             
+``` 
 ## Tunnel setup in one call
 
 ```python
