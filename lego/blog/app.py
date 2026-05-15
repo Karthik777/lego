@@ -1,5 +1,5 @@
 import time
-from fasthtml.common import dataclass, Redirect, Div
+from fasthtml.common import dataclass, Redirect, Div, partition
 from fastlite import NotFoundError
 from lego.core import slug, base, not_found, RouteOverrides
 from lego.blog.data import posts, seed_posts
@@ -11,16 +11,11 @@ __all__ = ['connect']
 
 @dataclass
 class NewPost: title: str; summary: str; body: str; visibility: str = 'public'
-
-def _get_usr(req): return req.scope.get('auth') or req.scope.get('session', {}).get('auth')
-def _scaf(req, it, auth=None, title=''): return it if 'hx-request' in req.headers else base(it, auth, title=title)
 def _ordered_posts():
-    all_posts = posts(order_by='created_at desc')
-    pin = cfg.pinned_slug
-    pinned = [p for p in all_posts if p['slug'] == pin]
-    rest   = [p for p in all_posts if p['slug'] != pin]
-    return pinned + rest
+    p,r = partition(posts(order_by='created_at desc'), lambda p: p['slug'] == cfg.pinned_slug)
+    return p+r
 
+def _scaf(req, it, auth=None, title=''): return it if 'hx-request' in req.headers else base(it, auth, title=title)
 def _blog(usr=None): return Div(blog_hero(usr), post_list(_ordered_posts(), usr), showcase_cta(usr))
 def blog_index(req, auth=None): return base(_blog(auth), auth, title='The Obsession Journal')
 def blog_new_get(req, auth):

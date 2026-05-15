@@ -12,8 +12,9 @@ async def register(reg: Register): return reg
 async def verify_em(ver: VerEmailReq): return ver
 async def resend_ver_link(res: ResendVerLink): return res
 async def error(req): return home(req) if auth_ok(req) else landing(login_form(req, err=OathError))
-def modal(req, step: Step = Step.login, next: str = ''): return amodal(login_form(req, next=next)
-                                                                       if step == Step.login else form(step, next=next))
+def modal(req, step: Step = Step.login, next: str = ''):
+    if auth_ok(req): return home(next)
+    return amodal(login_form(req, next=next) if step == Step.login else form(step, next=next))
 
 def connect(app):
     setup_oath(app)

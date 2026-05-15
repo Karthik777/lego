@@ -286,28 +286,37 @@ class ChangePwd:
 
 class GoogleAuth(OAuth):
     pr = 'google'
-    def check_invalid(self, req, session, auth): return login_form(req, wrap=True) if not auth_ok(req) else False
+    def check_invalid(self, req, session, auth): return amodal(login_form(req, wrap=True)) if not auth_ok(req) else False
     def get_auth(self, info, ident, session, state):
         try:
             u = usr_by_oa(self.pr, ident)
-            if not u.avatar_url: users.update(dict(id=u.id, avatar_url=info.picture, updated_at=time.time()))
+            if not u.avatar_url: u = users.update(dict(id=u.id, avatar_url=info.picture, updated_at=time.time()))
         except (NotFoundError, StopIteration):
-            try: users.insert(dict(email=info.email, display_name=info.name, avatar_url=info.picture,
+            try:
+                try: ex = usr_by_em(info.email)
+                except (NotFoundError, StopIteration): ex = None
+                if ex: users.update(dict(id=ex.id, email=info.email, auth_provider=self.pr, avatar_url=info.picture,
+                        provider_user_id=ident, updated_at=time.time(), status=Status.active))
+                else: users.insert(dict(email=info.email, display_name=info.name, avatar_url=info.picture,
                                    auth_provider=self.pr, provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return Redirect(state) if state else home()
+        return home(state)
 
 class GithubAuth(OAuth):
     pr = 'github'
-    def check_invalid(self, req, session, auth): return login_form(req, wrap=True) if not auth_ok(req) else False
+    def check_invalid(self, req, session, auth): return amodal(login_form(req, wrap=True)) if not auth_ok(req) else False
     def get_auth(self, info, ident, session, state):
-        try: u=usr_by_oa(self.pr, ident)
+        try: u = usr_by_oa(self.pr, ident)
         except (NotFoundError, StopIteration):
             try:
                 em, dn, av = info.email or info.login, info.name or info.login, info.avatar
-                users.insert(dict(email=em, display_name=dn, avatar_url=av, auth_provider=self.pr,
+                try: ex = usr_by_em(em)
+                except (NotFoundError, StopIteration): ex = None
+                if ex: users.update(dict(id=ex.id, email=em, auth_provider=self.pr, avatar_url=av,
+                                         provider_user_id=ident, updated_at=time.time(), status=Status.active))
+                else: users.insert(dict(email=em, display_name=dn, avatar_url=av, auth_provider=self.pr,
                                   provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return Redirect(state) if state else home()
+        return home(state)

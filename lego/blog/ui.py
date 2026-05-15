@@ -290,8 +290,8 @@ def new_post_form(err_msg=None):
                 LabelInput('Summary', id='summary', placeholder='One sentence. What should readers expect?'),
                 LabelTextArea('Body', id='body', rows=14, placeholder='Write in Markdown.', input_cls='font-mono text-xs'),
                 LabelSelect(
-                    Option('Public — anyone can read', value='public', selected=True),
-                    Option('Members only — requires sign-in', value='members'),
+                    Option('Public: anyone can read', value='public', selected=True),
+                    Option('Members only: requires sign-in', value='members'),
                     label='Visibility', id='visibility', name='visibility'),
                 Div(
                     Button('Publish', cls=[ButtonT.primary, ButtonT.sm]),
