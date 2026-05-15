@@ -136,14 +136,28 @@ RouteOverrides.home = "/dashboard"
 RouteOverrides.skip += ["/public"]
 ```
 
+## Extensions
+
+The dev toolchain that ships with lego:
+
+- **[kosha](https://github.com/vedicreader/kosha)** — indexes your repo and installed packages into a hybrid search + call graph database. Agents query it before writing code.
+- **[dockeasy](https://github.com/vedicreader/dockeasy)** — Dockerfile, Caddyfile, and Compose builder in Python. Framework-aware defaults, cache mounts by default, Cloudflare tunnel support.
+- **[vpseasy](https://github.com/vedicreader/vpseasy)** — provisions Hetzner VPS servers, deploys with Docker Compose, handles Caddy and tunnels. Same cloud-init YAML runs in local Multipass VMs and production.
+- **[cfeasy](https://github.com/vedicreader/cfeasy)** — idempotent Cloudflare DNS and Zero Trust tunnel management. One call to create a tunnel, wire the DNS, and get the token back.
+- **[gheasy](https://github.com/vedicreader/gheasy)** — GitHub Actions workflows in Python. Pre-built jobs for test, lint, and PyPI publish. Secret routing from env schema to `gh secret set`.
+
+`deploy.py` in the repo shows all of them composing together — Dockerfile, Compose stack, tunnel, VPS provision, and env wiring in one script.
+
 ## Deployment
 
-lego is an ASGI app. Fly.io works well for SQLite:
+lego is an ASGI app. `deploy.py` uses dockeasy + vpseasy + cfeasy for a full Hetzner + Cloudflare tunnel deploy:
 
 ```bash
-fly launch
-fly deploy
+python deploy.py deploy   # provisions VPS, wires tunnel, deploys
+python deploy.py compose  # generate docker-compose.yml only
 ```
+
+The app runs at [lego.sankalpa.sh](https://lego.sankalpa.sh).
 
 For remote storage, point `get_pth` in `core/cfg.py` at an S3 bucket via fsspec.
 
