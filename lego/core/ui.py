@@ -87,7 +87,7 @@ def navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobil
 def theme_switcher(cls='uk-position-relative', heading='Customise', sub_heading='theme selection'):
     h = H3(heading, cls='m-2')
     sub = P(sub_heading, cls=(TextT.muted, 'mt-2 p-2'))
-    con = [h, sub, ThemePicker()]
+    con = [h, sub, ThemePicker(mode=False)]
     return Div(Div(
         Div(UkIcon('palette'), cls=(ButtonT.icon, ButtonT.sm)),
         CardBody(*con, cls='dropdown-content w-96', data_uk_dropdown='mode: click; pos: bottom-right; offset: 8')),

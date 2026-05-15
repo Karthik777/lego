@@ -27,7 +27,7 @@ class BlogRenderer(FrankenRenderer):
     def render_inline_code(self, token):
         import html as _html
         code = _html.escape(token.children[0].content if token.children else '')
-        return f'<code class="font-mono text-sm bg-zinc-100 dark:bg-zinc-800 text-primary px-1.5 py-0.5 rounded not-prose">{code}</code>'
+        return f'<code class="font-mono text-sm text-primary px-1.5 py-0.5 rounded not-prose">{code}</code>'
 
     def render_block_code(self, token):
         import html as _html
@@ -110,8 +110,8 @@ def blog_hero(usr=None):
             cls='flex items-center gap-2 mb-4'),
         H1('The Obsession Journal', cls='mb-3 tracking-tight'),
         P('Side projects. Package maintenance. The slow accumulation of taste.', cls='mb-6 leading-relaxed'),
-        Div(A('Write a post' if usr else 'Sign in to write', href=Routes.new,
-              cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}'),
+        Div(A('Write a post' if usr else 'Sign in to write', hx_get=f'{RouteOverrides.lgn}?next={Routes.new}',
+              hx_target='body', hx_swap='beforeend', cls=f'uk-btn {ButtonT.primary} {ButtonT.sm}'),
             A('Read the story', href='#blog-posts', cls=f'uk-btn {ButtonT.ghost} {ButtonT.sm}'),
             cls='flex gap-3'), cls='flex flex-col justify-center')
 

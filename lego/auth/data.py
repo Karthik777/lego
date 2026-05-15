@@ -157,7 +157,7 @@ class Login:
         return login_form(req, self.email, err, next=self.next)
 
     def catch(self):
-        err = reqd_chk(vars(self))
+        err = reqd_chk({'email': self.email, 'password': self.password})
         if err: return err
         em_or_err = em_chk(self.email)
         if isinstance(em_or_err, AppErr): return em_or_err

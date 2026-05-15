@@ -1,5 +1,5 @@
 import time
-from fasthtml.common import dataclass, Redirect, Div, is_full_page
+from fasthtml.common import dataclass, Redirect, Div
 from fastlite import NotFoundError
 from lego.core import slug, base, not_found, RouteOverrides
 from lego.blog.data import posts, seed_posts
@@ -12,14 +12,12 @@ __all__ = ['connect']
 class NewPost: title: str; summary: str; body: str; visibility: str = 'public'
 
 def _get_usr(req): return req.scope.get('auth') or req.scope.get('session', {}).get('auth')
-def _scaf(req, it, auth=None, title=''): return it if is_full_page(req, None) else base(it, auth, title=title)
+def _scaf(req, it, auth=None, title=''): return it if 'hx-request' in req.headers else base(it, auth, title=title)
 def _blog(usr=None): return Div(blog_hero(usr),post_list(posts(order_by='created_at desc'), usr),showcase_cta(usr))
 def blog_index(req, auth=None): return base(_blog(auth), auth, title='The Obsession Journal')
-def _trig(next): return Div(hx_get=next, hx_target='body', hx_swap='beforeend', hx_trigger='load')
-def member_only(c, title, next): return *base(c, None, title=title), _trig(next)
 def blog_new_get(req, auth):
-    if not auth: return member_only(_blog(),'The Obsession Journal',f'{RouteOverrides.lgn}?next={Routes.new}')
-    return _scaf(req, new_post_form(), auth, title='Write a post')
+    if auth: return _scaf(req, new_post_form(), auth, title='Write a post')
+    return base(_blog(), None, title='The Obsession Journal')
 
 def blog_new_post(req, auth, p: NewPost):
     if not (p.title and p.body):
@@ -33,10 +31,6 @@ def blog_post_get(req, slug: str, auth):
     try: post = dict(posts.selectone(where='slug=:s', where_args=dict(s=slug)))
     except (NotFoundError, StopIteration): return not_found()
     v = post_detail(post, auth)
-    if post['visibility'] == 'members' and not (auth and is_full_page(req, None)):
-        _get = f'{RouteOverrides.lgn}?next=/blog/{slug}'
-        trigger = Div(hx_get=_get, hx_target='body', hx_swap='beforeend', hx_trigger='load')
-        return *base(v, None, title=post['title']), trigger
     return _scaf(req, v, auth, title=post['title'])
 
 def connect(app):

@@ -139,7 +139,7 @@ def verify_error_form(email, err, *args):
 def amodal(content, title=s.app_sh):
     ftr = P(s.ftr_txt, cls='text-xs mt-4')
     ds = 'max-w-80 uk-margin-auto-vertical text-center'
-    return Modal(H3(title), typewriter(), content, ftr, dialog_cls=ds, id='auth-modal', hx_open=True)
+    return Modal(H3(title), typewriter(), content, ftr, dialog_cls=ds, id='auth-modal',hx_init=True, hx_open=True)
 
 def resend_verify_form(email, err, *args):
     return _form(Routes.resend_verification, (
