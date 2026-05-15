@@ -47,5 +47,6 @@ dev = [
     "cfeasy>=0.0.3",
     "gheasy>=0.0.2",
     "koshas>=0.0.16",
+    "pytest>=9.0.3",
     "vpseasy>=0.0.6",
 ]

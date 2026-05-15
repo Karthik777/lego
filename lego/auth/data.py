@@ -12,6 +12,10 @@ g_oath = git_oath = None
 def setup_beforeware(app):
     def before(req, sess): return Redirect(Routes.login) if not auth_ok(req) else True
     app.before.append(Beforeware(before, Routes.skip+RouteOverrides.skip))
+    @app.get(Routes.logout)
+    async def logout(session):
+        session.pop('auth', None)
+        return Redirect('/')
 
 def setup_oath(app):
     if not cfg.git_cli and not cfg.g_cli: setup_beforeware(app); return
@@ -109,7 +113,7 @@ def pw_chk(pwd, conf_pwd) -> AppErr | None:
     if not re.search('[!@#$%^&*(),.?\":{}|<>]', pwd): errs.append('Password must contain a special character')
     return AppErr(', '.join(errs), ['password', 'confirm_password']) if errs else None
 
-def tok_chk(tok) -> AppErr | Table:
+def tok_chk(tok, consume=True) -> AppErr | Table:
     if not tok: return InvalidToken
     try:
         ct = confirmation_tokens.selectone(where='token=?', where_args=[tok])
@@ -118,18 +122,18 @@ def tok_chk(tok) -> AppErr | Table:
         uid, typ = data.get('uid'), data.get('typ')
         if not (uid and typ and users[uid]): return InvalidToken
         if not (ct.user_id == uid and ct.type == typ and ct.created_at + int(cfg.tkn_exp) > time.time() and ct.validated != True): return InvalidToken
-        confirmation_tokens.update(dict(user_id=uid, type=typ, validated=True))
+        if consume: confirmation_tokens.update(dict(user_id=uid, type=typ, validated=True))
         return users[uid]
     except (NotFoundError, StopIteration): return InvalidToken
     except Exception: return DefaultError
 
-def login_form(req, email='', err=None, wrap=False):
+def login_form(req, email='', err=None, wrap=False, next=''):
     global g_oath, git_oath
     g_redirect = git_redirect = None
     if g_oath: g_redirect = g_oath.login_link(req)
     if git_oath: git_redirect = git_oath.login_link(req)
-    c = form(git_redirect=git_redirect, g_redirect=g_redirect, email=email, err=err)
-    return landing(c) if wrap else c
+    c = form(git_redirect=git_redirect, g_redirect=g_redirect, email=email, err=err, next=next)
+    return amodal(c) if wrap else c
 
 def send_ver_em(u, ver_link):
     link = A('Verify Your Account', href=ver_link, cls='text-blue-600 underline p-1')
@@ -145,15 +149,15 @@ def send_pw_ch_em(u, pw_chng_lnk):
 
 @dataclass
 class Login:
-    email: str = None; password: str = None
+    email: str = None; password: str = None; next: str = ''
 
     def __ft__(self, req, session):
         err = self.catch()
-        if not err: set_auth(self.email, req); return home()
-        return login_form(req, self.email, err)
+        if not err: set_auth(self.email, req); return Redirect(self.next or '/')
+        return login_form(req, self.email, err, next=self.next)
 
     def catch(self):
-        err = reqd_chk(vars(self))
+        err = reqd_chk({'email': self.email, 'password': self.password})
         if err: return err
         em_or_err = em_chk(self.email)
         if isinstance(em_or_err, AppErr): return em_or_err
@@ -220,9 +224,9 @@ class ResetPwdReq:
     def __ft__(self):
         if isinstance(self.catch(), AppErr):
             return landing(placeholder('This link is invalid. Please hit forgot password again.'))
-        return form(Step.reset_pw, token=self.token)
+        return landing(form(Step.reset_pw, token=self.token))
 
-    def catch(self): return tok_chk(self.token)
+    def catch(self): return tok_chk(self.token, consume=False)
 
 @dataclass
 class ResendVerLink:
@@ -282,32 +286,37 @@ class ChangePwd:
 
 class GoogleAuth(OAuth):
     pr = 'google'
-    def check_invalid(self, req, session, auth):
-        return login_form(req, wrap=True) if not auth_ok(req) else False
-
+    def check_invalid(self, req, session, auth): return amodal(login_form(req, wrap=True)) if not auth_ok(req) else False
     def get_auth(self, info, ident, session, state):
         try:
             u = usr_by_oa(self.pr, ident)
-            if not u.avatar_url: users.update(dict(id=u.id, avatar_url=info.picture, updated_at=time.time()))
+            if not u.avatar_url: u = users.update(dict(id=u.id, avatar_url=info.picture, updated_at=time.time()))
         except (NotFoundError, StopIteration):
-            try: users.insert(dict(email=info.email, display_name=info.name, avatar_url=info.picture,
+            try:
+                try: ex = usr_by_em(info.email)
+                except (NotFoundError, StopIteration): ex = None
+                if ex: users.update(dict(id=ex.id, email=info.email, auth_provider=self.pr, avatar_url=info.picture,
+                        provider_user_id=ident, updated_at=time.time(), status=Status.active))
+                else: users.insert(dict(email=info.email, display_name=info.name, avatar_url=info.picture,
                                    auth_provider=self.pr, provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return home()
+        return home(state)
 
 class GithubAuth(OAuth):
     pr = 'github'
-    def check_invalid(self, req, session, auth):
-        return login_form(req, wrap=True) if not auth_ok(req) else False
-
+    def check_invalid(self, req, session, auth): return amodal(login_form(req, wrap=True)) if not auth_ok(req) else False
     def get_auth(self, info, ident, session, state):
-        try: u=usr_by_oa(self.pr, ident)
+        try: u = usr_by_oa(self.pr, ident)
         except (NotFoundError, StopIteration):
             try:
                 em, dn, av = info.email or info.login, info.name or info.login, info.avatar
-                users.insert(dict(email=em, display_name=dn, avatar_url=av, auth_provider=self.pr,
+                try: ex = usr_by_em(em)
+                except (NotFoundError, StopIteration): ex = None
+                if ex: users.update(dict(id=ex.id, email=em, auth_provider=self.pr, avatar_url=av,
+                                         provider_user_id=ident, updated_at=time.time(), status=Status.active))
+                else: users.insert(dict(email=em, display_name=dn, avatar_url=av, auth_provider=self.pr,
                                   provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return home()
+        return home(state)

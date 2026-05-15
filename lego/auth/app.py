@@ -3,16 +3,18 @@ from fasthtml.common import Response
 from lego.core import home, RouteOverrides
 
 async def ok(req): return Response(status_code=200) if auth_ok(req) else Response(status_code=401)
-async def login(req): return home() if auth_ok(req) else login_form(req, wrap=True)
+async def login(req, next: str = ''): return home(next) if auth_ok(req) else amodal(login_form(req, next=next))
 async def process_login(req, session, lgn: Login): return lgn.__ft__(req, session)
-def modal(req, step:Step = Step.login): return login_form(req) if step == Step.login else form(step)
 async def forgot_pwd(fgt_pw: ForgotPwdLink): return fgt_pw
 async def reset_pwd_link(rst_pw: ResetPwdReq): return rst_pw
 async def change_pwd(chng_pwd: ChangePwd): return chng_pwd
 async def register(reg: Register): return reg
 async def verify_em(ver: VerEmailReq): return ver
 async def resend_ver_link(res: ResendVerLink): return res
-async def error(req): return home(req) if auth_ok(req) else form(err=OathError)
+async def error(req): return home(req) if auth_ok(req) else landing(login_form(req, err=OathError))
+def modal(req, step: Step = Step.login, next: str = ''):
+    if auth_ok(req): return home(next)
+    return amodal(login_form(req, next=next) if step == Step.login else form(step, next=next))
 
 def connect(app):
     setup_oath(app)
@@ -27,5 +29,5 @@ def connect(app):
     app.get(Routes.resend_verification)(resend_ver_link)
     app.get(Routes.auth_modal)(modal)
     app.get(Routes.err)(error)
-    RouteOverrides.lgn = Routes.login
+    RouteOverrides.lgn = Routes.auth_modal
     RouteOverrides.lgt = Routes.logout
