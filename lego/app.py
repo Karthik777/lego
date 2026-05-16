@@ -27,14 +27,9 @@ hdrs = [
     *themes(),
 ]
 
-def before(req, sess):
-    auth = sess.get('auth')
-    if auth and isinstance(auth, (str, int, float)): req.scope['auth'] = a.set_auth(str(auth), req)
-    else: req.scope['auth'] = auth
-
 def nf(req, exc): return not_found()
 kw,exh = {'class': 'hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
-lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, before=before,
+lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm,
                   exts='preload', exception_handlers=exh, on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
 # connect your blocks
