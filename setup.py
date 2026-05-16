@@ -3,6 +3,7 @@ import os, sys, shutil
 from fastcore.all import Path, run, L, parse_env, filter_keys,in_
 from dockeasy import env_set
 from gheasy import GheasyConfig, gh_lfs, gh_push_env
+from gheasy.workflow import Workflow
 
 __all__ = ['setup', 'push_gh_vars', 'mk_env','env2push']
 
@@ -11,7 +12,7 @@ LFS_PATTERNS = ['*.mp3', '*.ogg', '*.wav', '*.flac', '*.ico', '*.png', '*.jpg', 
 ENV_KEYS = dict(MODE='dev', PORT='5001', DOMAIN='http://localhost:5001', TOKEN_EXP='691200', PURGE='false',
     JWT_SCRT=None, RESEND_API_KEY=None, WANT_GOOGLE='true', WANT_GIT='false', GOOGLE_CLI=None, GOOGLE_SCRT=None,
     GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='true', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
-    CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, HCLOUD_TOKEN=None)
+    CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, CLOUDFLARE_API_TOKEN=None, HCLOUD_TOKEN=None)
 
 def _load_env(): return dict(os.environ) | (parse_env(fn=str(envf)) if (envf := ROOT / '.env').exists() else {})
 def env2push(): return ENV_KEYS | filter_keys(_load_env(),in_(ENV_KEYS))
@@ -39,6 +40,21 @@ def push_gh_vars(dry_run=False):
 
 def push_cli(): push_gh_vars('--dry-run' in sys.argv)
 
+def gen_deploy_workflow():
+    wf = Workflow("deploy")
+    wf.on.push(branches=["main"])
+    env = {k: (f'${{{{ secrets.{k} }}}}' if v is None else f'${{{{ vars.{k} }}}}') for k, v in ENV_KEYS.items()}
+    (wf.job("deploy")
+       .runs_on("ubuntu-latest")
+       .env(**env)
+       .checkout().end_step()
+       .setup_uv().end_step()
+       .uv_install("uv sync --group dev").end_step()
+       .step("Deploy").run("python deploy.py deploy").end_job())
+    p = ROOT / '.github' / 'workflows' / 'deploy.yml'
+    wf.build().save(p)
+    print(f'workflow: wrote {p}')
+
 def setup():
 	_init_gheasy()
 	gh_lfs(LFS_PATTERNS, path=str(ROOT))
@@ -48,4 +64,5 @@ def setup():
 if __name__ == '__main__':
 	if 'push' in sys.argv: push_gh_vars('--dry-run' in sys.argv)
 	elif 'mkenv' in sys.argv: mk_env(env2push(), path=ROOT/'.env')
+	elif 'workflow' in sys.argv: gen_deploy_workflow()
 	else: setup()

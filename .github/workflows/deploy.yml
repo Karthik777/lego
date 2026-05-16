@@ -1,0 +1,40 @@
+name: deploy
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ vars.MODE }}
+      PORT: ${{ vars.PORT }}
+      DOMAIN: ${{ vars.DOMAIN }}
+      TOKEN_EXP: ${{ vars.TOKEN_EXP }}
+      PURGE: ${{ vars.PURGE }}
+      JWT_SCRT: ${{ secrets.JWT_SCRT }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      WANT_GOOGLE: ${{ vars.WANT_GOOGLE }}
+      WANT_GIT: ${{ vars.WANT_GIT }}
+      GOOGLE_CLI: ${{ secrets.GOOGLE_CLI }}
+      GOOGLE_SCRT: ${{ secrets.GOOGLE_SCRT }}
+      GIT_CLI: ${{ secrets.GIT_CLI }}
+      GIT_SCRT: ${{ secrets.GIT_SCRT }}
+      NEED_BACKUP: ${{ vars.NEED_BACKUP }}
+      RC_TYPE: ${{ vars.RC_TYPE }}
+      RC_PROVIDER: ${{ vars.RC_PROVIDER }}
+      CF_ACCESS_KEY_ID: ${{ secrets.CF_ACCESS_KEY_ID }}
+      CF_SCRT_ACCESS_KEY: ${{ secrets.CF_SCRT_ACCESS_KEY }}
+      CF_ENDPOINT: ${{ secrets.CF_ENDPOINT }}
+      CF_TUNNEL_TOKEN: ${{ secrets.CF_TUNNEL_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: uv sync --group dev
+      - name: Deploy
+        run: python deploy.py deploy
