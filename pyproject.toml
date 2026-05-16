@@ -30,6 +30,9 @@ dependencies = [
     "ujson>=5.11.0",
 ]
 
+[project.scripts]
+lego-skill = "lego.skills:install_cli"
+
 [project.urls]
 Homepage = "https://github.com/Karthik777/lego"
 Issues = "https://github.com/Karthik777/lego/issues"
