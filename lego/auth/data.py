@@ -18,10 +18,7 @@ def setup_beforeware(app):
         return Redirect('/')
 
 def setup_oath(app):
-    def _hydrate(req, sess):
-        if (auth := sess.get('auth')) and isinstance(auth, (str, int, float)): set_auth(auth, req)
-        else: req.scope['auth'] = auth
-    app.before.append(Beforeware(_hydrate))
+    app.before.append(Beforeware(lambda req, sess: auth_ok(req)))
     if not cfg.git_cli and not cfg.g_cli: setup_beforeware(app); return
     global g_oath, git_oath
     sk, err, lgt, fail = Routes.skip+RouteOverrides.skip, Routes.err, Routes.logout, '/'
