@@ -19,8 +19,7 @@ def setup_beforeware(app):
 
 def setup_oath(app):
     def _hydrate(req, sess):
-        auth = sess.get('auth')
-        if auth and isinstance(auth, (str, int, float)): req.scope['auth'] = set_auth(str(auth), req)
+        if (auth := sess.get('auth')) and isinstance(auth, (str, int, float)): set_auth(auth, req)
         else: req.scope['auth'] = auth
     app.before.append(Beforeware(_hydrate))
     if not cfg.git_cli and not cfg.g_cli: setup_beforeware(app); return
