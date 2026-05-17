@@ -35,6 +35,10 @@ def cache(p=None, ttl=3600, **_):
 @cache('jwt_scrt', ttl=10*365*24*3600)
 def generate_jwt_scrt(): return secrets.token_urlsafe(32)
 
+def _env_url(k, default):
+    v = os.getenv(k, default)
+    return v if v.startswith(('http://','https://')) else f'https://{v}'
+
 cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
                       app_sh=os.getenv('APP_SH','lego'),
                       site_author=os.getenv('SITE_AUTHOR','Karthik Rajgopal'),
@@ -42,7 +46,7 @@ cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
                       site_keywords=os.getenv('SITE_KEYWORDS','lego, fastHTML, MonsterUI, webapp, python'),
                       jwt_scrt=os.getenv('JWT_SCRT', generate_jwt_scrt()),
                       mode=os.getenv('MODE','dev'),
-                      domain=os.getenv('DOMAIN','http://localhost:5001'),
+                      domain=_env_url('DOMAIN','http://localhost:5001'),
                       resend_api_key=os.getenv('RESEND_API_KEY', ''),
                       need_backup=str2bool(os.getenv('NEED_BACKUP', 'false')),
                       port=str2int(os.getenv('PORT', '5001')),

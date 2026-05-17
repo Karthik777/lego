@@ -49,6 +49,7 @@ def deploy_cli():
     if cmd == 'compose': mk_compose()
     elif cmd == 'deploy': deploy2prod()
     elif cmd == 'nuke': nuke_prod()
+    elif cmd == 'env': mk_env(env2push(), path=root/'.env')
     else: print('usage: vr-deploy compose | deploy')
 
 if __name__ == '__main__': deploy_cli()

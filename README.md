@@ -10,9 +10,18 @@ Clone it, connect your blocks, ship it.
 git clone https://github.com/Karthik777/lego.git
 cd lego
 uv sync
-uv run python main.py
-# http://localhost:5001
+uv run lego-setup       # scaffold .env.example, .github workflow, and SKILL.md files
+uv run python main.py   # http://localhost:5001
 ```
+
+`lego-setup` is idempotent and safe to re-run. The console scripts shipped with the package:
+
+| script | purpose |
+|---|---|
+| `uv run lego-setup` | init gheasy config, git-lfs patterns, `.env.example`, deploy workflow, install skills |
+| `uv run lego-skill` | (re)install `SKILL.md` into `.claude/skills/lego/` and `.agents/skills/lego/` |
+| `uv run lego-push` | push values from `.env` to GitHub Actions secrets/vars (use `--dry-run` to preview) |
+| `uv run lego-deploy` | Docker + Hetzner + Cloudflare tunnel deploy (`compose` \| `deploy` \| `nuke` \| `env`) |
 
 ## How it works
 
@@ -112,16 +121,16 @@ RESEND_API_KEY=re_...
 Google OAuth:
 ```
 WANT_GOOGLE=true
-G_CLI_ID=...
-G_CLI_SCRT=...
+GOOGLE_CLI=...
+GOOGLE_SCRT=...
 # callback: {DOMAIN}/a/google/callback
 ```
 
 GitHub OAuth:
 ```
-WANT_GITHUB=true
-GIT_CLI_ID=...
-GIT_CLI_SCRT=...
+WANT_GIT=true
+GIT_CLI=...
+GIT_SCRT=...
 # callback: {DOMAIN}/a/github/callback
 ```
 
@@ -153,8 +162,10 @@ The dev toolchain that ships with lego:
 lego is an ASGI app. `deploy.py` uses dockeasy + vpseasy + cfeasy for a full Hetzner + Cloudflare tunnel deploy:
 
 ```bash
-python deploy.py deploy   # provisions VPS, wires tunnel, deploys
-python deploy.py compose  # generate docker-compose.yml only
+uv run lego-deploy deploy    # provisions VPS, wires tunnel, deploys
+uv run lego-deploy compose   # generate docker-compose.yml only
+uv run lego-deploy nuke      # delete VPS and tunnel (irreversible)
+uv run lego-push             # push .env values to GitHub Actions
 ```
 
 The app runs at [lego.sankalpa.sh](https://lego.sankalpa.sh).

@@ -2,6 +2,23 @@
 
 lego is a FastHTML + MonsterUI web app template. Each feature is a **block**: a folder with `cfg.py`, `data.py`, `ui.py`, `app.py`, and a `connect(app)` function. Blocks are wired in `lego/app.py`. Auth always connects last.
 
+## CLI entrypoints
+
+Defined under `[project.scripts]` in `pyproject.toml`. Always invoke via `uv run` — never `python …` directly, and never `pip install`.
+
+| command | calls | purpose |
+|---|---|---|
+| `uv run python main.py` | `lego.launch()` | start the dev server (port from `PORT`, default 5001) |
+| `uv run lego-setup` | `setup:setup` | init gheasy config, set git-lfs patterns, write `.env.example`, generate `.github/workflows/deploy.yml`, install SKILL.md files |
+| `uv run lego-skill` | `setup:install_skills` | (re)copy `SKILL.md` into `.claude/skills/lego/` and `.agents/skills/lego/` (plus any installed companions: dockeasy, gheasy, vpseasy, cfeasy, kosha, litesearch) |
+| `uv run lego-push` | `setup:push_cli` | push `.env` values to GitHub — `None`-default keys become secrets, string-default keys become variables. Append `--dry-run` to preview |
+| `uv run lego-deploy compose` | `deploy:deploy_cli` | build `Dockerfile` + `docker-compose.yml` only |
+| `uv run lego-deploy deploy` | `deploy:deploy_cli` | provision Hetzner VPS (if needed), create Cloudflare tunnel, deploy |
+| `uv run lego-deploy nuke` | `deploy:deploy_cli` | delete VPS + tunnel (interactive confirmation) |
+| `uv run lego-deploy env` | `deploy:deploy_cli` | refresh `.env` from `env2push()` only |
+
+`SKILL.md` is the canonical source — `.claude/skills/lego/SKILL.md` and `.agents/skills/lego/SKILL.md` are copies produced by `lego-skill`. Edit the root file, then re-run the command.
+
 ## Block pattern
 
 ```python

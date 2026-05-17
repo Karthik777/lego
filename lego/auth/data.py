@@ -307,7 +307,7 @@ class GoogleAuth(OAuth):
                                    auth_provider=self.pr, provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return home(state)
+        return Redirect(state) if state else home()
 
 class GithubAuth(OAuth):
     pr = 'github'
