@@ -62,10 +62,10 @@ def gen_deploy_workflow():
 	wf.on.push(branches=['main'])
 	env = {k: (f'${{{{ secrets.{k} }}}}' if v is None else f'${{{{ vars.{k} }}}}') for k, v in ENV_KEYS.items()}
 	(wf.job('deploy').runs_on('ubuntu-latest')
-	   .env(**env).checkout().end_step()
-	   .setup_uv().end_step()
-	   .uv_install('uv sync --group dev').end_step()
-	   .step('Deploy').run('python deploy.py deploy').end_job())
+	 .env(**env).checkout().end_step()
+	 .setup_uv().with_(python_version='3.13').end_step()
+	 .uv_install('uv sync --group dev').end_step()
+	 .step('Deploy').run('python deploy.py deploy').end_job())
 	p = ROOT / '.github' / 'workflows' / 'deploy.yml'
 	wf.build().save(p)
 	print(f'workflow: wrote {p}')
