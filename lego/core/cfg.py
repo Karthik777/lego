@@ -5,7 +5,7 @@ import secrets
 from diskcache import Cache as DiskCache, memoize_stampede
 from fasthtml.common import Redirect, FT, dataclass
 from fastcore.all import threaded, AttrDictDefault, str2bool, str2int, startthread, to_xml, Path
-from fastlite import database
+from litesearch import database
 from logging.handlers import RotatingFileHandler as RFH
 
 __all__ = ['cfg', 'database', 'AppErr', 'home', 'send_email', 'RouteOverrides', 'get_pth', 'get_db_pth',
@@ -24,12 +24,23 @@ def get_db_pth(nm='vr'): return get_pth(f'{nm}.db', 'db')
 def in_static(nm, sf=''): return static / sf / nm
 def get_log_pth(nm='vr', mk=True): return get_pth(f'{nm}.log', 'logs', mk)
 
+kv = DiskCache(str(data_root / 'cache'), eviction_policy='least-recently-used', size_limit=500*1024*1024)
+def get_lock(k='dlock', ttl=None): return kv.add(k, 'locked', expire=ttl)
+def release_lock(k='dlock'): kv.delete(k)
+def clear_cache(): startthread(kv.clear)
+def cache(p=None, ttl=3600, **_):
+    def d(f): return memoize_stampede(kv, expire=ttl, name=p)(f)
+    return d
+
+@cache('jwt_scrt', ttl=10*365*24*3600)
+def generate_jwt_scrt(): return secrets.token_urlsafe(32)
+
 cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
                       app_sh=os.getenv('APP_SH','lego'),
                       site_author=os.getenv('SITE_AUTHOR','Karthik Rajgopal'),
                       site_description=os.getenv('SITE_DESCRIPTION','Build performant webapps one block at a time'),
                       site_keywords=os.getenv('SITE_KEYWORDS','lego, fastHTML, MonsterUI, webapp, python'),
-                      jwt_scrt=os.getenv('JWT_SCRT',secrets.token_urlsafe(32)),
+                      jwt_scrt=os.getenv('JWT_SCRT', generate_jwt_scrt()),
                       mode=os.getenv('MODE','dev'),
                       domain=os.getenv('DOMAIN','http://localhost:5001'),
                       resend_api_key=os.getenv('RESEND_API_KEY', ''),
@@ -48,7 +59,8 @@ cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
                       typwrtr_stat_txt='like lego',
                       data_root=data_root, backup_path=backups,
                       db=get_db_pth(), static=static,
-                      svg=in_static('svg'), log_file=get_log_pth())
+                      svg=in_static('svg'), log_file=get_log_pth(),
+                      github_repo=os.getenv('GITHUB_REPO', 'Karthik777/lego'))
 
 def not_prod(): return cfg.mode != 'production'
 def get_db_dir(): return Path(cfg.db).parent if cfg.db else Path(data_root) / 'db'
@@ -67,7 +79,7 @@ def send_email(to, subject, html: FT, from_='accounts@lego.com'):
     r = resend.Emails.send({'from': from_, 'to': to, 'subject': subject, 'html': html})
     print(f'Resend Result: {r}')
 
-def home(): return Redirect(RouteOverrides.home)
+def home(next=None): return Redirect(next or RouteOverrides.home)
 
 @dataclass
 class RouteOverrides: lgn, lgt, home, skip = '/lgn', '/lgt', cfg.domain, ['/health']
@@ -97,11 +109,3 @@ def get_logger(fn=cfg.log_file, lvl=logging.INFO, rot=True):
 def quick_lgr(p=None):
     lgr = get_logger(fn=get_log_pth(p or get_caller_fn({__file__}) or Path(__file__).stem), lvl=logging.INFO, rot=False)
     return lgr.info, lgr.error, lgr.warning
-
-kv = DiskCache(str(cfg.data_root / 'cache'), eviction_policy='least-recently-used', size_limit=500*1024*1024)
-def get_lock(k='dlock', ttl=None): return kv.add(k, 'locked', expire=ttl)
-def release_lock(k='dlock'): kv.delete(k)
-def clear_cache(): startthread(kv.clear)
-def cache(p=None, ttl=3600, **_):
-    def d(f): return memoize_stampede(kv, expire=ttl, name=p)(f)
-    return d

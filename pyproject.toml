@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Build scalable, maintainable, performant webapps one block at a time"
 authors = [{ name = "Karthik Rajgopal", email = "karthik.rajgopal@hotmail.com" }]
 requires-python = ">=3.13"
-readme = "README.md"
 license = { text = "MIT" }
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -19,16 +18,22 @@ dependencies = [
     "apscheduler>=3.11.2",
     "diskcache>=5.6.3",
     "email-validator>=2.3.0",
+    "litesearch>=0.0.29",
     "monsterui>=1.0.44",
     "pyjwt>=2.11.0",
-    "python-fasthtml>=0.12.47",
+    "python-fasthtml>=0.14.0",
     "rclone-python>=0.1.24",
     "rcssmin>=1.2.2",
     "resend>=2.22.0",
     "rjsmin>=1.2.5",
-    "starlette-bridge>=0.3.0",
     "ujson>=5.11.0",
 ]
+
+[project.scripts]
+lego-skill = "setup:install_skills"
+lego-setup = "setup:setup"
+lego-push = "setup:push_cli"
+lego-deploy = "deploy:deploy_cli"
 
 [project.urls]
 Homepage = "https://github.com/Karthik777/lego"
@@ -47,5 +52,6 @@ dev = [
     "cfeasy>=0.0.3",
     "gheasy>=0.0.2",
     "koshas>=0.0.16",
+    "pytest>=9.0.3",
     "vpseasy>=0.0.6",
 ]

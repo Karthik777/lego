@@ -69,9 +69,8 @@ setTimeout(() => {
 mediaQuery.addEventListener('change', (event) => {if (!htmlElement.classList.contains('auto')) return;setMode('auto');});
 document.addEventListener('uk-theme-switcher:change', (e) => {
     _.each(e.detail.value, (v,k) => {
-    if (k === 'theme') setTheme(v);if (k === 'mode') setMode(v);
-    if (k === 'radii') setRadii(v);if (k === 'shadows') setShadows(v);
-    if (k === 'font') setFont(v);});
+    if (k === 'theme') setTheme(v);if (k === 'radii') setRadii(v);
+    if (k === 'shadows') setShadows(v); if (k === 'font') setFont(v);});
 });
 
 function* cycle(...items) {
