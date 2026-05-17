@@ -52,6 +52,8 @@ def push_gh_vars(dry_run=False):
 	to_push = env2push()
 	if not to_push: return print('push: nothing to push (no matching keys with values in .env)')
 	gh_push_env(to_push, dry_run=dry_run, path=ROOT)
+	print(f'push: {"would push" if dry_run else "pushed"} {len(to_push)} keys to GitHub as '
+	      f'{"secrets" if any(v is None for v in ENV_KEYS.values()) else "variables"}')
 
 def push_cli(): push_gh_vars('--dry-run' in sys.argv)
 
