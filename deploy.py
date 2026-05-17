@@ -1,5 +1,5 @@
 """Docker + Hetzner + Cloudflare tunnel deployment for VedicReader."""
-import sys
+import sys, secrets
 from fastcore.all import Path, joins
 from dockeasy import fasthtml_app, env_set
 from cfeasy import CF
@@ -9,8 +9,8 @@ from setup import mk_env, env2push
 root = Path(__file__).resolve().parent
 pkgs = ['rclone','libsqlite3-dev','curl']
 vols = ['/app/data', '/app/backups']
-inc = '''lego/ static/ pyproject.toml uv.lock docker-compose.yml main.py Dockerfile Caddyfile .env'''.split()
-exc = 'data/ backups/'.split()
+inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Dockerfile','Caddyfile','.env','uv.lock']
+exc = ['data/','backups/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
 
 def mk_compose():
@@ -18,10 +18,10 @@ def mk_compose():
     return caddy_stack(joins('.', [sd, domain]), df, vols=vols)
 
 def deploy2prod():
-    "Idempotent: provisions Hetzner VPS if needed, then deploys."
+    'Idempotent: provisions Hetzner VPS if needed, then deploys.'
     mk_env(env2push(), path=root/'.env')
     mk_compose()
-    tid, tok = CF().setup_tunnel(domain,tunnel_name=f'{sd}_{domain}')
+    tid, tok = CF().setup_tunnel(domain, sd, tunnel_name=f'{sd}_{domain}')
     print('created Cloudflare tunnel:', tid)
     env_set('CF_TUNNEL_TOKEN',tok, path=root/'.env')
     r = hetzner_deploy(sd, root, include=inc, exclude=exc, path=srv)
@@ -30,7 +30,10 @@ def deploy2prod():
     print(f'deployed: {r.ip}')
 
 def nuke_prod():
-    "Nuke prod server and Cloudflare tunnel. Use with caution!"
+    'Nuke prod server and Cloudflare tunnel. Use with caution!'
+    typ = secrets.token_urlsafe(8)
+    input(f'WARNING: This will irreversibly delete the production server and tunnel. Type {typ} to proceed: ')
+    if input() != typ: return print('Aborting nuke.')
     Hetzner().delete(sd)
     try:
         cf = CF()

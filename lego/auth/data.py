@@ -1,8 +1,8 @@
-from fasthtml.common import Beforeware, Redirect, threaded, NotFoundError
+from fasthtml.common import Beforeware, Redirect, threaded
 import ujson as json
 from email_validator import validate_email, EmailNotValidError, EmailSyntaxError, EmailUndeliverableError
 from fasthtml.oauth import *
-from fastlite import Table
+from fastlite import Table, NotFoundError
 import hashlib, hmac, time, jwt, re
 from lego.core import landing, placeholder, send_email, email_template, database, home
 from .ui import *
@@ -17,8 +17,13 @@ def setup_beforeware(app):
         session.pop('auth', None)
         return Redirect('/')
 
+def setup_auth(req, sess):
+    auth = sess.get('auth')
+    if auth and isinstance(auth, (str, int, float)): req.scope['auth'] = set_auth(auth, req)
+    else: req.scope['auth'] = auth
+
 def setup_oath(app):
-    app.before.append(Beforeware(lambda req, sess: auth_ok(req)))
+    app.before.append(Beforeware(setup_auth))
     if not cfg.git_cli and not cfg.g_cli: setup_beforeware(app); return
     global g_oath, git_oath
     sk, err, lgt, fail = Routes.skip+RouteOverrides.skip, Routes.err, Routes.logout, '/'
