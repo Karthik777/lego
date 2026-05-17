@@ -23,14 +23,13 @@ hdrs = [
     *Favicon('/static/favicon.ico', '/static/favicon-dark.ico'),
     Link(rel='icon', type='image/svg+xml', href='/static/favicon.svg'),
     Link(rel='stylesheet', href='https://fonts.googleapis.com/css2?%s' % fonts, defer=True),
-    *Socials(title=cfg.app_nm, description=cfg.site_description, site_name=cfg.domain, image='/static/favicon.svg', url=cfg.domain),
-    *themes(),
-]
+    *Socials(title=cfg.app_nm, description=cfg.site_description, site_name=cfg.domain, image='/static/favicon.svg',
+             url=cfg.domain), *themes()]
 
 def nf(req, exc): return not_found()
 kw,exh = {'class': 'hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
-lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm,
-                  exts='preload', exception_handlers=exh, on_startup=start_scheduler, on_shutdown=stop_scheduler)
+lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, exts='preload', exception_handlers=exh,
+                    on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
 # connect your blocks
 b.connect(lego)
