@@ -27,7 +27,8 @@ LFS_PATTERNS = ['*.mp3', '*.ogg', '*.wav', '*.flac', '*.ico', '*.png', '*.jpg', 
 ENV_KEYS = dict(MODE='prod', PORT='5001', DOMAIN='lego.sankalpa.sh', TOKEN_EXP='691200', PURGE='false',
     JWT_SCRT=None, RESEND_API_KEY=None, WANT_GOOGLE='true', WANT_GIT='false', GOOGLE_CLI=None, GOOGLE_SCRT=None,
     GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='true', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
-    CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, CLOUDFLARE_API_TOKEN=None, HCLOUD_TOKEN=None)
+    CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, CLOUDFLARE_API_TOKEN=None, HCLOUD_TOKEN=None,
+    RSYNC_FORCE='')
 
 def _load_env(): return dict(os.environ) | (parse_env(fn=str(envf)) if (envf := ROOT / '.env').exists() else {})
 def env2push(): return ENV_KEYS | filter_keys(_load_env(),in_(ENV_KEYS))
@@ -69,7 +70,7 @@ def gen_deploy_workflow():
 	env['DEPLOY_KEY'] = '${{ secrets.DEPLOY_KEY }}'
 	ssh_cmd = 'mkdir -p ~/.ssh && echo "$DEPLOY_KEY" > ~/.ssh/lego && chmod 600 ~/.ssh/lego'
 	(wf.job('deploy').runs_on('ubuntu-latest')
-	 .env(**env).checkout().end_step()
+	 .env(**env).checkout().with_(lfs=True).end_step()
 	 .setup_uv().with_(python_version='3.13').end_step()
 	 .uv_install('uv sync --group dev').end_step()
 	 .step('Install SSH key').if_("env.DEPLOY_KEY != ''").run(ssh_cmd).end_step()
