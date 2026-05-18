@@ -3,12 +3,12 @@ import os, sys, secrets
 from fastcore.all import Path, joins
 from dockeasy import fasthtml_app, env_set
 from cfeasy import CF
-from vpseasy import hetzner_deploy, caddy_stack, Hetzner, run_ssh
+from vpseasy import hetzner_deploy, caddy_stack, Hetzner
 from setup import mk_env, env2push
 
 root = Path(__file__).resolve().parent
 pkgs = ['rclone','libsqlite3-dev','curl']
-vols = ['/app/data', '/app/backups']
+vols = ['/app/data', '/app/backups', '/app/static']
 inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Dockerfile','Caddyfile','.env','uv.lock']
 exc = ['data/','backups/', 'mrsladjoe/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
