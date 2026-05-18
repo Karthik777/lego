@@ -66,12 +66,13 @@ def gen_deploy_workflow():
 	wf = Workflow('deploy')
 	wf.on.push(branches=['main'])
 	env = {k: (f'${{{{ secrets.{k} }}}}' if v is None else f'${{{{ vars.{k} }}}}') for k, v in ENV_KEYS.items()}
-	ssh_cmd = 'mkdir -p ~/.ssh && echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/lego && chmod 600 ~/.ssh/lego'
+	env['DEPLOY_KEY'] = '${{ secrets.DEPLOY_KEY }}'
+	ssh_cmd = 'mkdir -p ~/.ssh && echo "$DEPLOY_KEY" > ~/.ssh/lego && chmod 600 ~/.ssh/lego'
 	(wf.job('deploy').runs_on('ubuntu-latest')
 	 .env(**env).checkout().end_step()
 	 .setup_uv().with_(python_version='3.13').end_step()
 	 .uv_install('uv sync --group dev').end_step()
-	 .step('Install SSH key').if_("secrets.DEPLOY_KEY != ''").run(ssh_cmd).end_step()
+	 .step('Install SSH key').if_("env.DEPLOY_KEY != ''").run(ssh_cmd).end_step()
 	 .step('Deploy').run('python deploy.py deploy').end_job())
 	p = ROOT / '.github' / 'workflows' / 'deploy.yml'
 	wf.build().save(p)

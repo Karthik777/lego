@@ -29,6 +29,7 @@ jobs:
       CF_TUNNEL_TOKEN: ${{ secrets.CF_TUNNEL_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+      DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
       - name: Install SSH key
-        if: secrets.DEPLOY_KEY != ''
-        run: mkdir -p ~/.ssh && echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/lego && chmod 600 ~/.ssh/lego
+        if: env.DEPLOY_KEY != ''
+        run: mkdir -p ~/.ssh && echo "$DEPLOY_KEY" > ~/.ssh/lego && chmod 600 ~/.ssh/lego
       - name: Deploy
         run: python deploy.py deploy
