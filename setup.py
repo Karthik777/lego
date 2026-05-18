@@ -57,14 +57,21 @@ def push_gh_vars(dry_run=False):
 
 def push_cli(): push_gh_vars('--dry-run' in sys.argv)
 
+def push_ssh_key():
+	"Upload ~/.ssh/lego private key as the DEPLOY_KEY GitHub secret (matches vpseasy _res_key(name='lego'))."
+	from gheasy import gh_deploy_key_setup
+	gh_deploy_key_setup(Path.home()/'.ssh'/'lego')
+
 def gen_deploy_workflow():
 	wf = Workflow('deploy')
 	wf.on.push(branches=['main'])
 	env = {k: (f'${{{{ secrets.{k} }}}}' if v is None else f'${{{{ vars.{k} }}}}') for k, v in ENV_KEYS.items()}
+	ssh_cmd = 'mkdir -p ~/.ssh && echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/lego && chmod 600 ~/.ssh/lego'
 	(wf.job('deploy').runs_on('ubuntu-latest')
 	 .env(**env).checkout().end_step()
 	 .setup_uv().with_(python_version='3.13').end_step()
 	 .uv_install('uv sync --group dev').end_step()
+	 .step('Install SSH key').if_("secrets.DEPLOY_KEY != ''").run(ssh_cmd).end_step()
 	 .step('Deploy').run('python deploy.py deploy').end_job())
 	p = ROOT / '.github' / 'workflows' / 'deploy.yml'
 	wf.build().save(p)
@@ -94,4 +101,5 @@ if __name__ == '__main__':
 	elif 'mkenv' in sys.argv: mk_env(env2push(), path=ROOT/'.env')
 	elif 'workflow' in sys.argv: gen_deploy_workflow()
 	elif 'skills' in sys.argv: install_skills()
+	elif 'ssh-key' in sys.argv: push_ssh_key()
 	else: setup()
