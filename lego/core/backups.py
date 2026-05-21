@@ -5,7 +5,8 @@ from fastcore.xtras import globtastic
 from datetime import datetime
 from .cfg import cfg, get_log_pth, get_logger
 
-__all__ = ['create_backup', 'clean_dates', 'run_backup', 'compress', 'clone', 'get_date', 'conv_date']
+__all__ = ['create_backup', 'clean_dates', 'run_backup', 'compress', 'clone', 'get_date', 'conv_date',
+           'checkpoint', 'restore_checkpoint', 'restore', 'pull_clone']
 def get_date(): return datetime.now().strftime('%Y%m%d_%H%M%S')
 def conv_date(d): return datetime.strptime(d, '%Y%m%d_%H%M%S') if isinstance(d, str) else d
 lgr = get_logger(get_log_pth('backup'))
@@ -91,6 +92,56 @@ def clone(src=cfg.static, remote=cfg.app_nm, bucket=cfg.app_nm.lower(), sync=Tru
             info(f'Compressing {src} before copying to {d}')
             try: rclone.copy(str(src.absolute()), d, show_progress=True)
             except: err(f'Failed to copy {src} to {d} on remote {remote}')
+
+def checkpoint(name, src=cfg.data_root, dest_root=cfg.backup_path, overwrite=False):
+    'Create backups/checkpoints/<name>.tar.gz. Returns path. Warns if exists unless overwrite=True.'
+    cp_dir = Path(dest_root) / 'checkpoints'
+    cp_dir.mkdir(parents=True, exist_ok=True)
+    out = cp_dir / f'{name}.tar.gz'
+    if out.exists() and not overwrite: warn(f'Checkpoint {name} exists. Use overwrite=True.'); return out
+    import tarfile
+    src = Path(src)
+    with tarfile.open(out, 'w:gz') as tar: tar.add(src, arcname=src.name)
+    info(f'Checkpoint created: {out}')
+    return out
+
+def restore_checkpoint(name, dest=cfg.data_root, backup_root=cfg.backup_path, backup_current=True):
+    'Restore from named checkpoint. Auto-backs up current state first (backup_current=True).'
+    cp = Path(backup_root) / 'checkpoints' / f'{name}.tar.gz'
+    if not cp.exists(): raise FileNotFoundError(f'Checkpoint not found: {cp}')
+    if backup_current:
+        auto = f'pre_restore_{name}_{get_date()}'
+        checkpoint(auto, src=dest, dest_root=backup_root, overwrite=True)
+        info(f'Auto-backup before restore: {auto}')
+    import tarfile
+    dest = Path(dest)
+    with tarfile.open(cp, 'r:gz') as tar: tar.extractall(path=dest.parent, filter='data')
+    info(f'Restored checkpoint {name} to {dest}')
+
+def restore(backup_ts=None, src=cfg.backup_path, dest=cfg.data_root):
+    'Restore from timestamped snapshot. backup_ts=None restores most recent.'
+    src = Path(src)
+    snaps = sorted([d for d in src.iterdir() if d.is_dir() and d.name != 'checkpoints'])
+    if not snaps: raise FileNotFoundError(f'No backups found in {src}')
+    snap = src / backup_ts if backup_ts else snaps[-1]
+    if not snap.exists(): raise FileNotFoundError(f'Backup not found: {snap}')
+    import shutil
+    dest = Path(dest)
+    if dest.exists(): shutil.rmtree(dest)
+    shutil.copytree(snap, dest)
+    info(f'Restored {snap} -> {dest}')
+
+def pull_clone(filename, remote=cfg.app_nm, bucket=None, dest='backups/checkpoints'):
+    'Pull a single file from R2/S3 to local dest dir via rclone (reverse of clone).'
+    from rclone_python import rclone
+    if not rclone.is_installed(): info('rclone not installed.'); return
+    bucket = bucket or cfg.app_nm.lower()
+    if not remote.endswith(':'): remote = remote + ':'
+    src = f'{remote}{bucket}/checkpoints/{filename}'
+    dest = Path(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    try: rclone.copy(src, str(dest), show_progress=True); info(f'Pulled {src} -> {dest}')
+    except Exception as e: err(f'Failed to pull {src}: {e}')
 
 @patch
 def backup(self:Database, dir='backup', suffix='', v=False):

@@ -28,7 +28,7 @@ ENV_KEYS = dict(MODE='prod', PORT='5001', DOMAIN='lego.sankalpa.sh', TOKEN_EXP='
     JWT_SCRT=None, RESEND_API_KEY=None, WANT_GOOGLE='true', WANT_GIT='false', GOOGLE_CLI=None, GOOGLE_SCRT=None,
     GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='true', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
     CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, CLOUDFLARE_API_TOKEN=None, HCLOUD_TOKEN=None,
-    RSYNC_FORCE='')
+    RSYNC_FORCE='', HETZNER_IP=None, HETZNER_KEY=None)
 
 def _load_env(): return dict(os.environ) | (parse_env(fn=str(envf)) if (envf := ROOT / '.env').exists() else {})
 def env2push(): return ENV_KEYS | filter_keys(_load_env(),in_(ENV_KEYS))
@@ -79,12 +79,20 @@ def gen_deploy_workflow():
 	wf.build().save(p)
 	print(f'workflow: wrote {p}')
 
+def gen_backup_workflow():
+	'Generate .github/workflows/backup.yml — daily backup job + R2 clone.'
+	from gheasy.workflow import backup_workflow
+	p = ROOT / '.github' / 'workflows' / 'backup.yml'
+	backup_workflow(cron='0 2 * * *').save(p)
+	print(f'workflow: wrote {p}')
+
 def setup():
 	_init_gheasy()
 	gh_lfs(LFS_PATTERNS, path=str(ROOT))
 	print(f'lfs: tracking {len(LFS_PATTERNS)} patterns')
 	mk_env()
 	gen_deploy_workflow()
+	gen_backup_workflow()
 	install_skills()
 	print('Setup complete. Please review the generated .env.example, .github/workflows/deploy.yml, and SKILL.md files.'
 	      'Update .env with your secrets and push to GitHub to trigger the deploy workflow.')

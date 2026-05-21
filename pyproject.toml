@@ -34,6 +34,10 @@ lego-skill = "setup:install_skills"
 lego-setup = "setup:setup"
 lego-push = "setup:push_cli"
 lego-deploy = "deploy:deploy_cli"
+lego-backup = "deploy:backup_cli"
+lego-restore = "deploy:restore_cli"
+lego-checkpoint = "deploy:checkpoint_cli"
+lego-migrate = "deploy:migrate_cli"
 
 [project.urls]
 Homepage = "https://github.com/Karthik777/lego"
