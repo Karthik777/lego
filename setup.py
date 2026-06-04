@@ -26,7 +26,7 @@ ROOT = repo_root()
 LFS_PATTERNS = ['*.mp3', '*.ogg', '*.wav', '*.flac', '*.ico', '*.png', '*.jpg', '*.jpeg', '*.webp', '*.xml']
 ENV_KEYS = dict(MODE='prod', PORT='5001', DOMAIN='lego.sankalpa.sh', TOKEN_EXP='691200', PURGE='false',
     JWT_SCRT=None, RESEND_API_KEY=None, WANT_GOOGLE='true', WANT_GIT='false', GOOGLE_CLI=None, GOOGLE_SCRT=None,
-    GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='true', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
+    GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='false', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
     CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, CLOUDFLARE_API_TOKEN=None, HCLOUD_TOKEN=None,
     RSYNC_FORCE='')
 
