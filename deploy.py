@@ -1,10 +1,10 @@
 """Docker + Hetzner + Cloudflare tunnel deployment for VedicReader."""
 import os, sys, secrets
 from fastcore.all import Path, joins
-from dockeasy import fasthtml_app, env_set
+from dockeasy import fasthtml_app, env_set, env_get
 from cfeasy import CF
 from vpseasy import hetzner_deploy, caddy_stack, Hetzner
-from setup import mk_env, env2push
+from setup import mk_env, env2push, push_gh_vars
 
 root = Path(__file__).resolve().parent
 pkgs = ['rclone','libsqlite3-dev','curl']
@@ -18,7 +18,7 @@ def mk_compose():
     df = fasthtml_app(pkgs=pkgs, vols=vols, healthcheck='/health', cmd=['python', 'main.py'])
     return caddy_stack(joins('.', [sd, domain]), df, vols=vols)
 
-def deploy2prod(force=None):
+def deploy2prod(force=None, password=False):
     '''Idempotent: provisions Hetzner VPS if needed, then deploys.
     force= \'\' | \'checksum\' | \'ignore-times\' (falls back to $RSYNC_FORCE).'''
     mk_env(env2push(), path=root/'.env')
@@ -28,18 +28,24 @@ def deploy2prod(force=None):
     env_set('CF_TUNNEL_TOKEN',tok, path=root/'.env')
     force = force or os.getenv('RSYNC_FORCE', '')
     extra = RSYNC_FORCE.get(force)
+    hz_nm = env_get('server_name', path=root/'.env', default=sd)
+    u, k = env_get('server_user', path=root/'.env', default='deploy'), env_get('HETZNER_KEY', path=root/'.env')
+    p = env_get('server_password', path=root/'.env', default=password)
     if extra: print(f'rsync force: {force} ({extra})')
-    r = hetzner_deploy(sd, root, include=inc, exclude=exc, path=srv, extra=extra)
+    r = hetzner_deploy(hz_nm, root, include=inc, exclude=exc, path=srv, extra=extra, password=p, user=u, key=k)
     env_set('HETZNER_IP', r.ip, path=root/'.env')
     env_set('HETZNER_KEY', r.key, path=root/'.env')
+    push_gh_vars()
     print(f'deployed: {r.ip}')
 
 def nuke_prod():
     'Nuke prod server and Cloudflare tunnel. Use with caution!'
     typ = secrets.token_urlsafe(8)
-    input(f'WARNING: This will irreversibly delete the production server and tunnel. Type {typ} to proceed: ')
-    if input() != typ: return print('Aborting nuke.')
-    Hetzner().delete(sd)
+    ans = input(f'WARNING: This will irreversibly delete the production server and tunnel. Type {typ} to proceed: ')
+    if ans != typ: return print('Aborting nuke.')
+    hz_nm = env_get('server_name', sd)
+    Hetzner().delete(hz_nm)
+    print(f'prod server {hz_nm} deleted')
     try:
         cf = CF()
         tid = cf.tunnel_id(sd)
@@ -57,4 +63,4 @@ def deploy_cli():
     elif cmd == 'env': mk_env(env2push(), path=root/'.env')
     else: print('usage: lego-deploy compose | deploy')
 
-if __name__ == '__main__': deploy_cli()
+if __name__ == '__main__': deploy2prod(password=True)
