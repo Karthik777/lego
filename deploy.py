@@ -4,7 +4,7 @@ from fastcore.all import Path, joins
 from dockeasy import fasthtml_app, env_set, env_get
 from cfeasy import CF
 from vpseasy import hetzner_deploy, caddy_stack, Hetzner
-from setup import mk_env, env2push, push_gh_vars
+from setup import ROOT, mk_env, env2push, push_gh_vars
 
 root = Path(__file__).resolve().parent
 pkgs = ['rclone','libsqlite3-dev','curl']
@@ -35,7 +35,7 @@ def deploy2prod(force=None, password=False):
     r = hetzner_deploy(hz_nm, root, include=inc, exclude=exc, path=srv, extra=extra, password=p, user=u, key=k)
     env_set('HETZNER_IP', r.ip, path=root/'.env')
     env_set('HETZNER_KEY', r.key, path=root/'.env')
-    push_gh_vars()
+    if (ROOT / '.gheasy/config.json').exists() :push_gh_vars()
     print(f'deployed: {r.ip}')
 
 def nuke_prod():
