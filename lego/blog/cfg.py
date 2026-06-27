@@ -9,4 +9,4 @@ class Routes:
     post = '/blog/{slug}'
     skip = ['/blog', r'/blog/.*']
 
-cfg = AttrDict(posts_seed_force=True, posts_dir=Path(__file__).parent / 'posts', pinned_slug='vedicreader-what-it-does')
+cfg = AttrDict(posts_seed_force=True, posts_dir=Path(__file__).parent / 'posts', pinned_slug='ishwara-is-all')

@@ -1,8 +1,9 @@
+import html
 from collections import Counter
 from datetime import datetime
 from fasthtml.common import *
 from monsterui.all import *
-from monsterui.franken import render_md, FrankenRenderer
+from monsterui.franken import render_md, FrankenRenderer, Iframe
 from lego.blog.data import posts
 from lego.core import RouteOverrides
 from lego.blog.cfg import Routes
@@ -30,10 +31,16 @@ class BlogRenderer(FrankenRenderer):
         return f'<code class="font-mono text-sm text-primary px-1.5 py-0.5 rounded not-prose">{code}</code>'
 
     def render_block_code(self, token):
-        import html as _html
         lang = (token.language or 'text').strip()
         if lang == 'col': return '<div style="break-after:column"></div>'
-        code = _html.escape(token.children[0].content if token.children else '')
+        if lang == 'youtube':
+            url = (token.children[0].content if token.children else '').strip()
+            vid = _yt_video_id(url)
+            if not vid: return to_xml(A(url, href=url))
+            return to_xml(Div(Iframe(src=f'https://www.youtube.com/embed/{vid}',
+             cls='absolute inset-0 w-full h-full rounded-xl', allowfullscreen=True, data_uk_responsive=True,
+             data_uk_video='automute: true; autoplay: inview'), cls='relative aspect-video my-6'))
+        code = html.escape(token.children[0].content if token.children else '')
         return (
             f'<div class="my-6" style="break-inside:avoid">'
             f'<pre class="!m-0">'
@@ -65,11 +72,22 @@ def _visibility_badge(v):
     if v != 'members': return ''
     return Label(UkIcon('lock', width=10, height=10), ' Members', cls='inline-flex items-center gap-1')
 
+def _yt_video_id(url):
+    for pat in (r'youtu\.be/([^?&\s]+)', r'youtube\.com/watch\?.*v=([^&\s]+)', r'youtube\.com/shorts/([^?&\s]+)'):
+        m = re.search(pat, url)
+        if m: return m.group(1)
+    return None
+
 def _first_image(body):
     m = re.search(r'!\[.*?\]\((.+?)\)', body)
-    if not m: return None
-    src = m.group(1)
-    return src if src.startswith('/') else f'/static/blog/{src}'
+    if m:
+        src = m.group(1)
+        return src if src.startswith('/') else f'/static/blog/{src}'
+    m = re.search(r'```youtube\s+(https?://\S+)\s*```', body, re.DOTALL)
+    if m:
+        vid = _yt_video_id(m.group(1).strip())
+        if vid: return f'https://img.youtube.com/vi/{vid}/maxresdefault.jpg'
+    return None
 
 def _sign_in_cta(_slug):
     return Div(UkIcon('lock', width=16, height=16, cls='text-muted-foreground'),
