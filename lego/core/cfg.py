@@ -39,11 +39,20 @@ def _env_url(k, default):
     v = os.getenv(k, default)
     return v if v.startswith(('http://','https://')) else f'https://{v}'
 
-cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
-                      app_sh=os.getenv('APP_SH','lego'),
-                      site_author=os.getenv('SITE_AUTHOR','Karthik Rajgopal'),
-                      site_description=os.getenv('SITE_DESCRIPTION','Build performant webapps one block at a time'),
-                      site_keywords=os.getenv('SITE_KEYWORDS','lego, fastHTML, MonsterUI, webapp, python'),
+def _domain_host(url): return url.split('://', 1)[-1].rstrip('/')
+
+cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','The Pilgrim Assembly'),
+                      app_sh=os.getenv('APP_SH','The Pilgrim Assembly'),
+                      site_author=os.getenv('SITE_AUTHOR','The Pilgrim Assembly'),
+                      site_description=os.getenv('SITE_DESCRIPTION',
+                          'Belonging in Christ for life on the move. A weekly online assembly, Sundays 7pm.'),
+                      site_keywords=os.getenv('SITE_KEYWORDS',
+                          'online church, christian assembly, bible teaching, online bible study, zoom church'),
+                      contact_email=os.getenv('CONTACT_EMAIL', f'hello@{_domain_host(os.getenv("DOMAIN","thepilgrimassembly.org"))}'),
+                      instagram_handle=os.getenv('INSTAGRAM_HANDLE', ''),
+                      assembly_day_time=os.getenv('ASSEMBLY_DAY_TIME', 'Sundays · 7:00pm'),
+                      zoom_join_url=os.getenv('ZOOM_JOIN_URL', ''),
+                      gathering_info=os.getenv('GATHERING_INFO', 'Bathurst region · date to be announced'),
                       jwt_scrt=os.getenv('JWT_SCRT', generate_jwt_scrt()),
                       mode=os.getenv('MODE','dev'),
                       domain=_env_url('DOMAIN','http://localhost:5001'),

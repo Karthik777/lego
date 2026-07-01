@@ -1,7 +1,7 @@
-from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P
+from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse
 from monsterui.all import *
 from .core import *
-from lego import auth as a, blog as b
+from lego import church as c
 
 __all__ = ['launch', 'lego']
 
@@ -26,14 +26,13 @@ hdrs = [
     *Socials(title=cfg.app_nm, description=cfg.site_description, site_name=cfg.domain, image='/static/favicon.svg',
              url=cfg.domain), *themes()]
 
-def nf(req, exc): return not_found()
+def nf(req, exc): return c.church_not_found()
 kw,exh = {'class': 'hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
 lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, exts='preload', exception_handlers=exh,
                     on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
 # connect your blocks
-b.connect(lego)
-a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
+c.connect(lego)
 
 # optionally add a scheduled backup of data folders
 if cfg.need_backup and not not_prod():
@@ -44,24 +43,6 @@ if cfg.need_backup and not not_prod():
     scheduler.add_job(clone,trigger='cron', hour='10,22',minute=0)
     scheduler.add_job(clone,args=[cfg.backup_path],kwargs=dict(sync=False),trigger='interval',hours=24, id='daily_bkp')
 
-@cache('showcase', ttl=3600 * 24 * 30)
-def showcase(auth):
-    if auth: return home()
-    txt = Div(
-        P('Welcome to Lego', cls='text-xl font-bold text-center'),
-        P('make coding fun again', cls='text-xs font-bold mb-4 text-center'),
-        P('Write code one block at a time. Use syntactic sugars like multi process locking, backups, caching and more. Modify, hack and refactor anything.', cls='mb-2'),
-        P('Lego uses functional, succinct code. So no ruff, pep or linters. Its optimised for reading on mobiles.',cls='mb-2'),
-        cls='mx-auto mt-4')
-    td_get, td_tgt, bj_get, bj_tgt = '/', '#main-content', f'{a.Routes.auth_modal}?step={a.Step.login}', '#showcase'
-    btns = Div(cls='flex justify-center space-x-4 mt-4')(
-        Button('Test Drive', hx_get=td_get, hx_target=td_tgt, cls=[ButtonT.default, TextT.sm]),
-        Button('Begin Journey', hx_get=bj_get, hx_target=bj_tgt, ncls=[ButtonT.primary, TextT.sm]))
-    c = Div(txt, btns, id='showcase', cls='w-80 text-center mx-auto')
-    return landing(c)
-
-# add default routes. the blocks can override these. the first in line wins.
-# lego.get('/')(showcase)
 lego.get('/health')(lambda req: JSONResponse({'status': 'ok'}))
 
 def launch(): serve('lego', 'lego', port=cfg.port)

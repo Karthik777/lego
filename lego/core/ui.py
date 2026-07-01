@@ -10,7 +10,7 @@ from .icons import icon_auto
 from .utils import loadX
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
-           'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
+           'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT', 'NavBarT',
            'welcome', 'not_found', 'email_template', 'main', 'themes', 'github_star']
 
 class PresetsT:
