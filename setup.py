@@ -92,7 +92,7 @@ def setup():
 def install_skills():
 	import importlib
 	mv_skill_md(dry_run=False)
-	for nm in ('dockeasy', 'gheasy', 'vpseasy', 'cfeasy', 'kosha', 'litesearch'):
+	for nm in ('dockeasy', 'gheasy', 'vpseasy', 'cfeasy', 'kosha', 'litesearch', 'fossick'):
 		try: mod = importlib.import_module(nm)
 		except ImportError: print(f'skip {nm}: not installed'); continue
 		if mv := getattr(mod, 'mv_skill_md', None): mv(dry_run=False)
