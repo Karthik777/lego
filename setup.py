@@ -59,6 +59,7 @@ def push_gh_vars(dry_run=False):
 def push_cli():
 	_init_gheasy()
 	push_gh_vars('--dry-run' in sys.argv)
+	push_ssh_key()
 
 def push_ssh_key():
 	"Upload ~/.ssh/lego private key as the DEPLOY_KEY GitHub secret (matches vpseasy _res_key(name='lego'))."
