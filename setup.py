@@ -28,14 +28,14 @@ ENV_KEYS = dict(MODE='prod', PORT='5001', DOMAIN='lego.sankalpa.sh', TOKEN_EXP='
     JWT_SCRT=None, RESEND_API_KEY=None, WANT_GOOGLE='true', WANT_GIT='false', GOOGLE_CLI=None, GOOGLE_SCRT=None,
     GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='false', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
     CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, CLOUDFLARE_API_TOKEN=None, HCLOUD_TOKEN=None,
-    RSYNC_FORCE='', server_name='lego', server_user='deploy', server_password=None)
+    RSYNC_FORCE='false', SERVER_NAME=None, SERVER_USER=None, SERVER_PASSWORD=None)
 
 def _load_env(): return dict(os.environ) | (parse_env(fn=str(envf)) if (envf := ROOT / '.env').exists() else {})
 def env2push(): return ENV_KEYS | filter_keys(_load_env(),in_(ENV_KEYS))
 
 def _init_gheasy():
 	if app:=GheasyConfig.load(ROOT).app: print(f'gheasy: config already initialized for {app}')
-	gh=GheasyConfig(app='vedicreader', env_schema=ENV_KEYS).save(ROOT)
+	gh=GheasyConfig(app='lego', env_schema=ENV_KEYS).save(ROOT)
 	print(f'gheasy: initialized config fpr {gh.app} with env schema keys: {len(gh.env_schema)}')
 
 def lfs():
@@ -56,12 +56,14 @@ def push_gh_vars(dry_run=False):
 	print(f'push: {"would push" if dry_run else "pushed"} {len(to_push)} keys to GitHub as '
 	      f'{"secrets" if any(v is None for v in ENV_KEYS.values()) else "variables"}')
 
-def push_cli(): push_gh_vars('--dry-run' in sys.argv)
+def push_cli():
+	_init_gheasy()
+	push_gh_vars('--dry-run' in sys.argv)
 
 def push_ssh_key():
 	"Upload ~/.ssh/lego private key as the DEPLOY_KEY GitHub secret (matches vpseasy _res_key(name='lego'))."
 	from gheasy import gh_deploy_key_setup
-	gh_deploy_key_setup(Path.home()/'.ssh'/'lego')
+	gh_deploy_key_setup(Path.home()/'.ssh'/'vedicreader')
 
 def gen_deploy_workflow():
 	wf = Workflow('deploy')

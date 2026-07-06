@@ -8,9 +8,8 @@ from fastcore.all import threaded, AttrDictDefault, str2bool, str2int, startthre
 from litesearch import database
 from logging.handlers import RotatingFileHandler as RFH
 
-__all__ = ['cfg', 'database', 'AppErr', 'home', 'send_email', 'RouteOverrides', 'get_pth', 'get_db_pth',
-           'in_static', 'get_log_pth', 'get_db_dir', 'not_prod', 'get_caller_fn', 'slug',
-           'rot_log', 'get_logger', 'quick_lgr',
+__all__ = ['cfg', 'database', 'AppErr', 'home', 'send_email', 'RouteOverrides', 'get_pth', 'get_db_pth', 'in_static',
+           'get_log_pth', 'get_db_dir', 'not_prod', 'get_caller_fn', 'slug', 'rot_log', 'get_logger', 'quick_lgr',
            'cache', 'clear_cache', 'kv', 'get_lock', 'release_lock']
 
 # === Paths ===

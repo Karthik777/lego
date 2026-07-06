@@ -30,6 +30,9 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
       RSYNC_FORCE: ${{ vars.RSYNC_FORCE }}
+      SERVER_NAME: ${{ secrets.SERVER_NAME }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
       DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
     steps:
       - name: Checkout

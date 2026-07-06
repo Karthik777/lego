@@ -3,9 +3,10 @@ from fastcore.all import Path, patch
 from fastlite import Database, database
 from fastcore.xtras import globtastic
 from datetime import datetime
-from .cfg import cfg, get_log_pth, get_logger
+from .cfg import cfg, get_log_pth, get_logger, not_prod, get_db_dir
+from .utils import scheduler
 
-__all__ = ['create_backup', 'clean_dates', 'run_backup', 'compress', 'clone', 'get_date', 'conv_date']
+__all__ = ['create_backup', 'clean_dates', 'run_backup', 'compress', 'clone', 'get_date', 'conv_date', 'schedule_backup']
 def get_date(): return datetime.now().strftime('%Y%m%d_%H%M%S')
 def conv_date(d): return datetime.strptime(d, '%Y%m%d_%H%M%S') if isinstance(d, str) else d
 lgr = get_logger(get_log_pth('backup'))
@@ -41,7 +42,7 @@ def run_backup(src=cfg.data_root,dest=cfg.backup_path,max_ages= "2,14,60",dry_ru
     # Set up logging
     try:
         create_backup(src,dest,dry_run,recursive=recursive,symlinks=symlinks,file_glob=file_glob,file_re=file_re,
-                      folder_re=folder_re, skip_file_glob=skip_file_glob,skip_file_re=skip_file_re,skip_folder_re=skip_folder_re)
+          folder_re=folder_re, skip_file_glob=skip_file_glob,skip_file_re=skip_file_re,skip_folder_re=skip_folder_re)
         info(f"Backup created: {src} -> {dest}")
     except Exception as e: err(f"Backup failed: {str(e)}", exc_info=True)
     finally: clean_old_backups(dest, dry_run, max_ages)
@@ -108,3 +109,13 @@ def restore(self:Database, src, force=False):
     if not Path(src).exists(): return
     if self.t.files.count > 0 and not force: return
     return database(src).backup(Path(self.conn.filename).parent)
+
+def schedule_backup():
+    if not (cfg.need_backup and not_prod()): return
+    run_backup(get_db_dir())
+    clone(cfg.static)
+    clone(cfg.backup_path, sync=False)  # initial clone to ensure backups are in place
+    scheduler.add_job(run_backup, args=[get_db_dir()], trigger='cron', hour='8,20', minute=0)
+    scheduler.add_job(clone, trigger='cron', hour='10,22', minute=0)
+    scheduler.add_job(clone, args=[cfg.backup_path], kwargs=dict(sync=False), trigger='interval', hours=24,
+                      id='daily_bkp')

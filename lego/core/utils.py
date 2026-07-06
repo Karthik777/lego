@@ -3,7 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastcore.all import patch, ifnone, Path, L
 from functools import wraps
 from time import time
-from .cfg import get_lock, quick_lgr
+from .cfg import get_lock
 
 __all__ = ['init_js_then_use', 'get_usr_ini', 'start_scheduler', 'stop_scheduler', 'scheduler', 'loadX',
            'timeit', 'clean_dev', 'rm_special', 'arun']
@@ -37,14 +37,13 @@ def loadX(fn:Path, kw=None, pattern=r'__(\w+)__',minify=True):
     if minify: sa = minjs(sa) if fn.suffix == '.js' else mincss(sa) if fn.suffix == '.css' else sa
     return sa
 
-i,e,w = quick_lgr()
 def timeit(f):
     @wraps(f)
     def w(*a, **kw):
         st = time()
         result = f(*a, **kw)
         et = time()
-        i(f"{f.__name__}: {a}: {kw} took {et - st:.4f} seconds")
+        print(f"{f.__name__}: {a}: {kw} took {et - st:.4f} seconds")
         return result
     return w
 
