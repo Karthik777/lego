@@ -1,4 +1,4 @@
-from fasthtml.common import Beforeware, Redirect, threaded
+from fasthtml.common import Beforeware, Redirect, threaded, filter_keys, not_, in_
 import ujson as json
 from email_validator import validate_email, EmailNotValidError, EmailSyntaxError, EmailUndeliverableError
 from fasthtml.oauth import *
@@ -184,16 +184,12 @@ class Register(Login):
         return form(Step.em_ver, self.email) if not err else form(Step.reg, self.email, self.name, err=err)
 
     def catch(self):
-        err = reqd_chk(vars(self))
-        if err: return err
+        if err:= reqd_chk(filter_keys(vars(self),not_(in_('next')))): return err
         em_or_err = em_chk(self.email)
         if isinstance(em_or_err, AppErr): return em_or_err
         self.email = em_or_err
-        err = pw_chk(self.password, self.confirm_password)
-        if err: return err
-        try:
-            u = usr_by_em(self.email)
-            return EmailNotVerified if u.status == Status.pending else EmailAlreadyRegistered
+        if err:=pw_chk(self.password, self.confirm_password): return err
+        try: return EmailNotVerified if usr_by_em(self.email).status == Status.pending else EmailAlreadyRegistered
         except (NotFoundError, StopIteration):
             u = users.insert(dict(email=self.email, password_hash=hash_pw(self.password), display_name=self.name))
             tok = get_token(u.id)
@@ -206,7 +202,7 @@ class ForgotPwdLink:
 
     def __ft__(self, **kwargs):
         err = self.catch()
-        if err and err.msg == AllFieldsRequired().msg: form(Step.forgot_pw, err=err)
+        if err and err.msg == AllFieldsRequired().msg: return form(Step.forgot_pw, err=err)
         else: return form(Step.pw_reset_sent, self.email)
 
     def catch(self):
@@ -292,7 +288,7 @@ class ChangePwd:
 
 class GoogleAuth(OAuth):
     pr = 'google'
-    def check_invalid(self, req, session, auth): return amodal(login_form(req, wrap=True)) if not auth_ok(req) else False
+    def check_invalid(self, req, session, auth): return False if auth_ok(req) else home()
     def get_auth(self, info, ident, session, state):
         try:
             u = usr_by_oa(self.pr, ident)
@@ -307,11 +303,11 @@ class GoogleAuth(OAuth):
                                    auth_provider=self.pr, provider_user_id=ident, status=Status.active))
             except: return Redirect(Routes.err)
         except: return Redirect(Routes.err)
-        return Redirect(state) if state else home()
+        return home(state)
 
 class GithubAuth(OAuth):
     pr = 'github'
-    def check_invalid(self, req, session, auth): return amodal(login_form(req, wrap=True)) if not auth_ok(req) else False
+    def check_invalid(self, req, session, auth): return False if auth_ok(req) else home()
     def get_auth(self, info, ident, session, state):
         try: u = usr_by_oa(self.pr, ident)
         except (NotFoundError, StopIteration):

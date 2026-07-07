@@ -44,7 +44,6 @@ if cfg.need_backup and not not_prod():
     scheduler.add_job(clone,trigger='cron', hour='10,22',minute=0)
     scheduler.add_job(clone,args=[cfg.backup_path],kwargs=dict(sync=False),trigger='interval',hours=24, id='daily_bkp')
 
-@cache('showcase', ttl=3600 * 24 * 30)
 def showcase(auth):
     if auth: return home()
     txt = Div(
