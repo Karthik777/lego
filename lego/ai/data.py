@@ -1,11 +1,15 @@
 from datetime import datetime
 from time import time
-from lego.core import database, quick_lgr
+from lego.core import database, quick_lgr, slug
 from .cfg import *
 
-__all__ = ['get_db', 'hist', 'shared', 'get_projects']
+__all__ = ['get_db', 'hist', 'shared', 'get_projects', 'new_chat', 'get_chat', 'latest_chat', 'get_msgs', 'add_msg', 'msgs_as_bubbles']
 
 info,err,warn=quick_lgr()
+
+def all_dcs(db):
+    for t in db.t:
+        if '_fts' not in t.name: t.dataclass()   # skip FTS shadow tables
 
 def get_db():
     _db = database(cfg.db)
@@ -43,7 +47,7 @@ def get_db():
     ckpts.create_index(['user_id'], if_not_exists=True)
     ckpts.create_index(['chat_id'], if_not_exists=True)
 
-    all_dcs(_db,True)
+    all_dcs(_db)
     return _db
 
 db = get_db()
@@ -71,3 +75,27 @@ def hist(uid=None, pg=1, sz=10):
 def shared(uid=None, pg=1, sz=5): return L(db.t.chats(where=f"instr(shared_with, '{uid}') > 0", limit=_limit(pg, sz), order_by='updated_at desc'))
 def get_projects(uid=None, pg=1, sz=5): return L(db.t.projects(where=f"user_id={uid}", limit=_limit(pg, sz), order_by='created_at desc'))
 
+def new_chat(uid, name='New Chat'):
+    cid = slug(f'{uid}{name}{time()}')
+    db.t.chats.insert(dict(id=cid, user_id=uid, name=name, created_at=time(), updated_at=time()))
+    return cid
+
+def get_chat(cid, uid):
+    r = L(db.t.chats(where='id=? and user_id=?', where_args=[cid, uid]))
+    return r[0] if r else None
+
+def latest_chat(uid):
+    r = L(db.t.chats(where='user_id=?', where_args=[uid], order_by='updated_at desc', limit=1))
+    return r[0] if r else None
+
+def get_msgs(cid):
+    return L(db.t.chat_messages(where='chat_id=?', where_args=[cid], order_by='created_at'))
+
+def add_msg(cid, sender, message):
+    row = db.t.chat_messages.insert(dict(chat_id=cid, sender=sender, message=message, created_at=time()))
+    db.t.chats.update(dict(id=cid, updated_at=time()))
+    return row
+
+def _ts(t): return datetime.fromtimestamp(t).strftime('%I:%M %p')
+def msgs_as_bubbles(cid):
+    return [(r.message, r.sender == 'user', _ts(r.created_at)) for r in get_msgs(cid)]

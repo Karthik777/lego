@@ -17,6 +17,7 @@ class PresetsT:
     animate_shine = 'shadow-md'
     shine = 'bg-card %s p-2' % animate_shine
     primary = 'bg-primary text-primary-foreground'
+    secondary = 'bg-secondary text-secondary-foreground'
     transparent = 'bg-transparent backdrop-blur-lg'
     glass = stringify([transparent, animate_shine])
     standout = 'bg-muted muted-border %s relative p-2' % animate_shine

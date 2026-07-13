@@ -4,23 +4,24 @@ from monsterui.foundations import stringify
 from lego.core.ui import *
 from lego.core.utils import loadX
 from .cfg import AIPresetsT
-from .data import hist, shared as hist_shared, get_projects
+from .data import hist, shared as hist_shared, get_projects, msgs_as_bubbles
 
-__all__ = ['chats']
+__all__ = ['chats', 'chatbot', 'sse_bubble']
 def _nav_btn(ico_nm, txt=None, cls=None, ico_cls=None, code=None, **kw):
     t, btn_cls=Span(txt, cls='text-center') if txt else None, f'{ButtonT.icon if not txt else ''} {ButtonT.ghost}'
     c = ('w-full items-left justify-start flex gap-2 px-0.75 cursor-pointer' if txt else '') + f'{btn_cls} {cls if cls else ''}'
     return Button(UkIcon(ico_nm, cls=ico_cls), code, t, cls=c, **kw)
 
 def _nav_i(*c, cls='', **kw): return Li(*c, cls=f'cursor-pointer {cls}', **kw)
-def new(ico=False): return _nav_i(_nav_btn('square-pen', 'Chat' if not ico else None))
+def new(ico=False): return _nav_i(_nav_btn('square-pen', 'Chat' if not ico else None, hx_post='/ai/c'))
 def files(ico=False): return _nav_i(_nav_btn('file-text', 'Files' if not ico else None))
 
 def smpl_navi(txt, sub_t='', ico=None, cls='', ico_cls='', a_cls='', **kw):
     """Create a navigation item with optional icon, name, and description"""
     if not txt: return None
     nm, dsc = lambda n: Span(n, cls='truncate font-semibold nav-text'), lambda d: NavSubtitle(d, cls='truncate')
-    c = A(UkIcon(ico, cls=ico_cls) if ico else None, Div(nm(txt), dsc(sub_t) if sub_t else None, cls='flex flex-col'), href='#', cls=[stringify(a_cls), 'py-0.5 gap-2'])
+    c = A(UkIcon(ico, cls=ico_cls) if ico else None, Div(nm(txt), dsc(sub_t) if sub_t else None, cls='flex flex-col'),
+          href='#', cls=[stringify(a_cls), 'py-0.5 gap-2'])
     return _nav_i(c, cls=cls, **kw)
 
 def search(ico=False):
@@ -41,7 +42,8 @@ def projects(pr=get_projects(1001), ico=False):
 def shr(shared:L=hist_shared(2002), ico=False):
     if not shared: return None
     if ico: return _nav_i(_nav_btn('folder-kanban'), cls='mt-0')
-    ch_itm = lambda ch: A(Span(ch.name, cls='truncate group-hover:opacity-30'), UkIcon('book-copy', cls='group-hover:block hidden'), href='#', id=ch.id)
+    ch_itm = lambda ch: A(Span(ch.name, cls='truncate group-hover:opacity-30'),
+                          UkIcon('book-copy', cls='group-hover:block hidden'), href='#', id=ch.id)
     hst_pm = lambda chs: L(chs).map(lambda ch: _nav_i(ch_itm(ch), cls='group'))
     hsts = shared.map(lambda c: hst_pm(c)).concat() if shared else L()
     cnt = NavContainer(*hsts, id='shared-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
@@ -52,7 +54,8 @@ def shr(shared:L=hist_shared(2002), ico=False):
 def history(hst:L=hist(1001), ico=False):
     if not hst: return None
     if ico: return _nav_i(_nav_btn('history'), cls='mt-0')
-    hst_pm = lambda chs: L(chs).map(lambda ch: _nav_i(A(Span(ch[0], cls='truncate opacity-80'), UkIcon('ellipsis-vertical', cls='item-end group-hover:block hidden'), href='#', id=ch[1], cls='pl-2.5'), cls='group'))
+    hst_pm = lambda chs: L(chs).map(lambda ch: _nav_i(A(Span(ch[0], cls='truncate opacity-80'),
+        UkIcon('ellipsis-vertical', cls='item-end group-hover:block hidden'), href='#', id=ch[1], cls='pl-2.5'), cls='group'))
     hsts = hst.map(lambda c: (NavHeaderLi(c[0], cls=(TextT.xs,'py-0')),*hst_pm(c[1]))).concat()
     cnt=NavContainer(*hsts, id='history-container', parent=False, cls=[NavT.secondary, 'ml-3 border-l muted-border'])
     icon = (UkIcon('chevron-down', cls='group-hover:block hidden'), UkIcon('history', cls='group-hover:hidden block'))
@@ -95,22 +98,33 @@ messages = L([
     ("Perfect, let me upload a few files now.", True, "10:32 AM"),
 ])
 
-def chat_messages(msgs=messages):
-    return Div(Div(*(msg(*m) for m in msgs*10), Div(cls='h-48'), cls='mx-auto max-w-[48rem]'), cls='flex-1 py-4', uk_overflow_auto='selContainer: .chat-window; selContent: .chat-messages;')
+def sse_bubble(cid):
+    inner = Div(cls=['whitespace-pre-wrap break-words'])
+    mc = Div(inner, cls='flex flex-col')
+    return Div(mc, cls='flex justify-start mb-4 mx-4', hx_ext='sse',
+               sse_connect=f'/ai/c/{cid}/stream', sse_swap='message',
+               hx_swap='innerHTML', **{'sse-close': 'close'})
 
-def chat_inp(cls=None):
+def chat_messages(cid=None):
+    msgs = msgs_as_bubbles(cid) if cid else messages
+    return Div(Div(*(msg(*m) for m in msgs), Div(cls='h-48'), cls='mx-auto max-w-[48rem]'),
+               cls='flex-1 py-4', uk_overflow_auto='selContainer: .chat-window; selContent: .chat-messages;')
+
+def chat_inp(cid=None, cls=None):
     ta_cls = 'w-full p-4 pr-16 min-h-12 max-h-96 overflow-y-auto focus:outline-none chat-text h-auto'
-    ta = Textarea(placeholder="What do you want to know?", cls=ta_cls)
+    ta = Textarea(placeholder="What do you want to know?", name='message', cls=ta_cls)
     code = "console.log(e.scrollHeight); e.style.height = 'auto';if(!e.value){e.style.height = '4rem';} else {e.style.height = `${Math.max(e.scrollHeight/16, 4)}rem`;}"
-    ip = Div(ta, On(code, 'input', '.chat-text', me=False), opts(), cls=f'relative w-full rounded-2xl shadow-lg {PresetsT.shine}')
+    ip = Div(ta, On(code, 'input', '.chat-text', me=False), opts(cid), cls=f'relative w-full rounded-2xl shadow-lg {PresetsT.shine}')
+    form = Form(ip, hx_post=f'/ai/c/{cid}/msg', hx_target='.chat-messages > div', hx_swap='beforeend',
+                **{'hx-on::after-request': "me('.chat-text').value=''"}) if cid else ip
     ch_cls=f'absolute z-50 w-full max-w-[52rem] left-1/2 -translate-x-1/2 items-center px-4 {stringify(cls)}'
-    return Div(ip, id='chat-container', cls=ch_cls)
+    return Div(form, id='chat-container', cls=ch_cls)
 
-def opts():
+def opts(cid=None):
     btn_sm = f'{ButtonT.icon} {ButtonT.sm} {ButtonT.ghost}'
-    attach, proj = Button(UkIcon('paperclip'), cls=btn_sm), Button(UkIcon('box'), cls=btn_sm)
+    attach, proj = Button(UkIcon('paperclip'), type='button', cls=btn_sm), Button(UkIcon('box'), type='button', cls=btn_sm)
     lft = Div(attach, proj, mode(), cls='flex items-center gap-0')
-    rgt = Button(UkIcon('arrow-up'),cls=f'{ButtonT.primary} {ButtonT.icon} absolute right-3 bottom-2.5')
+    rgt = Button(UkIcon('arrow-up'), type='submit', cls=f'{ButtonT.primary} {ButtonT.icon} absolute right-3 bottom-2.5')
     return Div(lft, rgt, cls='flex items-center justify-between p-2')
 
 m = dict2obj([
@@ -153,20 +167,20 @@ def dev_set():
     hdn, code = Textarea('', id='fs-dev-cb', cls='hidden'), Script(loadX(Path(__file__).parent / 'js' / 'dev.js'))
     return Div(hdr, desc, mnt, hdn, code, cls='space-y-3')
 
-def chat_window(cls='grow-0 w-full h-screen', ip_cls='mt-auto bottom-14', msg_cls='w-full'):
-    c = Div(chat_messages(), cls=f'chat-messages {stringify(msg_cls)}'), chat_inp(ip_cls)
+def chat_window(cid=None, cls='grow-0 w-full h-screen', ip_cls='mt-auto bottom-14', msg_cls='w-full'):
+    c = Div(chat_messages(cid), cls=f'chat-messages {stringify(msg_cls)}'), chat_inp(cid, ip_cls)
     return Div(*c, cls=[cls, 'chat-window relative'])
 
-def lg_chat():
+def lg_chat(cid=None):
     d_nav = Div(lg_nav(ico=True, hide=True), lg_nav(), cls='grow-0')
     cls, cw_cls ='hidden lg:flex w-full desktop-layout h-auto', [PresetsT.glass, 'relative', 'w-full flex items-center lg-chat-window']
-    return Grid(d_nav, Div(chat_window(), cls=cw_cls), cls=cls, id='lg-chatbot-container', cols=4)
+    return Grid(d_nav, Div(chat_window(cid), cls=cw_cls), cls=cls, id='lg-chatbot-container', cols=4)
 
-def mob_chat():
+def mob_chat(cid=None):
     m_nav = Div(Div(mob_nav(), cls='uk-offcanvas-bar'), id='mob-nav', data_uk_offcanvas='overlay: true; container: false;')
     m_ico = Button(UkIcon('menu'), aria_label="Open navigation", data_uk_toggle="target: #mob-nav", cls=f'p-2 {ButtonT.icon}')
-    m_chat = Div(chat_window(ip_cls='bottom-8 mt-auto h-1/5'), cls='w-full',id='mob-chat-window')
+    m_chat = Div(chat_window(cid, ip_cls='bottom-8 mt-auto h-1/5'), cls='w-full', id='mob-chat-window')
     return Div(m_nav, m_ico, m_chat, cls='lg:hidden w-full', id='mob-chatbot-container')
 
-def chatbot(): return Div(mob_chat(), lg_chat(), customise(), id='chatbot-container', cls='h-[90vh]')
-def chats(): return chatbot()
+def chatbot(cid=None): return Div(mob_chat(cid), lg_chat(cid), customise(), id='chatbot-container', cls='h-[90vh]')
+def chats(cid=None): return chatbot(cid)

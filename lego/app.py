@@ -1,7 +1,7 @@
 from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P
 from monsterui.all import *
 from .core import *
-from lego import auth as a, blog as b
+from lego import auth as a, blog as b, ai
 
 __all__ = ['launch', 'lego']
 
@@ -23,6 +23,7 @@ hdrs = [
     *Favicon('/static/favicon.ico', '/static/favicon-dark.ico'),
     Link(rel='icon', type='image/svg+xml', href='/static/favicon.svg'),
     Link(rel='stylesheet', href='https://fonts.googleapis.com/css2?%s' % fonts, defer=True),
+    Script(src='https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2/sse.js'),
     *Socials(title=cfg.app_nm, description=cfg.site_description, site_name=cfg.domain, image='/static/favicon.svg',
              url=cfg.domain), *themes()]
 
@@ -33,6 +34,7 @@ lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, ext
 
 # connect your blocks
 b.connect(lego)
+ai.connect(lego)
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 
 # optionally add a scheduled backup of data folders
@@ -63,5 +65,5 @@ def showcase(auth):
 # lego.get('/')(showcase)
 lego.get('/health')(lambda req: JSONResponse({'status': 'ok'}))
 
-def launch(): serve('lego', 'lego', port=cfg.port)
+def launch(): serve('lego', 'lego', port=5001)
 if __name__ == '__main__': launch()

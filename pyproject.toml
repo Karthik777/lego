@@ -22,6 +22,7 @@ dependencies = [
     "monsterui>=1.0.44",
     "pyjwt>=2.11.0",
     "python-fasthtml>=0.14.0",
+    "python-fastllm>=0.0.27",
     "rclone-python>=0.1.24",
     "rcssmin>=1.2.2",
     "resend>=2.22.0",
