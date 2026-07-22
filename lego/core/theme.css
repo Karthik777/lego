@@ -150,7 +150,8 @@ html:not(.font-sm):not(.font-lg) #lg-font-btn { display: block !important; }
 .navbar-glass { background: color-mix(in srgb, var(--background) 80%, transparent); backdrop-filter: blur(12px); border-bottom-color: color-mix(in srgb, var(--border) 50%, transparent); }
 .navbar-shining { box-shadow: var(--shadow-medium); }
 .navbar nav { padding: 0.25rem 0.5rem 0.25rem 1rem; display: flex; align-items: center; justify-content: space-between; }
-.navbar a { text-decoration: none; color: inherit; }
+.navbar a { text-decoration: none; }
+.navbar a:not(.button):not(.gh-pill) { color: inherit; }
 
 /* github star pill */
 .gh-pill {
@@ -163,6 +164,11 @@ html:not(.font-sm):not(.font-lg) #lg-font-btn { display: block !important; }
 
 /* theme picker dropdown */
 .theme-menu { width: 20rem; max-width: calc(100vw - 2rem); padding: var(--space-4); }
+@media (max-width: 640px) {
+  /* ot-dropdown JS right-aligns to the trigger and can push the menu off-screen
+     on narrow viewports; pin it just under the navbar instead */
+  ot-dropdown [popover].theme-menu { position: fixed; left: 0.5rem !important; right: 0.5rem; top: 3.25rem !important; width: auto; }
+}
 .theme-menu h3 { margin: 0 0 var(--space-1); font-size: var(--text-4); }
 .swatch-grid { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2) var(--space-4); }
 .swatch {
