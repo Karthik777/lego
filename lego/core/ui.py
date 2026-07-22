@@ -232,15 +232,33 @@ def email_template(content, title=s.app_nm, usr=None):
 def welcome(usr=None): return landing(placeholder(f'Welcome to {s.app_nm}'), usr=usr)
 def not_found(): return landing(placeholder("The page you're looking for doesn't exist or has been moved."))
 
-def _oat(): return [Link(rel='stylesheet', href='/static/vendor/oat.min.css'),
-                    Script(src='/static/vendor/oat.min.js', type='module')]
 def _nosleep(): return Script(src='https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js', defer=True)
 
 _css, _js = Path(__file__).parent / 'theme.css', Path(__file__).parent / 'theme.js'
+_assets = Path('static') / 'assets'
+
+def _vlink(path):
+    'Content-hashed URL (?v=) so immutable caching busts when the file changes; plain path if unhashable.'
+    try: return vurl(path)
+    except Exception: return path
+
+def _asset(nm, content):
+    'Write a derived asset if its content changed; None on read-only filesystems (serverless).'
+    try:
+        p = _assets / nm
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if not p.exists() or p.read_text() != content: p.write_text(content)
+        return p
+    except OSError: return None
 
 @timed_cache(seconds=3600)
 def themes(color='zinc', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
     radii, shadows = getattr(radii, 'value', radii), getattr(shadows, 'value', shadows)
     d = AttrDict(mode='auto', theme='theme-%s' % color, radii=radii, shadows=shadows, font=font)
     j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')
-    return _oat() + [_nosleep(), Style(loadX(_css)), Script(j), Surreal("me('body').remove_class('hidden');")]
+    c = loadX(_css)
+    oat = [Link(rel='stylesheet', href=_vlink('/static/vendor/oat.min.css')),
+           Script(src=_vlink('/static/vendor/oat.min.js'), type='module')]
+    thm = [Link(rel='stylesheet', href=_vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
+           Script(src=_vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
+    return oat + thm + [_nosleep(), Surreal("me('body').remove_class('hidden');")]

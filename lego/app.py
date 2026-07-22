@@ -31,6 +31,12 @@ kw,exh = {'class': 'hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf,
 lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, exts='preload', pico=False, exception_handlers=exh,
                     on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
+# serve versioned css/js (vurl ?v= links) immutable, ahead of the default static route
+from starlette.routing import Mount
+for _d in ('vendor', 'assets'):
+    if (Path('static')/_d).exists():
+        lego.router.routes.insert(0, Mount(f'/static/{_d}', app=StaticImmutable(directory=f'static/{_d}'), name=f'static_{_d}'))
+
 # connect your blocks
 b.connect(lego)
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
