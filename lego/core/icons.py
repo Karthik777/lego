@@ -1,4 +1,24 @@
 from fasthtml.svg import *
+from fastlucide.core import SvgSprites
+
+__all__ = ['icon_auto', 'icon_toc', 'lc_icon', 'lc_sprites']
+
+# every lucide icon the app renders (incl. via htmx fragments) must be seeded here
+# so the sprite sheet emitted on full page loads contains all symbols
+_NMS = ('lock', 'log-out', 'moon', 'sun', 'palette', 'notebook', 'case-lower', 'triangle-alert', 'search', 'circle-help')
+_ALIASES = {'warning': 'triangle-alert'}
+_sprites = SvgSprites('lc-', nms=_NMS)
+
+def lc_icon(nm, w=16, h=None, cls='', **kw):
+    'Lucide icon by name (drop-in for the old UkIcon). Renders a <use> ref into the sprite sheet.'
+    nm = _ALIASES.get(nm, nm)
+    if nm not in _sprites.icons: nm = 'circle-help'
+    _sprites.nms.add(nm)
+    return _sprites(nm, sz=(w, h or w), cls=cls, **kw)
+
+def lc_sprites():
+    'Hidden <defs> sheet with all seeded symbols. Include once per full page render.'
+    return _sprites.__ft__()
 
 def icon_auto(cls='', stroke_width=1, stroke_color='currentColor', w=24, h=24):
     return Svg(Path(stroke='none', d='M0 0h24v24H0z', fill='none'), Circle(cx='12', cy='12', r='9'),

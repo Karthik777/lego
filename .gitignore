@@ -1,17 +1,7 @@
-# Python
 __pycache__/
 *.py[cod]
-*.pyo
 .venv/
-*.egg-info/
-dist/
-build/
-
-# Runtime data
 data/
 backups/
-.env
 .sesskey
-
-# uv
-.python-version
+static/assets/

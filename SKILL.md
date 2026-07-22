@@ -1,13 +1,13 @@
 ---
 name: lego
 description: >
-  Build performant webapps with FastHTML + MonsterUI, hetzner deployment, docker containers, cloudflare tunnels,
+  Build performant webapps with FastHTML + Oat, hetzner deployment, docker containers, cloudflare tunnels,
   and a full auth system. Each feature is a **block**: a folder with `cfg.py`, `data.py`, `ui.py`, `app.py`, and a `connect(app)` function.
 ---
 
 # lego
 
-lego is a FastHTML + MonsterUI web app template. Each feature is a **block**: a folder with `cfg.py`, `data.py`, `ui.py`, `app.py`, and a `connect(app)` function. Blocks are wired in `lego/app.py`. Auth always connects last.
+lego is a FastHTML + Oat web app template. Each feature is a **block**: a folder with `cfg.py`, `data.py`, `ui.py`, `app.py`, and a `connect(app)` function. Blocks are wired in `lego/app.py`. Auth always connects last.
 
 ## CLI entrypoints
 
