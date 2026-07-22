@@ -1,6 +1,6 @@
 # lego
 
-A FastHTML + MonsterUI web app starter. Powers [vedicreader.com](https://vedicreader.com/).
+A FastHTML + Oat web app starter. Powers [vedicreader.com](https://vedicreader.com/).
 
 Clone it, connect your blocks, ship it.
 
