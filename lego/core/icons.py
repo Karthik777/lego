@@ -5,7 +5,7 @@ __all__ = ['icon_auto', 'icon_toc', 'lc_icon', 'lc_sprites']
 
 # every lucide icon the app renders (incl. via htmx fragments) must be seeded here
 # so the sprite sheet emitted on full page loads contains all symbols
-_NMS = ('lock', 'log-out', 'moon', 'sun', 'palette', 'notebook', 'case-lower', 'triangle-alert', 'search', 'circle-help')
+_NMS = ('lock', 'log-out', 'moon', 'sun', 'sun-moon', 'palette', 'notebook', 'case-lower', 'triangle-alert', 'search', 'circle-help')
 _ALIASES = {'warning': 'triangle-alert'}
 _sprites = SvgSprites('lc-', nms=_NMS)
 

@@ -37,7 +37,6 @@ for _d in ('vendor', 'assets'):
     if (Path('static')/_d).exists():
         lego.router.routes.insert(0, Mount(f'/static/{_d}', app=StaticImmutable(directory=f'static/{_d}'), name=f'static_{_d}'))
 
-# connect your blocks
 b.connect(lego)
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 

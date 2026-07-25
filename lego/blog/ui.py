@@ -126,7 +126,6 @@ def blog_hero(usr=None):
             A('Read the story', href='#blog-posts', cls=f'{ButtonT.ghost} {ButtonT.sm}'),
             cls='flex gap-3'), cls='flex flex-col justify-center')
 
-    # Terminal-style code window
     right = Div(
         Div(
             Div(
@@ -155,7 +154,8 @@ def _featured_card(post, usr=None):
     locked = post['visibility'] == 'members' and not usr
     slug_href = f'/blog/{post["slug"]}'
     img_src = _first_image(post.get('body', ''))
-    kw = dict(hx_get=slug_href, hx_target='#main-content', hx_push_url='true')
+    kw = dict(hx_get=slug_href, hx_target='#main-content', hx_push_url='true',
+              hx_swap='innerHTML show:window:top')
     headline = H2(post['title'], cls='tracking-tight leading-tight mb-3')
     img_el = Div(Img(src=img_src, alt='', cls='img-featured'),
                  cls='overflow-hidden mb-4') if img_src else None
@@ -175,7 +175,8 @@ def _featured_card(post, usr=None):
 def _sidebar_item(post, usr=None):
     locked = post['visibility'] == 'members' and not usr
     slug_href = f'/blog/{post["slug"]}'
-    kw = dict(hx_get=slug_href, hx_target='#main-content', hx_push_url='true')
+    kw = dict(hx_get=slug_href, hx_target='#main-content', hx_push_url='true',
+              hx_swap='innerHTML show:window:top')
     tag = Span('Members', cls='text-xs font-mono tracking-wider uppercase text-primary block mb-1') if locked else ''
     title = H3(post['title'], cls='leading-snug tracking-tight mb-1')
     date = Span(_fmt_date(post['created_at']), cls='text-xs font-mono text-light')
@@ -186,7 +187,8 @@ def _grid_card(post, usr=None):
     locked = post['visibility'] == 'members' and not usr
     slug_href = f'/blog/{post["slug"]}'
     img_src = _first_image(post.get('body', ''))
-    kw = dict(hx_get=slug_href, hx_target='#main-content', hx_push_url='true')
+    kw = dict(hx_get=slug_href, hx_target='#main-content', hx_push_url='true',
+              hx_swap='innerHTML show:window:top')
     img_el = Div(Img(src=img_src, alt='', cls='w-full h-40 object-cover'),
                  cls='overflow-hidden mb-3') if img_src else None
     tag = Span('Members', cls='text-xs font-mono tracking-wider uppercase text-primary block mb-1') if locked else ''
@@ -281,7 +283,7 @@ def post_detail(post, usr=None):
         _visibility_badge(post['visibility']), cls='flex items-center gap-3 mb-6')
     title = H1(post['title'], cls='mb-4 tracking-tight')
     body = Article(render_md(post['body'], img_dir='/static/blog'),
-                   cls='np-body overflow-auto' if newspaper else 'overflow-auto')
+                   cls='np-body dropcap overflow-auto' if newspaper else 'dropcap overflow-auto')
     section_cls = 'max-w-5xl mx-auto px-4 py-12' if newspaper else 'max-w-3xl mx-auto px-4 py-12'
     extras = _hljs() + ([_NP_STYLE] if newspaper else [])
     return *extras, Section(back, meta, title, body, cls=section_cls)

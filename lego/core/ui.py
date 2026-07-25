@@ -7,7 +7,7 @@ from fasthtml.components import Ot_dropdown, Dialog, Menu
 from fastcore.all import timed_cache, ifnone, NotStr, globtastic, Path, AttrDict
 from itertools import islice, cycle
 from .cfg import cfg as s, RouteOverrides as r, not_prod
-from .icons import icon_auto, lc_icon, lc_sprites
+from .icons import lc_icon, lc_sprites
 from .utils import loadX
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
@@ -38,7 +38,8 @@ class ThemeRadii: none, sm, md, lg = 'radii-none', 'radii-sm', 'radii-md', 'radi
 class ThemeShadows: none, sm, md, lg = 'shadows-none', 'shadows-sm', 'shadows-md', 'shadows-lg'
 class ThemeFont: default, sm, lg = 'font-base', 'font-sm', 'font-lg'
 
-THEMES = [('theme-zinc', '#71717a'), ('theme-slate', '#64748b'), ('theme-stone', '#78716c'),
+THEMES = [('theme-paper', '#8a1f11'),
+          ('theme-zinc', '#71717a'), ('theme-slate', '#64748b'), ('theme-stone', '#78716c'),
           ('theme-red', '#dc2626'), ('theme-rose', '#e11d48'), ('theme-orange', '#ea580c'),
           ('theme-green', '#16a34a'), ('theme-blue', '#2563eb'), ('theme-violet', '#7c3aed'),
           ('theme-yellow', '#ca8a04')]
@@ -160,7 +161,7 @@ def theme_switcher(cls='relative', heading='Customise', sub_heading='theme selec
 
 def mode_switcher():
     btn_cls = f'{ButtonT.icon} {ButtonT.sm}'
-    return Div(Div(icon_auto(w=20, h=20), On('setMode("dark");'), cls=[btn_cls], id='auto-mode-btn'),
+    return Div(Div(lc_icon('sun-moon', 20), On('setMode("dark");'), cls=[btn_cls], id='auto-mode-btn'),
                Div(lc_icon('moon', 20), On('setMode("light");'), cls=btn_cls, id='dark-mode-btn'),
                Div(lc_icon('sun', 20), On('setMode("auto");'), cls=btn_cls, id='light-mode-btn'))
 
@@ -252,7 +253,7 @@ def _asset(nm, content):
     except OSError: return None
 
 @timed_cache(seconds=3600)
-def themes(color='zinc', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
+def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
     radii, shadows = getattr(radii, 'value', radii), getattr(shadows, 'value', shadows)
     d = AttrDict(mode='auto', theme='theme-%s' % color, radii=radii, shadows=shadows, font=font)
     j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')
