@@ -1,7 +1,7 @@
 """One-shot project setup: git-lfs, DB backup/restore, secrets push to GitHub."""
 import os, sys, shutil
 from fastcore.all import Path, parse_env, filter_keys,in_, first
-from dockeasy import env_set
+from dockeasy import env_set, env_get
 from gheasy import GheasyConfig, gh_lfs, gh_push_env
 from gheasy.workflow import Workflow
 
@@ -62,16 +62,18 @@ def push_cli():
 	push_ssh_key()
 
 def push_ssh_key():
-	"Upload ~/.ssh/lego private key as the DEPLOY_KEY GitHub secret (matches vpseasy _res_key(name='lego'))."
+	"Upload ~/.ssh/<SERVER_NAME> private key as the DEPLOY_KEY GitHub secret (matches vpseasy _res_key(name=SERVER_NAME))."
 	from gheasy import gh_deploy_key_setup
-	gh_deploy_key_setup(Path.home()/'.ssh'/'vedicreader')
+	name = env_get('SERVER_NAME', path=ROOT/'.env', default='lego')
+	gh_deploy_key_setup(Path.home()/'.ssh'/name)
 
 def gen_deploy_workflow():
 	wf = Workflow('deploy')
 	wf.on.push(branches=['main'])
 	env = {k: (f'${{{{ secrets.{k} }}}}' if v is None else f'${{{{ vars.{k} }}}}') for k, v in ENV_KEYS.items()}
 	env['DEPLOY_KEY'] = '${{ secrets.DEPLOY_KEY }}'
-	ssh_cmd = 'mkdir -p ~/.ssh && echo "$DEPLOY_KEY" > ~/.ssh/lego && chmod 600 ~/.ssh/lego'
+	ssh_cmd = ('mkdir -p ~/.ssh && name="${SERVER_NAME:-lego}" '
+	           '&& echo "$DEPLOY_KEY" > ~/.ssh/"$name" && chmod 600 ~/.ssh/"$name"')
 	(wf.job('deploy').runs_on('ubuntu-latest')
 	 .env(**env).checkout().with_(lfs=True).end_step()
 	 .setup_uv().with_(python_version='3.13').end_step()
