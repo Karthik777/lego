@@ -47,6 +47,6 @@ jobs:
         run: uv sync --group dev
       - name: Install SSH key
         if: env.DEPLOY_KEY != ''
-        run: mkdir -p ~/.ssh && echo "$DEPLOY_KEY" > ~/.ssh/lego && chmod 600 ~/.ssh/lego
+        run: mkdir -p ~/.ssh && name="${SERVER_NAME:-lego}" && echo "$DEPLOY_KEY" > ~/.ssh/"$name" && chmod 600 ~/.ssh/"$name"
       - name: Deploy
         run: python deploy.py deploy
