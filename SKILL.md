@@ -227,6 +227,33 @@ js = loadX('path/to/file.js', kw={'variable': 'value'})
 
 `__varname__` placeholders in the file are replaced by `kw['varname']`. Output is minified automatically based on file extension.
 
+**A block owns its assets.** Put a block's CSS and JS in the block folder and pull them in from a per-page head function, rather than adding to `lego/core/theme.css`:
+
+```python
+from lego.core import asset_js, asset_css, vendor_js
+
+asset_js(path)     # Script tag for a block's .js — static/assets when writable, inline when not
+asset_css(path)    # Link tag for a block's .css — same fallback; keeps styles with the block
+vendor_js(name)    # Script tag for static/vendor/<name>, content-hashed
+```
+
+## Navbar links
+
+```python
+RouteOverrides.nav += [('Dashboards', Routes.index, 'new', not cfg.public)]
+#                       label          href          tag    gated
+```
+
+`navbar()` renders nav entries as pills, deliberately smaller than the wordmark; `tag` puts a badge to the right. A `gated` entry opens the login modal in place for signed-out visitors rather than bouncing them to `/lgn`, which renders as a bare modal on an otherwise empty page. Nav pills carry `hx-boost="false"` so a block's page-level `<script src>` tags load through a real navigation.
+
+## Themes
+
+`THEMES` in `lego/core/ui.py` lists the palettes the theme switcher offers; `themes(color=...)` sets the default (`paper`). Every palette but `paper` only overrides `--primary`/`--primary-foreground` — `theme-paper` moves the surface colors too, so a new palette of that kind belongs in the same block of `theme.css`.
+
+`theme.js` wraps every appearance change in `withUiAnim`, which adds `.ui-anim` to `<html>` for 220ms so the swap cross-fades instead of snapping. It is skipped on the initial paint and under `prefers-reduced-motion`.
+
+Add `dropcap` to an article's class to get a drop capital on its first paragraph.
+
 ## Auth block (`lego/auth/`)
 
 ```python
@@ -335,6 +362,90 @@ Code blocks never split across columns.
 | `GET /blog/{slug}` | post detail |
 
 Pinned post: set `cfg.pinned_slug` in `lego/blog/cfg.py`.
+
+## Dash block (`lego/dash/`)
+
+```python
+import lego.dash as d
+d.connect(lego)   # before auth
+```
+
+Reflects a database, profiles its columns, and picks charts from what it finds. Nothing is hardcoded to a schema. Ships with Chinook and Northwind.
+
+**Routes** (from `lego/dash/cfg.py` `Routes`):
+
+| attribute | path |
+|---|---|
+| `Routes.index` | `/dash` |
+| `Routes.db` | `/dash/{db}` |
+| `Routes.table` | `/dash/{db}/{table}` |
+| `Routes.row` | `/dash/{db}/{table}/{pk}` |
+| `Routes.rel` | `/dash/{db}/{table}/{pk}/rel/{child}` (htmx partial) |
+| `Routes.chart` | `/dash/chart.json` (registered first — `/dash/{db}` would otherwise match it) |
+| `Routes.fopts` | `/dash/filter.opts` (htmx partial: the filter form's operator and value controls; registered first for the same reason) |
+
+**Registering a database.** Only what's in `DBS` (`lego/dash/data.py`) is reachable.
+
+```python
+DBS.mydb = AttrDict(nm='My DB', dump='mydb.sql.gz', about='...')
+```
+
+Each entry is a SQLite file of its own at `data/db/<key>.db`, opened with `database(..., sem_search=False)` — a file per database is what keeps `users` and `posts` out of the explorer, since reflection reports whatever the connection has. Drop `dump` for a database that already exists at that path.
+
+**Seeding.** Dumps live in `lego/dash/seed/` as gzipped SQL, statements split on a `\n--;--\n` separator, rejoined and applied as one script in one transaction. `seed()` runs only when the file has no tables in it, so it costs one `PRAGMA` per cold start after the first. `pragma defer_foreign_keys = on` holds the key checks until that commit — a dump loads a table at a time, so children land before parents and the database is only consistent once the whole script is in. A second process racing the same cold file gets "table already exists" and treats it as done.
+
+The dump ships with the block rather than being downloaded: SQL pulled off the network at runtime is SQL that executes without review.
+
+**Column roles** (`lego/dash/infer.py`) — assigned from declared type, name, and sampled stats:
+
+| role | assigned when |
+|---|---|
+| `temporal` | date/time type, or a date-ish name whose min value parses as ISO |
+| `measure` | numeric, non-key, non-zero σ |
+| `dimension` | ≤ `cfg.max_cats` distinct, not mostly null, not effectively unique |
+| `ref` | declared foreign key |
+| `key` / `bool` / `text` / `const` | primary key · two-valued int · high-cardinality text · single-valued |
+
+Chart rules score against these and the best `cfg.max_charts` render, at most 2 per table. Aggregation happens in SQL — no raw rows are pulled into Python. SQLite has no `STDDEV`, so σ comes from `sqrt(avg(x*x) - avg(x)^2)` in a single pass.
+
+**Filters** (`lego/dash/filters.py`). One filter is `table:column:op:value`, carried in repeated `f=` query parameters — so a filtered dashboard is a URL you can share, the back button undoes a facet, and nothing is stored server-side.
+
+```
+/dash/chinook?f=Artist%3AName%3Aeq%3AAC%2FDC        every chart and tile on the dashboard
+/dash/chinook/Track?f=Genre%3AName%3Aeq%3ARock&f=Genre%3AName%3Aeq%3AJazz
+```
+
+Two filters on the *same* column read as "either"; on different columns as "and". That is what ticking a second box in a facet list means, and the only reading under which it widens the result.
+
+The load-bearing part is that a filter is not applied literally. "Only AC/DC" is a predicate on `Artist.Name`, but the chart it has to change is drawn from `Track`, or `InvoiceLine`, and those have no artist column. `path(db, src, dst)` breadth-first searches the declared foreign keys — walked **both** ways, down to a parent and up into a child — for the shortest route from the chart's own table to the filtered one, up to `cfg.max_hops`. `where()` renders that route as a correlated `EXISTS`. Track → Album → Artist is two hops; Orders → Order Details → Products → Categories is three.
+
+A table with no route is reported in `where().dropped` rather than quietly returning everything, and the UI says so on the card (`Unfiltered — Customer has no relation to Artist`) and in the row counts. A chart that silently ignored the filter beside charts that honoured it would be read as data.
+
+Applying it: `payload()` takes the parsed filters as `p['fs']` (or raw `f=` strings as `p['f']`); `count_rows`, `page_rows`, `stats` and `headline` all take `fs=`. Every chart aliases its base table to `"_b"` so the correlated subquery has one name to point at. Histogram bin edges keep coming from the *unfiltered* profile, so the same column keeps the same axis and two filters can be compared rather than just read; `stats` is the opposite case and re-measures in SQL, because the cached profile's mean describes rows the tile is no longer showing.
+
+Adding one: charts are clickable (the mark already names the thing, so `spec.on` + `spec.keys[i]` become a filter — raw group keys travel separately from the clipped axis labels), dimension cells in the rows table are links, and the filter bar has a three-control form. That form posts `fc`/`fop`/`fv` separately, because one `<select>` cannot compose a `table:column:op:value` string without JS; `_added()` folds them in and 303s to the canonical `f=` URL, so what is in the address bar is always the filter.
+
+**Identifier safety.** `ident(name, allowed)` raises unless `name` matches something the schema reported, then quotes it. Every table and column in a generated query goes through it; values are always bound. `_check()` in `charts.py` validates a whole chart request — including that a join is a *declared* foreign key — before any SQL is built. `parse()` holds filters to the same rule: a table, column or operator the schema does not report is dropped, never corrected, so a hand-edited URL never reaches SQL.
+
+**fastlite, not fastsql.** Reflection reads `table.columns`, `table.pks` and `table.foreign_keys` rather than SQLAlchemy metadata, and `db.q(sql, params)` takes its binds as a dict. A rowid table reports `pks == ['rowid']`; `reflect()` returns `pk=[]` for it, and only a single-column key gets linked to a row page — a composite key needs every part, and a row URL carries one value.
+
+**Profiles** are cached in `data/db/dash.db` under a hash of the schema plus row count, so they survive restarts and invalidate when the data changes. Bump `_PROFILE_V` when the stats collected in `_measure` change.
+
+**Config** (`lego/dash/cfg.py`): `public` (`DASH_PUBLIC`, default on), `rows_per_page`, `sample_rows`, `max_cats`, `bar_cats`, `pie_cats`, `top_n`, `hist_bins`, `max_charts`, `rel_preview`, `max_filters`, `max_hops`, `filter_values`.
+
+`filter_values` is deliberately not `max_cats`: that one is about what makes a readable *chart*, and 275 artists is a hopeless doughnut but a perfectly good dropdown.
+
+### Charts
+
+Chart.js 4 is vendored at `static/vendor/chart.umd.min.js` (204 KB raw / 69 KB gzip, no runtime deps) and only loaded on `/dash` routes, via `dash_head()`, alongside `lego/dash/chart.js` (the wrapper) and `lego/dash/dash.css` (every style `/dash` renders, including the `--chart-*` tokens). Nothing the block needs lives outside the block.
+
+Series colours are `--chart-1` … `--chart-8` in `dash.css`. They are **fixed across all themes on purpose**: the hue *order* is what keeps adjacent series apart under protanopia and deuteranopia, so re-tinting per palette would break it. Chart chrome — `--chart-grid`, `--chart-axis`, `--chart-tick` — does follow the theme.
+
+Three light-mode slots sit under 3:1 contrast, so every chart ships the relief channel: direct value labels on bars plus a "Show data" table built from the same payload.
+
+Reading a custom property with `getComputedStyle` returns its raw token stream, so `light-dark(...)` comes back unresolved. `chart.js` paints each var onto a throwaway probe element and reads back the computed colour instead. A `MutationObserver` on `documentElement`'s class list repaints every live chart when `setTheme`/`setMode` fires.
+
+Charts fetch their data from `/dash/chart.json` on intersection, so a page of eight charts issues eight small parallel queries rather than one slow render.
 
 ## Adding a new block
 

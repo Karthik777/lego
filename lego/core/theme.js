@@ -10,19 +10,28 @@ for (const [k, p] of [['theme','theme-'],['radii','radii-'],['shadows','shadows-
 function storeState(key, value) {__LEGO__[key] = value; localStorage.setItem(lego, JSON.stringify(__LEGO__));}
 function getState(key){return __LEGO__[key];}
 function removeState(key) {delete  __LEGO__[key]; localStorage.setItem(key, JSON.stringify(__LEGO__)); }
+let uiReady = false, uiTimer = null;   // uiReady: skip the fade on initial paint
+function withUiAnim(apply) {
+    if (!uiReady || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {apply(); return;}
+    htmlElement.classList.add('ui-anim');
+    apply();
+    clearTimeout(uiTimer);
+    uiTimer = setTimeout(() => htmlElement.classList.remove('ui-anim'), 220);
+}
 function setCls(key, value, fn=null, ...args) {
     if (value === null || value === undefined) {return;}
-    if (__LEGO__[key]) htmlElement.classList.remove(__LEGO__[key]);
-    htmlElement.classList.add(value);
-    storeState(key, value);
+    withUiAnim(() => {
+        if (__LEGO__[key]) htmlElement.classList.remove(__LEGO__[key]);
+        htmlElement.classList.add(value);
+        storeState(key, value);
+    });
     if (typeof fn === 'function') {fn(...args);}
 }
 function setTheme(color, fn=null, ...args) {setCls('theme', color, fn, ...args);}
 function setRadii(radii, fn=null, ...args) {setCls('radii', radii, fn, ...args);}
 function setShadows(shadows, fn=null, ...args) {setCls('shadows', shadows, fn, ...args);}
 function setFont(font, fn=null, ...args) {setCls('font', font, fn, ...args);}
-function setMode(mode, fn=null, ...args) {
-    if (mode === null || mode === undefined) {return;}
+function applyMode(mode) {
     if (mode === 'dark') {htmlElement.classList.remove('light', 'auto'); htmlElement.classList.add('dark'); storeState('mode', mode);}
     if (mode === 'light') {htmlElement.classList.remove('dark', 'auto'); htmlElement.classList.add('light'); storeState('mode', mode);}
     if (mode === 'auto') {
@@ -31,6 +40,10 @@ function setMode(mode, fn=null, ...args) {
         htmlElement.classList.add(isDark ? 'dark' : 'light', 'auto');
         storeState('mode', mode);
     }
+}
+function setMode(mode, fn=null, ...args) {
+    if (mode === null || mode === undefined) {return;}
+    withUiAnim(() => applyMode(mode));
     if (typeof fn === 'function') {fn(...args);}
 }
 function setup() {
@@ -38,7 +51,8 @@ function setup() {
     setMode(__LEGO__.mode);
     setRadii(__LEGO__.radii);
     setShadows(__LEGO__.shadows);
-    setFont(__LEGO__.font);}
+    setFont(__LEGO__.font);
+    uiReady = true;}
 
 mediaQuery.addEventListener('change', (event) => {if (!htmlElement.classList.contains('auto')) return; setMode('auto');});
 setTimeout(setup, 50);

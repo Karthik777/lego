@@ -1,0 +1,137 @@
+/* Dashboards block — everything /dash renders.
+   Lives with the block, not in the core theme, so copying lego/dash/ into another
+   lego app brings its styling along. Consumes core design tokens (--card, --border,
+   --text-*, --radius-*); the chart tokens below are the block’s own. */
+
+/* ── Chart tokens ─────────────────────────────────────────────────────────────
+   Series slots are fixed across all themes: the hue *order* is what keeps
+   adjacent series apart under protanopia/deuteranopia, so re-tinting them per
+   palette would break the guarantee. Dark steps are selected for the dark
+   surface, not flipped. Chart chrome below does follow the active theme.
+   Validated (OKLab ΔE, Machado 2009) against the extremes of lego's surfaces:
+   #ffffff light, #2a2520 dark. Slots 3/4/5 sit under 3:1 on light, so charts
+   ship direct labels and a table view. */
+:root {
+  --chart-1: light-dark(#2a78d6, #3987e5);
+  --chart-2: light-dark(#eb6834, #d95926);
+  --chart-3: light-dark(#1baf7a, #199e70);
+  --chart-4: light-dark(#eda100, #c98500);
+  --chart-5: light-dark(#e87ba4, #d55181);
+  --chart-6: light-dark(#008300, #008300);
+  --chart-7: light-dark(#4a3aa7, #9085e9);
+  --chart-8: light-dark(#e34948, #e66767);
+  --chart-grid: color-mix(in srgb, var(--border) 55%, transparent);
+  --chart-axis: color-mix(in srgb, var(--border) 90%, transparent);
+  --chart-tick: var(--muted-foreground);
+}
+
+/* ── Dashboards block ─────────────────────────────────────────────────────── */
+.dash-wrap { max-width: 76rem; margin-inline: auto; padding: 1rem; }
+.dash-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; margin-block-end: 1.25rem; }
+.dash-head h1, .dash-head h2 { margin: 0; }
+
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: var(--text-8); color: var(--muted-foreground); }
+.crumbs a { color: inherit; text-decoration: none; }
+.crumbs a:hover { color: var(--foreground); text-decoration: underline; }
+.crumbs .sep { opacity: 0.45; }
+
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.75rem; margin-block-end: 1.25rem; }
+.tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium); padding: 0.75rem 0.875rem; min-width: 0; }
+.tile-label { font-size: var(--text-8); color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.06em; }
+.tile-value { font-family: var(--font-sans); font-size: var(--text-3); line-height: 1.15; margin-block: 0.15rem 0; overflow-wrap: anywhere; }
+.tile-sub { font-size: var(--text-8); color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.tile svg.spark { display: block; width: 100%; height: 1.75rem; margin-block-start: 0.4rem; overflow: visible; }
+
+.chart-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 900px) { .chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart-card.wide { grid-column: 1 / -1; } }
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium); padding: 0.875rem 1rem 1rem; min-width: 0; }
+.chart-card > header { margin-block-end: 0.75rem; }
+.chart-card h3 { margin: 0; font-size: var(--text-5); }
+.chart-why { font-size: var(--text-8); color: var(--muted-foreground); margin: 0.15rem 0 0; }
+.chart-box { position: relative; height: 16rem; }
+.chart-box.tall { height: 22rem; }
+.chart-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-block-start: 0.5rem; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: var(--text-8); color: var(--muted-foreground); }
+.chart-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.chart-legend i { width: 0.6rem; height: 0.6rem; border-radius: 2px; display: inline-block; }
+.chart-skel { display: grid; place-items: center; height: 100%; color: var(--muted-foreground); font-size: var(--text-8); }
+.chart-hint { font-size: var(--text-8); color: var(--muted-foreground); opacity: 0.75; white-space: nowrap; margin-inline-start: auto; }
+
+/* ── Filters ──────────────────────────────────────────────────────────────────
+   The bar sits between the page heading and everything it changes, so what is
+   being excluded is readable without scrolling back to find out. */
+.filt-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem;
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium);
+            padding: 0.5rem 0.75rem; margin-block-end: 1.25rem; }
+.filt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; min-width: 0; flex: 1 1 auto; }
+.filt-lbl { font-size: var(--text-8); color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.06em; }
+.filt-none { font-size: var(--text-8); color: var(--muted-foreground); font-style: italic; }
+.filt-chip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--text-8);
+             background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius-small);
+             padding: 0.1rem 0.2rem 0.1rem 0.45rem; max-width: 22rem; }
+.filt-chip > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filt-chip .filt-x { color: var(--muted-foreground); text-decoration: none; line-height: 1;
+                     padding: 0 0.25rem; border-radius: var(--radius-small); }
+.filt-chip .filt-x:hover { color: var(--foreground); background: color-mix(in srgb, var(--border) 60%, transparent); }
+.filt-clear { font-size: var(--text-8); color: var(--muted-foreground); margin-inline-start: 0.25rem; }
+.filt-add { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.35rem; margin: 0; }
+.filt-in { display: contents; }
+/* fixed widths, not max-widths: a <select> is as wide as its widest option, and a column
+   list from a whole schema would otherwise set the form's intrinsic width to something
+   absurd and make flexbox wrap it even where it fits */
+.filt-add select, .filt-add input { font-size: var(--text-8); padding: 0.2rem 0.4rem; margin: 0; width: 10rem; }
+.filt-add select[name="fop"] { width: 7.5rem; }
+.filt-off { color: var(--chart-2); }
+.filt-of { display: block; font-size: 0.625rem; color: var(--muted-foreground); font-weight: 400; }
+table.dash-tbl a.filt-cell { color: inherit; text-decoration-line: underline; text-decoration-style: dotted;
+                             text-underline-offset: 0.2em; text-decoration-color: var(--chart-grid); }
+table.dash-tbl a.filt-cell:hover { color: var(--primary); text-decoration-style: solid; }
+
+/* relief channel for the sub-3:1 light-mode slots: every chart can show its numbers */
+details.chart-data { margin-block-start: 0.5rem; }
+details.chart-data > summary { cursor: pointer; font-size: var(--text-8); color: var(--muted-foreground); }
+details.chart-data > summary:hover { color: var(--foreground); }
+details.chart-data table { margin-block-start: 0.5rem; }
+
+.lego-tip {
+  position: absolute; z-index: 60; pointer-events: none; opacity: 0;
+  transition: opacity 0.1s ease; transform: translate(-50%, -100%);
+  background: var(--card); color: var(--card-foreground);
+  border: 1px solid var(--border); border-radius: var(--radius-medium);
+  box-shadow: var(--shadow-medium); padding: 0.5rem 0.625rem;
+  font-size: var(--text-8); font-family: var(--font-serif); min-width: 7rem;
+}
+.lego-tip .t-title { color: var(--muted-foreground); margin-block-end: 0.3rem; }
+.lego-tip .t-row { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+.lego-tip .t-row i { width: 0.55rem; height: 0.55rem; border-radius: 2px; flex: none; }
+.lego-tip .t-row b { margin-inline-start: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.tbl-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-medium); background: var(--card); }
+table.dash-tbl { width: 100%; border-collapse: collapse; font-size: var(--text-8); }
+table.dash-tbl th, table.dash-tbl td { padding: 0.4rem 0.625rem; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--chart-grid); }
+table.dash-tbl thead th { position: sticky; top: 0; background: var(--card); z-index: 1; font-weight: 600; }
+table.dash-tbl tbody tr:last-child td { border-bottom: 0; }
+table.dash-tbl tbody tr:hover { background: color-mix(in srgb, var(--muted) 60%, transparent); }
+table.dash-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.dash-tbl td.null { color: var(--muted-foreground); font-style: italic; }
+table.dash-tbl a { color: var(--primary); text-decoration: none; }
+table.dash-tbl a:hover { text-decoration: underline; }
+
+.role-chip { font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.05rem 0.3rem; border-radius: var(--radius-small); background: var(--muted); color: var(--muted-foreground); font-weight: 500; }
+.col-head { display: flex; align-items: center; gap: 0.35rem; }
+
+.rel-tree { display: grid; gap: 0.5rem; }
+.rel-node { border: 1px solid var(--border); border-radius: var(--radius-medium); background: var(--card); }
+.rel-node > summary { cursor: pointer; padding: 0.5rem 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-size: var(--text-7); }
+.rel-node > summary::marker { color: var(--muted-foreground); }
+.rel-node > summary:hover { background: color-mix(in srgb, var(--muted) 50%, transparent); }
+.rel-node > .rel-body { padding: 0 0.75rem 0.75rem; }
+.rel-count { margin-inline-start: auto; font-size: var(--text-8); color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+
+.field-grid { display: grid; grid-template-columns: 1fr; gap: 0.5rem 1.25rem; }
+@media (min-width: 640px) { .field-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.field { display: flex; gap: 0.75rem; align-items: baseline; border-bottom: 1px solid var(--chart-grid); padding-block: 0.35rem; min-width: 0; }
+.field dt { font-size: var(--text-8); color: var(--muted-foreground); flex: none; width: 8rem; }
+.field dd { margin: 0; overflow-wrap: anywhere; min-width: 0; }
+
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-block-start: 0.75rem; font-size: var(--text-8); color: var(--muted-foreground); }
