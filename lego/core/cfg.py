@@ -85,7 +85,9 @@ def send_email(to, subject, html: FT, from_='accounts@lego.com'):
 def home(next=None): return Redirect(next or RouteOverrides.home)
 
 @dataclass
-class RouteOverrides: lgn, lgt, home, skip = '/lgn', '/lgt', cfg.domain, ['/health']
+class RouteOverrides:
+    lgn, lgt, home, skip = '/lgn', '/lgt', cfg.domain, ['/health']
+    nav = []   # (label, href, tag, gated) tuples; blocks append theirs in connect()
 
 def get_caller_fn(skip=None):
     import inspect

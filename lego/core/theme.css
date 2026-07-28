@@ -24,9 +24,28 @@
 body { font-family: var(--font-serif), serif; }
 pre { overflow-x: auto; }
 
+h1, h2, h3, h4 { font-family: var(--font-sans), serif; }
+
+.dropcap > p:first-of-type::first-letter {
+  float: left; font-family: var(--font-sans), serif; font-weight: 700;
+  font-size: 3.4em; line-height: 0.78; color: var(--primary);
+  padding-inline-end: 0.07em; margin-block-start: 0.06em;
+}
+.dropcap > p:first-of-type { text-indent: 0; }
+
 /* ── Mode: Oat colors are light-dark(); force scheme via html class, auto follows OS ── */
 html.dark { color-scheme: dark; }
 html.light { color-scheme: light; }
+
+/* ── Appearance-change cross-fade; theme.js adds .ui-anim for the change only ── */
+@media (prefers-reduced-motion: no-preference) {
+  html.ui-anim, html.ui-anim *, html.ui-anim *::before, html.ui-anim *::after {
+    transition: background-color 180ms ease, color 180ms ease,
+                border-color 180ms ease, outline-color 180ms ease,
+                fill 180ms ease, stroke 180ms ease,
+                box-shadow 180ms ease, border-radius 180ms ease !important;
+  }
+}
 
 /* ── Color themes: override Oat primary/ring per palette ─────────────────── */
 .theme-zinc   { --primary: light-dark(#18181b, #fafafa); --primary-foreground: light-dark(#fafafa, #18181b); }
@@ -39,6 +58,27 @@ html.light { color-scheme: light; }
 .theme-blue   { --primary: light-dark(#2563eb, #60a5fa); --primary-foreground: light-dark(#eff6ff, #172554); }
 .theme-violet { --primary: light-dark(#7c3aed, #a78bfa); --primary-foreground: light-dark(#f5f3ff, #2e1065); }
 .theme-yellow { --primary: light-dark(#ca8a04, #facc15); --primary-foreground: light-dark(#fefce8, #422006); }
+
+/* unlike the palettes above, paper also moves the surface colors */
+.theme-paper {
+  --background: light-dark(#f8f4e8, #221f19);
+  --foreground: light-dark(#1b1a17, #d9d0bd);
+  --primary: light-dark(#8a1f11, #dcae6d);
+  --primary-foreground: light-dark(#f8f4e8, #221f19);
+  --muted-foreground: light-dark(#6c6a63, #9d9687);
+  --card: light-dark(#f8f4e8, #2a2520);
+  --card-foreground: light-dark(#1b1a17, #d9d0bd);
+  --secondary: light-dark(#efe8d4, #2a2520);
+  --secondary-foreground: light-dark(#1b1a17, #d9d0bd);
+  --muted: light-dark(#efe8d4, #2a2520);
+  --accent: light-dark(#efe8d4, #332d25);
+  --faint: light-dark(#efe8d4, #2a2520);
+  --faint-foreground: light-dark(#7c7563, #b0a790);
+  --border: light-dark(#ded6be, #3a342b);
+  --input: light-dark(#ded6be, #3a342b);
+  --danger: light-dark(#8a1f11, #dcae6d);
+  --neo-shadow-color: light-dark(#1b1a17, #3a342b);
+}
 [class*="theme-"] { --ring: var(--primary); }
 
 /* ── Radii scale ─────────────────────────────────────────────────────────── */
@@ -414,3 +454,19 @@ dialog.cmd-palette { max-width: 34rem; padding: 0; }
 .flex-wrap { flex-wrap: wrap; }
 .justify-start { justify-content: flex-start; }
 .text-center { text-align: center; }
+
+/* ── Navbar block links: a pill that sits quieter than the wordmark ────────── */
+.nav-pill {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.15rem 0.5rem 0.15rem 0.65rem; border-radius: var(--radius-full);
+  border: 1px solid var(--border); background: var(--muted);
+  font-family: var(--font-sans), serif; font-size: var(--text-8); line-height: 1.7;
+  text-decoration: none; transition: background-color 0.15s, border-color 0.15s;
+}
+.nav-pill:hover { background: var(--accent); border-color: var(--ring); }
+.nav-tag {
+  font-size: 0.5625rem; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600;
+  padding: 0.05rem 0.32rem; border-radius: var(--radius-full);
+  background: var(--primary); color: var(--primary-foreground);
+}
+@media (max-width: 420px) { .nav-tag { display: none; } .nav-pill { padding-inline: 0.55rem; } }

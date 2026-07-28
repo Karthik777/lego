@@ -7,14 +7,14 @@ from fasthtml.components import Ot_dropdown, Dialog, Menu
 from fastcore.all import timed_cache, ifnone, NotStr, globtastic, Path, AttrDict
 from itertools import islice, cycle
 from .cfg import cfg as s, RouteOverrides as r, not_prod
-from .icons import icon_auto, lc_icon, lc_sprites
+from .icons import lc_icon, lc_sprites
 from .utils import loadX
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
            'welcome', 'not_found', 'email_template', 'main', 'themes', 'github_star', 'stringify',
            'ButtonT', 'TextT', 'ThemeRadii', 'ThemeShadows', 'ThemeFont', 'NavBarT', 'THEMES',
-           'LabelInput', 'LabelTextArea', 'LabelSelect', 'modal', 'CmdPalette']
+           'LabelInput', 'LabelTextArea', 'LabelSelect', 'modal', 'CmdPalette', 'asset_js', 'asset_css', 'vendor_js']
 
 def stringify(o):
     'Join class fragments (str | list | tuple, arbitrarily nested) into one class string.'
@@ -38,7 +38,8 @@ class ThemeRadii: none, sm, md, lg = 'radii-none', 'radii-sm', 'radii-md', 'radi
 class ThemeShadows: none, sm, md, lg = 'shadows-none', 'shadows-sm', 'shadows-md', 'shadows-lg'
 class ThemeFont: default, sm, lg = 'font-base', 'font-sm', 'font-lg'
 
-THEMES = [('theme-zinc', '#71717a'), ('theme-slate', '#64748b'), ('theme-stone', '#78716c'),
+THEMES = [('theme-paper', '#8a1f11'),
+          ('theme-zinc', '#71717a'), ('theme-slate', '#64748b'), ('theme-stone', '#78716c'),
           ('theme-red', '#dc2626'), ('theme-rose', '#e11d48'), ('theme-orange', '#ea580c'),
           ('theme-green', '#16a34a'), ('theme-blue', '#2563eb'), ('theme-violet', '#7c3aed'),
           ('theme-yellow', '#ca8a04')]
@@ -131,13 +132,30 @@ class NavBarT:
     glass = 'navbar navbar-glass'
     shining = 'navbar navbar-shining'
 
+def nav_link(txt, href, tag=None, gated=False, usr=None):
+    inner = [Span(txt), Span(tag, cls='nav-tag') if tag else None]
+    # A gated link would otherwise bounce a signed-out visitor to the login route, which
+    # renders as a bare modal on an otherwise empty page. Open it in place instead,
+    # the same way the Login button does.
+    if gated and not usr:
+        # href stays real so the link still works with JS off; htmx cancels it otherwise
+        return A(*inner, href=href, cls='nav-pill',
+                 hx_get=r.lgn, hx_target='body', hx_swap='beforeend')
+    # unboosted: a block brings its own <script src> and <link>, and a real navigation is
+    # the one thing guaranteed to run them
+    return A(*inner, href=href, cls='nav-pill', hx_boost='false')
+
+def nav_links(usr=None):
+    if not r.nav: return None
+    return Div(*[nav_link(*x, usr=usr) for x in r.nav], cls='flex items-center gap-2')
+
 def navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobile_cls=''):
     usr_ok = bool(usr)
     inc_fnt_sz, inc_mode_sw, inc_th_sw, inc_avtr = True, True, not_prod(), usr_ok
     sep = Div('|', cls='text-light text-xl px-2')
     cmps = [(font_size_switcher(), inc_fnt_sz), (mode_switcher(), inc_mode_sw), (theme_switcher(), inc_th_sw),
             (sep, True), (github_star(), True), (logout(usr), inc_avtr), (login(), not inc_avtr)]
-    lft = A(H4(title, cls='m-0'), href='/')
+    lft = Div(A(H4(title, cls='m-0'), href='/'), nav_links(usr), cls='flex items-center gap-4')
     rgt = Div(*[c for c, inc in cmps if inc], cls='flex items-center gap-1')
     return Div(Nav(lft, rgt, cls=mobile_cls), cls=[style, cls])
 
@@ -160,7 +178,7 @@ def theme_switcher(cls='relative', heading='Customise', sub_heading='theme selec
 
 def mode_switcher():
     btn_cls = f'{ButtonT.icon} {ButtonT.sm}'
-    return Div(Div(icon_auto(w=20, h=20), On('setMode("dark");'), cls=[btn_cls], id='auto-mode-btn'),
+    return Div(Div(lc_icon('sun-moon', 20), On('setMode("dark");'), cls=[btn_cls], id='auto-mode-btn'),
                Div(lc_icon('moon', 20), On('setMode("light");'), cls=btn_cls, id='dark-mode-btn'),
                Div(lc_icon('sun', 20), On('setMode("auto");'), cls=btn_cls, id='light-mode-btn'))
 
@@ -251,8 +269,22 @@ def _asset(nm, content):
         return p
     except OSError: return None
 
+def asset_js(path, **kw):
+    'Script tag for a package .js file — served from static/assets when writable, inlined when not.'
+    p = Path(path)
+    c = loadX(p)
+    return Script(src=_vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Script(c, **kw)
+
+def asset_css(path, **kw):
+    'Link tag for a block-local .css file, so a block can ship its own styles instead of adding to the core theme.'
+    p = Path(path)
+    c = loadX(p)
+    return Link(rel='stylesheet', href=_vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Style(c, **kw)
+
+def vendor_js(nm, **kw): return Script(src=_vlink(f'/static/vendor/{nm}'), **kw)
+
 @timed_cache(seconds=3600)
-def themes(color='zinc', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
+def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
     radii, shadows = getattr(radii, 'value', radii), getattr(shadows, 'value', shadows)
     d = AttrDict(mode='auto', theme='theme-%s' % color, radii=radii, shadows=shadows, font=font)
     j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')

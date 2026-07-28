@@ -281,7 +281,7 @@ def post_detail(post, usr=None):
         _visibility_badge(post['visibility']), cls='flex items-center gap-3 mb-6')
     title = H1(post['title'], cls='mb-4 tracking-tight')
     body = Article(render_md(post['body'], img_dir='/static/blog'),
-                   cls='np-body overflow-auto' if newspaper else 'overflow-auto')
+                   cls='np-body dropcap overflow-auto' if newspaper else 'dropcap overflow-auto')
     section_cls = 'max-w-5xl mx-auto px-4 py-12' if newspaper else 'max-w-3xl mx-auto px-4 py-12'
     extras = _hljs() + ([_NP_STYLE] if newspaper else [])
     return *extras, Section(back, meta, title, body, cls=section_cls)
