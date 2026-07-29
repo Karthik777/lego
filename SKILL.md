@@ -370,7 +370,9 @@ import lego.dash as d
 d.connect(lego)   # before auth
 ```
 
-Reflects a database, profiles its columns, and picks charts from what it finds. Nothing is hardcoded to a schema. Ships with Chinook and Northwind.
+Reflects a database, profiles its columns, and picks charts from what it finds. Nothing is hardcoded to a schema.
+
+Ships with sixteen: Chinook and Northwind (normalised, dated, monetary — what rollups and running totals are for), and the fourteen seaborn teaching sets (one wide fact table of measurements, a few lookups, no dates and nothing to add up). Half the chart kinds exist because the second group did not fit the first group's rules.
 
 **Routes** (from `lego/dash/cfg.py` `Routes`):
 
@@ -383,12 +385,15 @@ Reflects a database, profiles its columns, and picks charts from what it finds. 
 | `Routes.rel` | `/dash/{db}/{table}/{pk}/rel/{child}` (htmx partial) |
 | `Routes.chart` | `/dash/chart.json` (registered first — `/dash/{db}` would otherwise match it) |
 | `Routes.fopts` | `/dash/filter.opts` (htmx partial: the filter form's operator and value controls; registered first for the same reason) |
+| `Routes.bopts` | `/dash/build.opts` (htmx partial: the builder's controls for the table just chosen; likewise) |
 
 **Registering a database.** Only what's in `DBS` (`lego/dash/data.py`) is reachable.
 
 ```python
-DBS.mydb = AttrDict(nm='My DB', dump='mydb.sql.gz', about='...')
+DBS.mydb = AttrDict(nm='My DB', dump='mydb.sql.gz', about='...', group='Business')
 ```
+
+`group` sorts the card on `/dash` under one of the headings in `ui.GROUPS`; `dump` defaults to `<key>.sql.gz`.
 
 Each entry is a SQLite file of its own at `data/db/<key>.db`, opened with `database(..., sem_search=False)` — a file per database is what keeps `users` and `posts` out of the explorer, since reflection reports whatever the connection has. Drop `dump` for a database that already exists at that path.
 
@@ -402,11 +407,29 @@ The dump ships with the block rather than being downloaded: SQL pulled off the n
 |---|---|
 | `temporal` | date/time type, or a date-ish name whose min value parses as ISO |
 | `measure` | numeric, non-key, non-zero σ |
-| `dimension` | ≤ `cfg.max_cats` distinct, not mostly null, not effectively unique |
+| `dimension` | ≤ `cfg.max_cats` distinct **and** ≤ 25% of the rows, not mostly null, not effectively unique |
 | `ref` | declared foreign key |
-| `key` / `bool` / `text` / `const` | primary key · two-valued int · high-cardinality text · single-valued |
+| `key` / `bool` / `text` / `const` | primary key or an identifier-ish name · two-valued int · high-cardinality text · single-valued |
 
-Chart rules score against these and the best `cfg.max_charts` render, at most 2 per table. Aggregation happens in SQL — no raw rows are pulled into Python. SQLite has no `STDDEV`, so σ comes from `sqrt(avg(x*x) - avg(x)^2)` in a single pass.
+Two more shapes sit beside the roles. `_cats()` is every category a table can be grouped by, whether it owns the column or reaches it through a foreign key — the same list feeds the axis, the split-by and the builder. `_axes()` is the columns that carry an *order*, so a chart over them is a line and not a ranking: a date, or a dense run of integers, or a float whose name claims a sequence and which has few enough levels to be one.
+
+Chart rules score against all of this. `specs_for_db` fills `cfg.max_charts` in two passes — the first holds each chart *kind* to two cards so a single-table database cannot return eight bar charts, the second fills what is left over without that rule so the page is never half empty. Transposed pairs ("fare by class split by sex" and "fare by sex split by class") are one chart and deduplicate to the higher-scoring one.
+
+Aggregation happens in SQL — no raw rows are pulled into Python. SQLite has no `STDDEV`, so σ comes from `sqrt(avg(x*x) - avg(x)^2)` in a single pass.
+
+**Which aggregate.** `sum` for a column whose name says it is additive (`total`, `amount`, `revenue`, `qty`, `passengers`); `avg` for everything else. Summing every unit price gives a number tracking how many products there are, and nobody asked that. A two-valued 0/1 column averages to a *rate* and formats as a percentage, which is the only summary it has — that is where "survival rate by class and sex" comes from. Such a column also renders its axis as yes/no, while the raw value still travels in `keys` so clicking still filters on `1`.
+
+**Chart kinds** beyond bar/hbar/line/area/doughnut/scatter:
+
+| kind | what it is | when it is picked |
+|---|---|---|
+| `box` | median, middle half, p05–p95 whiskers, mean dot — quantiles from `row_number()` in one pass | a category ≤ `bar_cats` wide with ≥ `2 × box_min` rows per group |
+| `heat` | 2D density; every row binned into a `heat_bins²` grid | two measures and > 4,000 rows, where a scatter would draw its own overplotting |
+| `corr` | Pearson r for every measure pair, all sums from one scan, rendered as an HTML grid rather than a canvas | ≥ 3 measures |
+
+Any of bar/line/area/scatter/hist can also be **split** into one series per category value (`s`/`sj`+`scol`+`slabel`), stacked or not. That is the difference between "signal over time" and "signal over time per region", and on measurement data the second is usually the only one that says anything. Series are capped at `cfg.max_series` by size but then ordered by *name*, so a colour stays with its category when a filter changes the totals.
+
+`best_pair()` picks the two measures for a scatter or density by strongest correlation, skipping pairs above r = 0.95 — those are one quantity written down twice, and a scatter of them is a picture of a straight line. `_determines()` likewise drops a rate chart whose category already fixes the answer (Titanic carries survival as both `survived` and `Alive`).
 
 **Filters** (`lego/dash/filters.py`). One filter is `table:column:op:value`, carried in repeated `f=` query parameters — so a filtered dashboard is a URL you can share, the back button undoes a facet, and nothing is stored server-side.
 
@@ -425,13 +448,23 @@ Applying it: `payload()` takes the parsed filters as `p['fs']` (or raw `f=` stri
 
 Adding one: charts are clickable (the mark already names the thing, so `spec.on` + `spec.keys[i]` become a filter — raw group keys travel separately from the clipped axis labels), dimension cells in the rows table are links, and the filter bar has a three-control form. That form posts `fc`/`fop`/`fv` separately, because one `<select>` cannot compose a `table:column:op:value` string without JS; `_added()` folds them in and 303s to the canonical `f=` URL, so what is in the address bar is always the filter.
 
+**Building a chart by hand** (`lego/dash/build.py`). The inferred dashboard answers "what is in here"; it cannot answer "average tip by day, split by smoker", because nobody asked it that. The builder is six selects over the same `Spec` and the same `/dash/chart.json`.
+
+A composed chart lives in the URL as one `c=` parameter holding its query string, exactly as a filter lives in an `f=`. So a dashboard somebody built is a link they can send, the back button removes the last chart, and there is no per-user state to expire or leak. Every `c=` is re-validated on arrival by the same `_check()` the chart endpoint uses, so a hand-edited URL reaches SQL no more easily here than there. Built charts render above the inferred ones and the inferred set shrinks to make room.
+
+The form posts `bt`/`bkind`/`bagg`/`by`/`bx`/`bs`/`bstack` and `_added()` folds them into a `c=` and 303s, the same shape as the filter form. `options(db, tbl)` drives the selects off `_cats()` and `_axes()`, so the builder offers a category called "Cut" even though the column holding it is an integer on another table.
+
 **Identifier safety.** `ident(name, allowed)` raises unless `name` matches something the schema reported, then quotes it. Every table and column in a generated query goes through it; values are always bound. `_check()` in `charts.py` validates a whole chart request — including that a join is a *declared* foreign key — before any SQL is built. `parse()` holds filters to the same rule: a table, column or operator the schema does not report is dropped, never corrected, so a hand-edited URL never reaches SQL.
 
 **fastlite, not fastsql.** Reflection reads `table.columns`, `table.pks` and `table.foreign_keys` rather than SQLAlchemy metadata, and `db.q(sql, params)` takes its binds as a dict. A rowid table reports `pks == ['rowid']`; `reflect()` returns `pk=[]` for it, and only a single-column key gets linked to a row page — a composite key needs every part, and a row URL carries one value.
 
-**Profiles** are cached in `data/db/dash.db` under a hash of the schema plus row count, so they survive restarts and invalidate when the data changes. Bump `_PROFILE_V` when the stats collected in `_measure` change.
+**Profiles** are cached in `data/db/dash.db` under a hash of the schema plus row count, so they survive restarts and invalidate when the data changes. Bump `_PROFILE_V` when the stats collected in `_measure` change. `cached(db, tbl, tag, fn)` memoises any other derived fact — the correlation pair, the determines-check — against that same hash.
 
-**Config** (`lego/dash/cfg.py`): `public` (`DASH_PUBLIC`, default on), `rows_per_page`, `sample_rows`, `max_cats`, `bar_cats`, `pie_cats`, `top_n`, `hist_bins`, `max_charts`, `rel_preview`, `max_filters`, `max_hops`, `filter_values`.
+Min, max, mean, sum and σ are measured over **every** row; only `count(distinct)` is sampled to `cfg.sample_rows`. A table is not stored in random order, and the first five thousand rows of a file sorted by carat report the mean price of the cheapest tenth.
+
+**Connections are per thread** (`threading.local`). Starlette runs sync handlers on a threadpool and a dashboard fires one chart request per card in parallel; apsw refuses to run a cursor on a connection busy in another thread, so a single cached connection turns a full dashboard into a race some cards lose.
+
+**Config** (`lego/dash/cfg.py`): `public` (`DASH_PUBLIC`, default on), `rows_per_page`, `sample_rows`, `max_cats`, `bar_cats`, `pie_cats`, `top_n`, `hist_bins`, `max_series`, `heat_bins`, `box_min`, `corr_max`, `max_charts`, `rel_preview`, `max_filters`, `max_hops`, `filter_values`.
 
 `filter_values` is deliberately not `max_cats`: that one is about what makes a readable *chart*, and 275 artists is a hopeless doughnut but a perfectly good dropdown.
 
@@ -443,7 +476,9 @@ Series colours are `--chart-1` … `--chart-8` in `dash.css`. They are **fixed a
 
 Three light-mode slots sit under 3:1 contrast, so every chart ships the relief channel: direct value labels on bars plus a "Show data" table built from the same payload.
 
-Reading a custom property with `getComputedStyle` returns its raw token stream, so `light-dark(...)` comes back unresolved. `chart.js` paints each var onto a throwaway probe element and reads back the computed colour instead. A `MutationObserver` on `documentElement`'s class list repaints every live chart when `setTheme`/`setMode` fires.
+Reading a custom property with `getComputedStyle` returns its raw token stream, so `light-dark(...)` comes back unresolved. `chart.js` paints each var onto a throwaway probe element and reads back the computed colour instead — **one probe per token**, because re-assigning `style.color` on a single element and reading it back returns a stale answer under `prefers-reduced-motion: reduce`, and every slot comes out as the first one. A `MutationObserver` on `documentElement`'s class list repaints every live chart when `setTheme`/`setMode` fires.
+
+Sequential and diverging ramps are mixed from the same tokens: the density heatmap runs `--card` → `--chart-1` on `sqrt(count)`, and the correlation grid runs `--chart-2` ← surface → `--chart-1`, so the neutral midpoint is the card itself and never a hue.
 
 Charts fetch their data from `/dash/chart.json` on intersection, so a page of eight charts issues eight small parallel queries rather than one slow render.
 

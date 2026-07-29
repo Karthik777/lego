@@ -7,35 +7,86 @@ after. A file per database is also what keeps the explorer honest — it reports
 tables its connection has, and this one has only the sample data, never the `users` table
 auth keeps on the app's own database.
 '''
-import gzip, hashlib, json
+import gzip, hashlib, json, threading
 from fastcore.all import AttrDict
 from lego.core.cfg import database, get_db_pth, get_db_dir
 from .cfg import cfg
 
-__all__ = ['DBS', 'get_db', 'seed', 'schema', 'table_names', 'reflect', 'profile', 'rowcount', 'ident']
+__all__ = ['DBS', 'get_db', 'seed', 'schema', 'table_names', 'reflect', 'profile', 'rowcount', 'ident', 'cached']
 
-# only databases listed here are reachable from /dash
+def _db(nm, about, group='Statistical'):
+    return AttrDict(nm=nm, dump=None, about=about, group=group)
+
+# only databases listed here are reachable from /dash. `dump` defaults to `<key>.sql.gz`.
+# The two business schemas make the relational charts — money over time, rollups through a
+# foreign key. The fourteen below them are the seaborn teaching sets, converted by
+# tools/dash_seeds.py: one wide fact table, a handful of lookups, and no dates or money at
+# all. They are here because a picker that only ever sees invoices is a picker tuned to
+# invoices, and half the chart kinds in this block exist because these did not fit.
 DBS = AttrDict(
-    chinook=AttrDict(nm='Chinook', dump='chinook.sql.gz',
-                     about='The classic digital-media store sample: artists, albums, tracks, invoices.'),
-    northwind=AttrDict(nm='Northwind', dump='northwind.sql.gz',
-                       about='The other classic: a specialty-foods importer, its orders, products and staff.'),
+    chinook   = _db('Chinook', 'The classic digital-media store sample: artists, albums, tracks, invoices.', 'Business'),
+    northwind = _db('Northwind', 'The other classic: a specialty-foods importer, its orders, products and staff.', 'Business'),
+
+    diamonds  = _db('Diamonds', '53,940 diamonds priced against carat, cut, colour and clarity — '
+                                'big enough that the honest picture of two measures is a density, not a scatter.'),
+    titanic   = _db('Titanic', 'Every passenger on the 1912 crossing, with who lived. Survival is a rate, '
+                               'and a rate splits by class, sex and deck.'),
+    tips      = _db('Tips', 'Two hundred restaurant bills: what was spent, what was tipped, by whom and when.'),
+    iris      = _db('Iris', "Fisher's three species of iris, four petal and sepal measurements each — "
+                            'the dataset every scatter-by-species chart is descended from.'),
+    mpg       = _db('Fuel economy', '398 cars from 1970–82: mileage against weight, power and displacement, '
+                                    'by year and origin.'),
+    planets   = _db('Exoplanets', 'A thousand confirmed planets — mass, orbit, distance, and the method '
+                                  'and year each was found by.'),
+    flights   = _db('Air travel', 'Monthly airline passengers, 1949–1960. Twelve years of seasonality in 144 rows.'),
+    car_crashes = _db('Car crashes', 'One row per US state: crash rate broken into causes, against '
+                                     'what insurance costs there.'),
+    fmri      = _db('fMRI', 'Brain signal over time for fourteen subjects, two regions, two event types — '
+                            'a time series that only makes sense split by something.'),
+    gammas    = _db('BOLD gammas', 'Six thousand BOLD measurements across three regions of interest, '
+                                   'sampled along a timecourse.'),
+    dots      = _db('Motion decision', 'Neural firing rate against motion coherence, by what the '
+                                       'subject chose and how the trial was aligned.'),
+    exercise  = _db('Exercise', 'Pulse measured at rest, walking and running, on two diets.'),
+    attention = _db('Attention', 'Twenty subjects solving puzzles under divided and focused attention.'),
+    anscombe  = _db('Anscombe', "Four tiny datasets with near-identical means, variances and regression "
+                                'lines, and nothing else in common. The argument for drawing the chart.'),
 )
+for _k, _v in DBS.items(): _v.dump = _v.dump or f'{_k}.sql.gz'
 
 # sqlite keeps its own bookkeeping in the same namespace as the data; none of it is a table
 # anybody wants to chart
 _INTERNAL = ('sqlite_',)
 
-_conns = {}
+# One connection per database per thread.
+#
+# Starlette runs sync handlers on a threadpool, and a dashboard page fires one chart
+# request per card — eight of them, in parallel, the moment it loads. apsw refuses to run a
+# cursor on a connection that is busy in another thread, so a single cached connection per
+# database turns a full dashboard into a race that some cards lose. These files are opened
+# read-only and never written after seeding, so a connection each costs nothing to keep
+# consistent.
+_local = threading.local()
+_seeded, _seed_lock = set(), threading.Lock()
 
 def get_db(nm):
     if nm not in DBS: raise KeyError(nm)
-    if nm not in _conns:
+    conns = getattr(_local, 'conns', None)
+    if conns is None: conns = _local.conns = {}
+    if nm not in conns:
         # sem_search loads the usearch extension, which these read-only reference databases
         # have no use for — and it is a network fetch on first call
-        _conns[nm] = database(get_db_dir() / f'{nm}.db', sem_search=False)
-        seed(nm)
-    return _conns[nm]
+        conns[nm] = database(get_db_dir() / f'{nm}.db', sem_search=False)
+        _ensure_seeded(nm, conns[nm])
+    return conns[nm]
+
+def _ensure_seeded(nm, db):
+    'Seed once per process, whichever thread gets here first.'
+    if nm in _seeded: return
+    with _seed_lock:
+        if nm in _seeded: return
+        seed(nm, db)
+        _seeded.add(nm)
 
 # ── seeding ───────────────────────────────────────────────────────────────────
 
@@ -44,7 +95,7 @@ def _dump_sql(nm):
     sql = gzip.decompress((cfg.seed_dir / DBS[nm].dump).read_bytes()).decode()
     return ';\n'.join(s.strip() for s in sql.split('\n--;--\n') if s.strip()) + ';'
 
-def seed(nm):
+def seed(nm, db):
     '''Put the dump in the database if the file is still empty.
 
     The dump ships with the block rather than being fetched, because SQL pulled off the
@@ -56,7 +107,6 @@ def seed(nm):
     time, so a child row lands before the parent it points at more often than not; the
     database is consistent once the whole script is in, which is the only point the check
     is meaningful. It resets itself at the end of the transaction.'''
-    db = _conns[nm]
     if _tables(db): return
     try:
         with db.conn: db.conn.execute('pragma defer_foreign_keys = on;\n' + _dump_sql(nm))
@@ -115,51 +165,81 @@ def _kind(sqltype):
     if any(k in t for k in _NUM): return 'num'
     return 'text'
 
-_PROFILE_V = 2   # bump when the stats collected in _measure change
+_PROFILE_V = 3   # bump when the stats collected in _measure change
 
-_meta = database(get_db_pth('dash'), sem_search=False)
-_meta.t.dash_profile.create(k=str, body=str, pk='k', if_not_exists=True)
-_cache = _meta.t.dash_profile
+def _cache():
+    'The profile cache table, on this thread\'s connection — same reason as get_db.'
+    t = getattr(_local, 'meta', None)
+    if t is None:
+        m = database(get_db_pth('dash'), sem_search=False)
+        t = _local.meta = m.t.dash_profile
+        t.create(k=str, body=str, pk='k', if_not_exists=True)
+    return t
 
 def _schema_hash(nm, tbl):
     r = reflect(nm, tbl)
     body = json.dumps([[c.name, c.type] for c in r.cols], sort_keys=True)
     return hashlib.md5(f'{_PROFILE_V}.{nm}.{tbl}.{body}.{rowcount(nm, tbl)}'.encode()).hexdigest()[:16]
 
+def cached(nm, tbl, tag, fn):
+    '''Any derived fact about a table, memoised beside its profile and invalidated by the
+    same schema-and-rowcount hash. What is expensive about the picker is never the rules,
+    it is the scans they need to apply them.'''
+    key = f'{nm}.{tbl}.{tag}.{_schema_hash(nm, tbl)}'
+    row = _cache().get(key, as_cls=False, default=None)
+    if row:
+        try: return json.loads(row['body'])
+        except ValueError: pass
+    v = fn()
+    _cache().upsert(dict(k=key, body=json.dumps(v)), pk='k')
+    return v
+
 def profile(nm, tbl, force=False):
     'Per-column stats used by the chart picker. Cached in dash.db against a schema+rowcount hash.'
     key = f'{nm}.{tbl}.{_schema_hash(nm, tbl)}'
     if not force:
-        row = _cache.get(key, as_cls=False, default=None)
+        row = _cache().get(key, as_cls=False, default=None)
         if row:
             try: return AttrDict(json.loads(row['body']))
             except (ValueError, KeyError): pass
     p = _measure(nm, tbl)
-    _cache.upsert(dict(k=key, body=json.dumps(p)), pk='k')
+    _cache().upsert(dict(k=key, body=json.dumps(p)), pk='k')
     return AttrDict(p)
 
 def _measure(nm, tbl):
+    '''Per-column statistics.
+
+    The min, max, mean, total and sigma are read off *every* row. They have to be: a table
+    is not stored in a random order, and taking the first five thousand diamonds off a file
+    sorted by carat reports the mean price of the cheapest tenth as the mean price. Those
+    aggregates are a single sequential scan, so the whole table is affordable.
+
+    Only `count(distinct)` is sampled, and that one is worth sampling — it is the expensive
+    aggregate, it decides nothing but whether a column reads as a category, and past a few
+    thousand distinct values every answer means the same thing.'''
     db, names = get_db(nm), table_names(nm)
     r, qt = reflect(nm, tbl), ident(tbl, names)
     allowed = {c.name for c in r.cols}
     n = rowcount(nm, tbl)
+    sampled = min(n, cfg.sample_rows)
     src = qt if n <= cfg.sample_rows else f'(select * from {qt} limit {cfg.sample_rows})'
     out = dict(table=tbl, rows=n, cols={})
     for c in r.cols:
         qc, kind = ident(c.name, allowed), _kind(c.type)
-        agg = [f'count({qc}) as nn', f'count(distinct {qc}) as nd']
+        agg = [f'count({qc}) as nn']
         if kind == 'num':
-            # sqlite has no stddev; one pass over sum(x) and sum(x*x) gives the population sigma
+            # sqlite has no stddev; one pass over avg(x) and avg(x*x) gives the population sigma
             agg += [f'min({qc}) as lo', f'max({qc}) as hi', f'avg({qc}) as mean',
                     f'avg({qc}*{qc}) as m2', f'sum({qc}) as total']
         elif kind == 'date':
             agg += [f'min({qc}) as lo', f'max({qc}) as hi']
         else:
             agg += [f'max(length({qc})) as maxlen', f'min({qc}) as lo', f'max({qc}) as hi']
-        row = db.q(f'select {", ".join(agg)} from {src}')[0]
+        row = db.q(f'select {", ".join(agg)} from {qt}')[0]
+        nd = db.q(f'select count(distinct {qc}) as nd from {src}')[0]['nd'] or 0
         seen = row['nn'] or 0
-        d = dict(name=c.name, type=c.type, kind=kind, nullable=c.nullable, distinct=row['nd'] or 0,
-                 nulls=(n if n <= cfg.sample_rows else cfg.sample_rows) - seen, sampled=min(n, cfg.sample_rows))
+        d = dict(name=c.name, type=c.type, kind=kind, nullable=c.nullable, distinct=nd,
+                 nulls=n - seen, sampled=sampled)
         if kind == 'num' and seen:
             var = max(0.0, (row['m2'] or 0) - (row['mean'] or 0) ** 2)
             d.update(lo=row['lo'], hi=row['hi'], mean=row['mean'], total=row['total'], sd=var ** 0.5)

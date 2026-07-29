@@ -11,6 +11,7 @@ class Routes:
     rel   = '/dash/{db}/{table}/{pk}/rel/{child}'
     chart = '/dash/chart.json'
     fopts = '/dash/filter.opts'
+    bopts = '/dash/build.opts'
     skip  = ['/dash', r'/dash/.*']
 
 # public=False keeps /dash behind the auth middleware; DASH_PUBLIC=true opens it up
@@ -24,6 +25,10 @@ cfg = AttrDict(
     pie_cats     = 5,       # at or below this it can also be a share-of-total doughnut
     top_n        = 10,      # top-N + "Other" for wide dimensions
     hist_bins    = 24,
+    max_series   = 6,       # split-by series drawn before the palette starts repeating itself
+    heat_bins    = 26,      # cells per axis on a density heatmap
+    box_min      = 8,       # rows a category needs before its quartiles mean anything
+    corr_max     = 8,       # measures a correlation matrix will put on a side
     max_charts   = 8,
     rel_preview  = 5,       # child rows shown per nested relation before "view all"
     max_filters  = 8,       # active filters per request — bounds the SQL a URL can ask for
