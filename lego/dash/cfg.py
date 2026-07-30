@@ -12,6 +12,7 @@ class Routes:
     chart = '/dash/chart.json'
     fopts = '/dash/filter.opts'
     bopts = '/dash/build.opts'
+    geo   = '/dash/geo/{pack}.json'
     skip  = ['/dash', r'/dash/.*']
 
 # public=False keeps /dash behind the auth middleware; DASH_PUBLIC=true opens it up
@@ -29,6 +30,9 @@ cfg = AttrDict(
     heat_bins    = 26,      # cells per axis on a density heatmap
     box_min      = 8,       # rows a category needs before its quartiles mean anything
     corr_max     = 8,       # measures a correlation matrix will put on a side
+    geo_min      = 6,       # distinct values below which a column is not worth mapping
+    geo_share    = 0.6,     # fraction of them that must resolve to shapes before it is one
+    map_classes  = 6,       # quantile classes a choropleth colours by
     max_charts   = 8,
     rel_preview  = 5,       # child rows shown per nested relation before "view all"
     max_filters  = 8,       # active filters per request — bounds the SQL a URL can ask for

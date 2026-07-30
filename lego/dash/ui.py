@@ -204,7 +204,7 @@ def tile(t):
 # density grid and a correlation matrix are square and want the full width of the row,
 # because squeezing either into a half-column column is what turns them into wallpaper.
 TALL = ('hbar', 'box')
-WIDE = ('area', 'line', 'heat', 'corr')
+WIDE = ('area', 'line', 'heat', 'corr', 'map')
 
 def chart_card(spec, wide=None, fs=()):
     # a chart drawn from a table the filter cannot reach says so; quietly showing everything
@@ -213,7 +213,8 @@ def chart_card(spec, wide=None, fs=()):
     off = [f for f in fs if f not in on]
     src = f'{Routes.chart}?{urlencode({**spec.qs, "f": [wire(f) for f in on]}, doseq=True)}'
     if wide is None: wide = spec.kind in WIDE
-    box = 'chart-box' + (' tall' if spec.kind in TALL else '') + (' square' if spec.kind in ('heat', 'corr') else '')
+    box = ('chart-box' + (' tall' if spec.kind in TALL else '')
+           + (' square' if spec.kind in ('heat', 'corr') else '') + (' map' if spec.kind == 'map' else ''))
     return Div(Header(H3(spec.title), P(spec.why, cls='chart-why'),
                       P(f'Unfiltered — {_h(spec.t)} has no relation to '
                         + ', '.join(sorted({f.t for f in off})), cls='chart-why filt-off') if off else None),

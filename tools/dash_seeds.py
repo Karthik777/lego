@@ -128,6 +128,59 @@ def build(name, src):
     path.write_bytes(gzip.compress(sql.encode(), 9))
     return path, len(rows), len(keyed)
 
+def _ordered(con, tbls):
+    '''Tables parents-first.
+
+    Alphabetical order puts `address` before `city`, and inserting an address then needs a
+    city table that is not there yet — apsw resolves a foreign key's parent when it
+    prepares the statement, which `defer_foreign_keys` does not help with because that
+    defers the *violation* check and not the lookup. Loading parents first sidesteps it,
+    and is the order the file reads best in anyway.'''
+    dep = {t: {r[2] for r in con.execute(f'pragma foreign_key_list({q(t)})')} & set(tbls) - {t}
+           for t in tbls}
+    out, seen = [], set()
+    def visit(t, path=()):
+        if t in seen or t in path: return   # a cycle just keeps its alphabetical position
+        for p in sorted(dep[t]): visit(p, path + (t,))
+        seen.add(t); out.append(t)
+    for t in tbls: visit(t)
+    return out
+
+def from_sqlite(name, src, skip=(), drop_cols=()):
+    '''Seed an already well-formed SQLite file — keys declared, tables named — by keeping
+    its own DDL and re-emitting its rows.
+
+    Nothing to repair here, which is the point of the contrast with `build()` above: given
+    a database that says what its relationships are, the importer is a copy. Views,
+    triggers and indexes are dropped, because the block reads tables and rebuilds
+    everything else it needs from the PRAGMAs.'''
+    con = sqlite3.connect(f'file:{src}?mode=ro', uri=True)
+    tbls = [r[0] for r in con.execute(
+        "select name from sqlite_master where type='table' and name not like 'sqlite_%' order by name")]
+    tbls = _ordered(con, [t for t in tbls if t not in skip])
+    # Every CREATE first, then every INSERT. A real schema has cycles in it — Sakila's
+    # store names a manager and staff name a store — so no ordering of whole tables can put
+    # both parents before both children. Creating all of them up front means any foreign
+    # key resolves whenever its rows arrive, and `defer_foreign_keys` holds the value checks
+    # to the commit at the end.
+    ddls, body, total = [], [], 0
+    for t in tbls:
+        n = con.execute(f'select count(*) from {q(t)}').fetchone()[0]
+        if not n: continue          # an empty table is a schema, not a dataset
+        cs = [c for c in cols(con, t) if (t, c[0]) not in drop_cols]
+        ddls.append(' '.join(con.execute('select sql from sqlite_master where type=? and name=?',
+                                         ('table', t)).fetchone()[0].split()))
+        rows = con.execute('select %s from %s' % (', '.join(q(c) for c, _ in cs), q(t))).fetchall()
+        body += list(inserts(t, cs, rows))
+        total += n
+    con.close()
+    stmts = ddls + body
+    if not stmts: raise SystemExit(f'{name}: nothing to seed from {src}')
+    sql = SEP.join(stmts)
+    path = OUT / f'{name}.sql.gz'
+    path.write_bytes(gzip.compress(sql.encode(), 9))
+    return path, total, len([s for s in stmts if s.startswith('CREATE')])
+
 def main(root):
     root = Path(root).expanduser()
     srcs = sorted(root.glob('*.db'))

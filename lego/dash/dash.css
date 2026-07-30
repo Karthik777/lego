@@ -52,7 +52,9 @@
 .chart-box.tall { height: 22rem; }
 /* a density grid and a correlation matrix are both square: letting them stretch to a
    16rem-high, 40rem-wide card would distort the one and strand the other */
-.chart-box.square { height: 24rem; }
+.chart-box.square { height: 28rem; }
+/* a world map at half a screen wide is a picture of continents, not of countries */
+.chart-box.map { height: 30rem; }
 .chart-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-block-start: 0.5rem; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: var(--text-8); color: var(--muted-foreground); }
 .chart-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
@@ -98,6 +100,24 @@ table.dash-tbl a.filt-cell { color: inherit; text-decoration-line: underline; te
 table.dash-tbl a.filt-cell:hover { color: var(--primary); text-decoration-style: solid; }
 
 /* relief channel for the sub-3:1 light-mode slots: every chart can show its numbers */
+/* ── Choropleth ───────────────────────────────────────────────────────────────
+   Inline SVG rather than a canvas, so every place is a real element: hoverable,
+   focusable, and readable by a screen reader off its own <title>. */
+.map-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.map-wrap svg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; }
+.map-wrap path { stroke: var(--card); stroke-width: 0.6; stroke-linejoin: round; }
+/* a place with no row is not zero — it is absent, and it has to look different from the
+   bottom class rather than like the smallest value */
+.map-wrap path.geo-nil { fill: var(--muted); }
+.map-wrap path.geo-on { cursor: pointer; transition: opacity 0.12s ease; }
+.map-wrap path.geo-on:hover { opacity: 0.72; }
+.map-wrap path.geo-on:focus-visible { outline: none; stroke: var(--foreground); stroke-width: 1.4; }
+.map-key { display: flex; flex-wrap: wrap; gap: 0.15rem 0.7rem; font-size: var(--text-8);
+           color: var(--muted-foreground); font-variant-numeric: tabular-nums; flex: none; }
+.map-key span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.map-key i { width: 0.85rem; height: 0.6rem; border-radius: 2px; display: inline-block; }
+@media (prefers-reduced-motion: reduce) { .map-wrap path.geo-on { transition: none; } }
+
 /* ── Correlation matrix ───────────────────────────────────────────────────────
    Not a canvas: the numbers are the chart, and colour only ranks them. Which also
    means it reads without colour, prints, and needs no separate table view. */

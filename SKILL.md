@@ -372,7 +372,9 @@ d.connect(lego)   # before auth
 
 Reflects a database, profiles its columns, and picks charts from what it finds. Nothing is hardcoded to a schema.
 
-Ships with sixteen: Chinook and Northwind (normalised, dated, monetary — what rollups and running totals are for), and the fourteen seaborn teaching sets (one wide fact table of measurements, a few lookups, no dates and nothing to add up). Half the chart kinds exist because the second group did not fit the first group's rules.
+Ships with eighteen, in three groups. **Business** — Chinook, Northwind and Sakila: normalised, dated, monetary, what rollups and running totals are for. **Geographic** — the CIA World Factbook, one row per country. **Statistical** — the fourteen seaborn teaching sets: one wide fact table of measurements, a few lookups, no dates and nothing to add up. Half the chart kinds exist because the second and third groups did not fit the first group's rules.
+
+A nineteenth, `nycflights` (336,776 flights against hourly weather), is registered but **not committed** — its dump is nine megabytes, ten times the rest put together. `tools/nycflights_seed.py` builds it; `DBS` drops any database whose dump is absent, so it appears on `/dash` once you run it and not before. Dropping your own `data/db/<name>.db` in works the same way, with no dump at all.
 
 **Routes** (from `lego/dash/cfg.py` `Routes`):
 
@@ -386,6 +388,7 @@ Ships with sixteen: Chinook and Northwind (normalised, dated, monetary — what 
 | `Routes.chart` | `/dash/chart.json` (registered first — `/dash/{db}` would otherwise match it) |
 | `Routes.fopts` | `/dash/filter.opts` (htmx partial: the filter form's operator and value controls; registered first for the same reason) |
 | `Routes.bopts` | `/dash/build.opts` (htmx partial: the builder's controls for the table just chosen; likewise) |
+| `Routes.geo` | `/dash/geo/{pack}.json` (map geometry, served immutable; likewise) |
 
 **Registering a database.** Only what's in `DBS` (`lego/dash/data.py`) is reachable.
 
@@ -426,6 +429,7 @@ Aggregation happens in SQL — no raw rows are pulled into Python. SQLite has no
 | `box` | median, middle half, p05–p95 whiskers, mean dot — quantiles from `row_number()` in one pass | a category ≤ `bar_cats` wide with ≥ `2 × box_min` rows per group |
 | `heat` | 2D density; every row binned into a `heat_bins²` grid | two measures and > 4,000 rows, where a scatter would draw its own overplotting |
 | `corr` | Pearson r for every measure pair, all sums from one scan, rendered as an HTML grid rather than a canvas | ≥ 3 measures |
+| `map` | a choropleth, inline SVG, quantile classes | a column whose values resolve to places (below) |
 
 Any of bar/line/area/scatter/hist can also be **split** into one series per category value (`s`/`sj`+`scol`+`slabel`), stacked or not. That is the difference between "signal over time" and "signal over time per region", and on measurement data the second is usually the only one that says anything. Series are capped at `cfg.max_series` by size but then ordered by *name*, so a colour stays with its category when a filter changes the totals.
 
@@ -448,6 +452,12 @@ Applying it: `payload()` takes the parsed filters as `p['fs']` (or raw `f=` stri
 
 Adding one: charts are clickable (the mark already names the thing, so `spec.on` + `spec.keys[i]` become a filter — raw group keys travel separately from the clipped axis labels), dimension cells in the rows table are links, and the filter bar has a three-control form. That form posts `fc`/`fop`/`fv` separately, because one `<select>` cannot compose a `table:column:op:value` string without JS; `_added()` folds them in and 303s to the canonical `f=` URL, so what is in the address bar is always the filter.
 
+**Maps** (`lego/dash/geo.py`). Geography is inferred the same way everything else is: a column is a place column when ≥ `cfg.geo_share` of its distinct values resolve to shapes in one of the packs under `geo/`. `Customer.Country` says "USA", `car_crashes.abbrev` says "AL", the Factbook says "Korea, South" — all three land without anything being declared. Two rewrites do most of the work on real spellings: a parenthetical gloss is dropped ("Turkey (Turkiye)"), and an inverted-comma form is put back in speaking order ("Congo, Democratic Republic of the"). Both packs are tried and the one matching most values wins, which is what settles a column of "Georgia".
+
+The map rule deliberately looks past `_cats`. A column of 255 country names is `text`, effectively unique, exactly what the picker refuses as a category — and the best column in the table for a map.
+
+Geometry is built by `tools/geo_build.mjs` into `lego/dash/geo/*.json.gz` (~91 KB for the pair) as **pre-projected SVG path strings**, so there is no projection at request time and no mapping library in the page. The world pack uses **Equal Earth**: equal-area is not a preference on a choropleth, because area is the channel the reader is reading. The US pack needs no projection — us-atlas ships Albers USA already in pixel space, insets and all. Colour is by **quantile class**, not a linear ramp; country data is heavy-tailed and a linear ramp paints two countries dark and the rest blank.
+
 **Building a chart by hand** (`lego/dash/build.py`). The inferred dashboard answers "what is in here"; it cannot answer "average tip by day, split by smoker", because nobody asked it that. The builder is six selects over the same `Spec` and the same `/dash/chart.json`.
 
 A composed chart lives in the URL as one `c=` parameter holding its query string, exactly as a filter lives in an `f=`. So a dashboard somebody built is a link they can send, the back button removes the last chart, and there is no per-user state to expire or leak. Every `c=` is re-validated on arrival by the same `_check()` the chart endpoint uses, so a hand-edited URL reaches SQL no more easily here than there. Built charts render above the inferred ones and the inferred set shrinks to make room.
@@ -464,7 +474,7 @@ Min, max, mean, sum and σ are measured over **every** row; only `count(distinct
 
 **Connections are per thread** (`threading.local`). Starlette runs sync handlers on a threadpool and a dashboard fires one chart request per card in parallel; apsw refuses to run a cursor on a connection busy in another thread, so a single cached connection turns a full dashboard into a race some cards lose.
 
-**Config** (`lego/dash/cfg.py`): `public` (`DASH_PUBLIC`, default on), `rows_per_page`, `sample_rows`, `max_cats`, `bar_cats`, `pie_cats`, `top_n`, `hist_bins`, `max_series`, `heat_bins`, `box_min`, `corr_max`, `max_charts`, `rel_preview`, `max_filters`, `max_hops`, `filter_values`.
+**Config** (`lego/dash/cfg.py`): `public` (`DASH_PUBLIC`, default on), `rows_per_page`, `sample_rows`, `max_cats`, `bar_cats`, `pie_cats`, `top_n`, `hist_bins`, `max_series`, `heat_bins`, `box_min`, `corr_max`, `geo_min`, `geo_share`, `map_classes`, `max_charts`, `rel_preview`, `max_filters`, `max_hops`, `filter_values`.
 
 `filter_values` is deliberately not `max_cats`: that one is about what makes a readable *chart*, and 275 artists is a hopeless doughnut but a perfectly good dropdown.
 

@@ -26,6 +26,15 @@ def _db(nm, about, group='Statistical'):
 DBS = AttrDict(
     chinook   = _db('Chinook', 'The classic digital-media store sample: artists, albums, tracks, invoices.', 'Business'),
     northwind = _db('Northwind', 'The other classic: a specialty-foods importer, its orders, products and staff.', 'Business'),
+    sakila    = _db('Sakila', 'A DVD rental chain: sixteen tables, two many-to-many joins and 16,000 payments. '
+                              'The deepest foreign-key graph here, and the one that makes the cross-table filter work '
+                              'for its living.', 'Business'),
+    nycflights = _db('NYC Flights', 'Every flight out of the three New York airports in 2013 — 336,776 rows against '
+                                    'hourly weather, by carrier, plane and destination.', 'Business'),
+
+    factbook  = _db('World Factbook', 'Every country the CIA publishes a profile for: area, population, '
+                                      'birth and death rates, GDP per head, time online. Public domain, and '
+                                      'the one dataset here whose rows are places.', 'Geographic'),
 
     diamonds  = _db('Diamonds', '53,940 diamonds priced against carat, cut, colour and clarity — '
                                 'big enough that the honest picture of two measures is a density, not a scatter.'),
@@ -53,6 +62,17 @@ DBS = AttrDict(
                                 'lines, and nothing else in common. The argument for drawing the chart.'),
 )
 for _k, _v in DBS.items(): _v.dump = _v.dump or f'{_k}.sql.gz'
+
+# A database is only reachable once something can supply it: its packaged dump, or a file
+# already sitting in the db directory. This is what lets a heavy dataset be optional —
+# `nycflights` is nine megabytes of gzipped SQL, which is ten times the rest of the seeds
+# put together and not a cost every clone of a starter template should pay. Its builder
+# ships in tools/; run it and the database appears. Dropping your own `<name>.db` into
+# data/db works the same way, with no dump at all.
+def _available(k, v):
+    return (cfg.seed_dir / v.dump).exists() or (get_db_dir() / f'{k}.db').exists()
+
+for _k in [k for k, v in DBS.items() if not _available(k, v)]: del DBS[_k]
 
 # sqlite keeps its own bookkeeping in the same namespace as the data; none of it is a table
 # anybody wants to chart
@@ -240,9 +260,13 @@ def _measure(nm, tbl):
         seen = row['nn'] or 0
         d = dict(name=c.name, type=c.type, kind=kind, nullable=c.nullable, distinct=nd,
                  nulls=n - seen, sampled=sampled)
-        if kind == 'num' and seen:
-            var = max(0.0, (row['m2'] or 0) - (row['mean'] or 0) ** 2)
-            d.update(lo=row['lo'], hi=row['hi'], mean=row['mean'], total=row['total'], sd=var ** 0.5)
+        # branch on the kind the aggregates were *selected* for, never on the kind plus
+        # whether any rows turned up: an all-null numeric column has no mean, and asking
+        # for the text branch's `maxlen` on a query that never selected it is a KeyError
+        if kind == 'num':
+            if seen:
+                var = max(0.0, (row['m2'] or 0) - (row['mean'] or 0) ** 2)
+                d.update(lo=row['lo'], hi=row['hi'], mean=row['mean'], total=row['total'], sd=var ** 0.5)
         elif kind == 'date':
             d.update(lo=row['lo'], hi=row['hi'])
         else:

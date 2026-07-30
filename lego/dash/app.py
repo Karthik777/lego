@@ -70,6 +70,19 @@ def dash_bopts(req, db: str = '', bt: str = ''):
     if not _known(db, bt): return not_found()
     return build_input(db, bt)
 
+def dash_geo(req, pack: str):
+    '''The map geometry, as pre-projected SVG paths.
+
+    Served apart from the chart data because it is the same however the chart is filtered,
+    and every map on the page wants the same one. Immutable: the packs only change when
+    tools/geo_build.mjs is re-run and the file is committed, so the browser should fetch
+    world.json once and never ask again.'''
+    from .geo import pack as geo_pack
+    try: g = geo_pack(pack)
+    except KeyError: return not_found()
+    return JSONResponse(dict(w=g.w, h=g.h, key=g.key, shapes=g.shapes, names=g.names),
+                        headers={'cache-control': 'public, max-age=31536000, immutable'})
+
 def dash_rel(req, db: str, table: str, pk: str, child: str, col: str = '', depth: int = 0, auth=None):
     'htmx partial: one level of children, loaded when the reader opens the section.'
     if not _known(db, child): return not_found()
@@ -89,6 +102,7 @@ def connect(app):
     app.get(Routes.chart)(dash_chart)   # before /dash/{db}, which would otherwise swallow it
     app.get(Routes.fopts)(dash_fopts)   # likewise
     app.get(Routes.bopts)(dash_bopts)   # likewise
+    app.get(Routes.geo)(dash_geo)       # likewise
     app.get(Routes.index)(dash_index)
     app.get(Routes.db)(dash_db)
     app.get(Routes.table)(dash_table)

@@ -10,7 +10,7 @@ __all__ = ['payload', 'stats', 'sparkline', 'page_rows', 'row_get', 'child_rows'
 
 # Reads that name rows go through fastlite's table API; the aggregates below stay hand-written
 # because GROUP BY is not something rows_where models.
-KINDS = {'bar', 'hbar', 'line', 'area', 'doughnut', 'scatter', 'box', 'heat', 'corr'}
+KINDS = {'bar', 'hbar', 'line', 'area', 'doughnut', 'scatter', 'box', 'heat', 'corr', 'map'}
 AGGS = {'sum', 'avg', 'count', 'hist', 'raw'}
 BUCKETS = {'%Y', '%Y-%m', '%Y-%m-%d'}
 NONE = '(none)'
@@ -71,6 +71,7 @@ def _check(p):
 def payload(p):
     'Run a validated chart spec and return the JSON the browser draws.'
     q = _check(p)
+    if q.kind == 'map': return _map(q)
     if q.kind == 'corr': return _corr(q)
     if q.kind == 'heat': return _heat(q)
     if q.kind == 'box': return _box(q)
@@ -226,6 +227,59 @@ def _box(q):
     out = _out(q, [xl(r['k']) for r in keep], [dict(label=_h(q.y), data=data)], fmt_of(q.y, ''),
                omitted=len(rows) - len(keep), range=[lo - pad, hi + pad])
     return _clickable(out, [r['k'] for r in keep], q.ax.t, q.ax.c)
+
+# ── the choropleth ────────────────────────────────────────────────────────────
+
+def _map(q):
+    '''A measure per place.
+
+    The geography is not declared anywhere. `geo.match` decides a column is a place column
+    because its values resolve to shapes, so `Customer.Country`, `Abbrev.abbrev` and the
+    Factbook's "Korea, South" all arrive here the same way.
+
+    Colour is assigned by **quantile class**, not by a linear ramp. Country data is almost
+    always heavy-tailed — China and India hold a third of the world's population between
+    them — and a linear ramp on that paints two countries dark and the other hundred and
+    seventy the same near-white, which is a picture of the two largest values rather than
+    of the distribution. Equal-count classes spend the colour where the countries are, and
+    the legend prints the break points so the classes are readable as numbers.'''
+    from .geo import resolve, geo_of
+    if not q.ax: raise ValueError('a map needs a place column')
+    g = geo_of(q.db, q.ax.t, q.ax.c)
+    if not g: raise ValueError('that column does not name places')
+    val, fmt, label = _val(q)
+    db = get_db(q.db)
+    w, p = _guard(q, f'{q.ax.expr} is not null')
+    rows = db.q(f'select {q.ax.expr} as k, {val} as v from {q.tq} {BASE} {q.joins} {w} group by k', p)
+    hit = resolve(g.pack, [r['k'] for r in rows])
+    cells, keys, dropped = {}, {}, []
+    for r in rows:
+        s = hit.get(r['k'])
+        if s is None: dropped.append(r['k']); continue
+        # two rows can land on one shape — "UK" and "United Kingdom" in the same column
+        cells[s] = (cells.get(s) or 0) + (r['v'] or 0) if q.agg in ('sum', 'count') else r['v']
+        keys[s] = str(r['k'])
+    if not cells: raise ValueError('nothing in that column resolved to a place')
+    vals = sorted(v for v in cells.values() if v is not None)
+    out = dict(kind='map', agg=q.agg, pack=g.pack, labels=[], fmt=fmt, label=label,
+               cells=cells, keys=keys, breaks=_quantiles(vals, cfg.map_classes),
+               lo=vals[0], hi=vals[-1], n=len(cells),
+               unmatched=len(dropped), series=[dict(label=label, data=list(cells.values()))])
+    if q.ax.t and q.ax.c: out['on'] = dict(t=q.ax.t, c=q.ax.c, op='eq')
+    return out
+
+def _quantiles(vals, k):
+    '''Upper bound of each class, equal counts per class.
+
+    Duplicates collapse — a column where two thirds of the places share one value cannot
+    have six distinct classes, and inventing empty ones would put breaks in the legend
+    that no place falls between.'''
+    if not vals: return []
+    out = []
+    for i in range(1, k):
+        v = vals[min(len(vals) - 1, int(len(vals) * i / k))]
+        if not out or v > out[-1]: out.append(v)
+    return out
 
 # ── density: the scatter that survives fifty thousand rows ────────────────────
 

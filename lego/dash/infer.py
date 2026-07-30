@@ -11,6 +11,20 @@ _MEASURE = re.compile(r'total|price|amount|cost|value|revenue|sales|qty|quantity
 _TEMPORAL = re.compile(r'date|_at$|time$|timestamp|year|month|created|updated|birth|hire', re.I)
 _LABEL = re.compile(r'name|title|label|subject|description', re.I)
 _MONEY = re.compile(r'price|total|amount|cost|revenue|sales|salary|balance', re.I)
+# Which measure a table leads with. Twenty numeric columns is common and alphabetical order
+# is not an opinion about any of them — a Factbook dashboard headed by `area` because it
+# sorts before `population` has picked the least interesting column in the table.
+_LEAD = re.compile(r'^total|revenue|sales|amount|price|population|gdp|income|passengers|'
+                   r'score|rating|signal|mpg|fare', re.I)
+# …and a *level* leads over a rate of change. "GDP growth by country" is a real chart and
+# a poor first impression of a table that also holds GDP per head.
+_DELTA = re.compile(r'growth|inflation|rate$|_rate|change', re.I)
+
+def _rank(c):
+    'Sort order for the measures a table offers. Lower leads.'
+    if _MONEY.search(c): return 0
+    if _LEAD.search(c): return 2 if _DELTA.search(c) else 1
+    return 3
 _ISO = re.compile(r'^\d{4}-\d{2}-\d{2}')
 # Adding these up answers something; adding up the others does not. The sum of every
 # invoice is the revenue, and the sum of every unit price is a number no one asked for —
@@ -186,6 +200,33 @@ def _axes(db, tbl):
                                 base=94 if named else 88))
     return sorted(out, key=lambda a: -a.base)
 
+def _places(db, tbl, cats):
+    '''Columns that name places, which is not the same set as columns that make categories.
+
+    A column of 255 country names is a hopeless bar chart and so never reaches `_cats` — it
+    is `text`, effectively unique, exactly the kind of column the picker is built to refuse.
+    On a map it is the best column in the table. So the map rule looks past the category
+    list at any column whose values resolve to shapes, and only then falls back to the
+    categories, which is where a foreign key to a `Country` lookup would come from.'''
+    from .geo import geo_of
+    out, seen = [], set()
+    for c, s in roles(db, tbl).items():
+        if s.role in ('key', 'const'): continue
+        g = geo_of(db, tbl, c)
+        if not g: continue
+        seen.add((tbl, c))
+        # `factbook.Country.name` is the table's own label, so "by Country" is what it is
+        # by; "by Name" is what the column is called, which is not the same sentence
+        title = _h(tbl) if c == label_col(db, tbl) else _h(c)
+        out.append(AttrDict(t=tbl, c=c, nd=s.distinct, title=title, own=True, geo=g,
+                            on=dict(x=c), split=dict(s=c)))
+    for c in cats:
+        if (c.t, c.c) in seen: continue
+        g = geo_of(db, c.t, c.c)
+        if g: out.append(AttrDict({**c, 'geo': g}))
+    # the column that puts the most places on the map is the one the table is about
+    return sorted(out, key=lambda c: -c.geo.n)
+
 def _rate_cols(db, tbl):
     'Two-valued integers. Their average is a rate, which is the only summary they have.'
     return [c for c, s in roles(db, tbl).items() if s.role == 'bool']
@@ -219,7 +260,7 @@ def specs_for_table(db, tbl, limit=None):
     # summing money is almost always the interesting total; summing durations or byte
     # counts rarely is, so those only lead when nothing better exists
     measures = sorted([c for c, s in rl.items() if s.role == 'measure'],
-                      key=lambda c: (0 if _MONEY.search(c) else 1, c))
+                      key=lambda c: (_rank(c), c))
     cats, axes, rates = _cats(db, tbl), _axes(db, tbl), _rate_cols(db, tbl)
     # narrow first, and a parent's label ahead of a raw column of the same width: splitting
     # by Sex draws two lines called "male" and "female", splitting by `adult_male` draws
@@ -295,8 +336,29 @@ def specs_for_table(db, tbl, limit=None):
                 add(kind=k, y=None, agg='count', stack=1, **c.on, **sp.split, score=sc + 2,
                     title=f'{head}{_plural(tbl)} by {c.title}, split by {sp.title}',
                     why=f'{why} · stacked by {sp.title.lower()}')
-        add(kind=k, y=None, agg='count', **c.on, score=sc,
-            title=f'{head}{_plural(tbl)} by {c.title}', why=why)
+        # "how many rows per category" is only a question when categories hold more than
+        # one row; one state per state is a bar chart of the number 1, ten times over
+        if n / max(c.nd, 1) >= 1.5:
+            add(kind=k, y=None, agg='count', **c.on, score=sc,
+                title=f'{head}{_plural(tbl)} by {c.title}', why=why)
+
+    # ── a measure per place ──
+    # Ranked above the bar chart of the same numbers on purpose. When the category *is*
+    # geography, the map answers a question the ranking cannot: where the values are next
+    # to each other. Top-10 bars of countries hide every regional pattern in the data.
+    for c in _places(db, tbl, cats):
+        g = c.geo
+        where = (f'{g.n} of {c.nd:,} {c.title.lower()} values placed on the '
+                 f'{"world" if g.pack == "world" else "US state"} map')
+        for m in measures[:2]:
+            ag = agg_for(m)
+            add(kind='map', y=m, agg=ag, **c.on, score=96,
+                title=f'{_h(m)} by {c.title}', why=f'{ag} of {_h(m)} · {where}')
+        # one row per place makes a map of the number 1; the measures above still work
+        if n / max(c.nd, 1) >= 2:
+            add(kind='map', y=None, agg='count', **c.on, score=90 if measures else 96,
+                title=f'{_plural(tbl)} by {c.title}', why=where)
+        break   # one place column per table is *the* place column
 
     # ── how a measure is spread inside each category ──
     for c in cats:
@@ -410,9 +472,19 @@ def _weight(n, nfks):
 
 def _plural(s):
     h = _h(s)
-    return h if h.endswith('s') else h + 'es' if re.search(r'(sh|ch|x|z)$', h) else h + 's'
+    if h.endswith('s'): return h
+    if re.search(r'[^aeiou]y$', h): return h[:-1] + 'ies'    # Country → Countries, not Countrys
+    return h + 'es' if re.search(r'(sh|ch|x|z)$', h) else h + 's'
 
-def _h(s): return re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', str(s)).replace('_', ' ').strip().capitalize()
+# words that are shouted, not capitalised — "Gdp per capita" reads as a typo
+_CAPS = {'gdp': 'GDP', 'id': 'ID', 'url': 'URL', 'api': 'API', 'usa': 'USA', 'us': 'US',
+         'uk': 'UK', 'iso': 'ISO', 'bold': 'BOLD', 'roi': 'ROI', 'mpg': 'MPG', 'fmri': 'fMRI'}
+
+def _h(s):
+    t = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', str(s)).replace('_', ' ').strip()
+    words = [(_CAPS.get(w.lower()) or w) for w in t.split()]
+    if words and words[0] not in _CAPS.values(): words[0] = words[0].capitalize()
+    return ' '.join(words)
 def _num(v):
     try: return f'{float(v):,.2f}'.rstrip('0').rstrip('.')
     except Exception: return str(v)

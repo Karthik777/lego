@@ -1,0 +1,12 @@
+{
+  "name": "lego-dash-tools",
+  "private": true,
+  "type": "module",
+  "description": "Build-time scripts for the dashboards block. Not part of the Python package.",
+  "dependencies": {
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1",
+    "world-atlas": "^2.0.2",
+    "world-countries": "^5.1.0"
+  }
+}

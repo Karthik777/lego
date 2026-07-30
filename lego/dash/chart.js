@@ -287,11 +287,86 @@
       `Blue is a positive relationship, orange a negative one; the stronger the colour, the tighter the fit.</p>`;
   }
 
+  // ── the choropleth ──────────────────────────────────────────────────────────
+  // Inline SVG, not a canvas. The geometry arrives as ready-made path strings — projected
+  // at build time by tools/geo_build.mjs — so a map is `<path d="…" fill="…">` and there
+  // is no mapping library in the page. Every place is also a real DOM node, which is what
+  // makes it hoverable, focusable and clickable without hit-testing anything by hand.
+  const geoPacks = new Map();
+  const geoPack = (nm) => {
+    if (!geoPacks.has(nm))
+      // one fetch per pack per page, shared by every map on it, and immutable thereafter
+      geoPacks.set(nm, fetch(`/dash/geo/${encodeURIComponent(nm)}.json`, { headers: { accept: 'application/json' } })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status)));
+    return geoPacks.get(nm);
+  };
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // which quantile class a value falls in — the breaks are upper bounds, computed server-side
+  function classOf(v, breaks) {
+    let i = 0;
+    while (i < breaks.length && v > breaks[i]) i++;
+    return i;
+  }
+
+  function mapSvg(canvas, spec, pal, geo) {
+    const host = canvas.parentNode;
+    canvas.style.display = 'none';
+    let box = host.querySelector('.map-wrap');
+    if (!box) { box = document.createElement('div'); box.className = 'map-wrap'; host.appendChild(box); }
+    const f = fmtr(spec.fmt);
+    const n = spec.breaks.length + 1;
+    // one hue, light to dark, stepped rather than continuous — the classes are the legend
+    const step = (i) => ramp(pal.card, pal.series[0], n === 1 ? 0.6 : 0.15 + 0.85 * (i / (n - 1)));
+    const paths = Object.entries(geo.shapes).map(([k, d]) => {
+      const v = spec.cells[k];
+      if (v == null) return `<path d="${d}" class="geo-nil"/>`;
+      const nm = geo.names[k] || k;
+      return `<path d="${d}" fill="${step(classOf(v, spec.breaks))}" class="geo-on"` +
+             ` data-k="${esc(k)}" tabindex="0" role="listitem"` +
+             ` aria-label="${esc(nm)}: ${esc(f(v))}"><title>${esc(nm)}: ${esc(f(v))}</title></path>`;
+    }).join('');
+    const edges = [spec.lo, ...spec.breaks, spec.hi];
+    const key = Array.from({ length: n }, (_, i) =>
+      `<span><i style="background:${step(i)}"></i>${f(edges[i])}–${f(edges[i + 1])}</span>`).join('');
+    box.innerHTML =
+      `<svg viewBox="0 0 ${geo.w} ${geo.h}" role="list" aria-label="${esc(spec.label)} by place"` +
+      ` preserveAspectRatio="xMidYMid meet">${paths}</svg>` +
+      `<div class="map-key">${key}</div>`;
+    mapHover(box, canvas, spec, geo);
+  }
+
+  function mapHover(box, canvas, spec, geo) {
+    const f = fmtr(spec.fmt), el = tipEl(canvas);
+    const show = (e) => {
+      const k = e.target.dataset?.k;
+      if (!k) return;
+      const r = box.getBoundingClientRect();
+      el.innerHTML = `<div class="t-title">${esc(geo.names[k] || k)}</div>` +
+        `<div class="t-row"><span>${esc(spec.label)}</span><b>${f(spec.cells[k])}</b></div>`;
+      const p = e.target.getBoundingClientRect();
+      place(canvas, el, p.left + p.width / 2 - r.left, p.top - r.top);
+    };
+    box.addEventListener('mouseover', show);
+    box.addEventListener('focusin', show);
+    box.addEventListener('mouseout', () => { el.style.opacity = 0; });
+    box.addEventListener('focusout', () => { el.style.opacity = 0; });
+    if (!spec.on) return;
+    const pick = (k) => { const i = Object.keys(spec.cells).indexOf(k); if (i >= 0) drillKey(spec, spec.keys[k]); };
+    box.addEventListener('click', (e) => { if (e.target.dataset?.k) pick(e.target.dataset.k); });
+    box.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset?.k) { e.preventDefault(); pick(e.target.dataset.k); }
+    });
+  }
+
   // Clicking a category is the shortest route to "only AC/DC": the mark already names the
   // thing, so the click adds the filter the reader would otherwise have had to spell out.
   // The raw group key travels in spec.keys — spec.labels is clipped for the axis.
-  function drill(spec, i) {
-    const on = spec.on, k = spec.keys && spec.keys[i];
+  function drill(spec, i) { drillKey(spec, spec.keys && spec.keys[i]); }
+
+  function drillKey(spec, k) {
+    const on = spec.on;
     if (!on || k == null) return;
     const u = new URL(window.location.href);
     const v = [on.t, on.c, on.op || 'eq', k].join(':');
@@ -452,6 +527,12 @@
     const f = fmtr(spec.fmt), xf = fmtr(spec.xfmt || 'float');
     const rows = (head, body) =>
       `<thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody>`;
+    if (spec.kind === 'map') {
+      const es = Object.entries(spec.cells).sort((a, b) => b[1] - a[1]);
+      t.innerHTML = rows(['place', spec.label], es.map(([k, v]) =>
+        `<tr><td>${esc(spec.keys[k] || k)}</td><td class="num">${f(v)}</td></tr>`).join(''));
+      return;
+    }
     if (spec.kind === 'corr') {
       t.innerHTML = rows(['', ...spec.labels], spec.matrix.map((r, i) =>
         `<tr><td>${spec.labels[i]}</td>${r.map(v => `<td class="num">${v == null ? '—' : v.toFixed(3)}</td>`).join('')}</tr>`).join(''));
@@ -494,6 +575,9 @@
     if (!foot) return;
     const bits = [];
     if (spec.note) bits.push(spec.note);
+    // a place the geometry has no shape for is dropped, and a map that dropped rows
+    // silently is a map you would read as "nothing there"
+    if (spec.unmatched) bits.push(`${FMT.int(spec.unmatched)} unmapped`);
     if (spec.omitted) bits.push(`${FMT.int(spec.omitted)} more not shown`);
     if (spec.omitted_series) bits.push(`${FMT.int(spec.omitted_series)} more series not shown`);
     if (spec.on) bits.push('Click to filter');
@@ -519,6 +603,12 @@
     const pal = palette();
     canvas.$spec = spec;
     if (spec.kind === 'corr') { corrGrid(canvas, spec, pal); dataTable(canvas, spec); hint(canvas, spec); return; }
+    if (spec.kind === 'map') {
+      dataTable(canvas, spec); hint(canvas, spec);
+      geoPack(spec.pack).then(geo => mapSvg(canvas, spec, pal, geo))
+        .catch(() => { const s = canvas.parentNode.querySelector('.chart-skel'); if (s) s.textContent = 'Map unavailable'; });
+      return;
+    }
     const cfg = build(spec, pal);
     const m = meta(spec, pal);
     // plugins draw during the first update, so $lego has to exist before construction
@@ -569,9 +659,10 @@
       ch.update('none');
       legend(canvas, spec, pal);
     });
-    // a correlation grid is DOM, not canvas, so it is not in `live` and has to be found
+    // correlation grids and maps are DOM, not canvas, so they are not in `live`
     document.querySelectorAll('canvas[data-chart-src]').forEach(c => {
       if (c.$spec?.kind === 'corr') corrGrid(c, c.$spec, pal);
+      else if (c.$spec?.kind === 'map') geoPack(c.$spec.pack).then(g => mapSvg(c, c.$spec, pal, g));
     });
   }
 
