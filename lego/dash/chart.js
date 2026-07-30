@@ -415,6 +415,16 @@
       else if (kind === 'hbar') Object.assign(ticks, { autoSkip: false, crossAlign: 'far' });
       else Object.assign(ticks, { autoSkip: true, maxTicksLimit: 12 });
       return {
+        // A log axis is the server's call — it has seen every value, the browser has seen
+        // a sample. `.chart-hint` says so on the card, because an axis whose gridlines are
+        // not evenly spaced in value is one the reader has to be told about.
+        //
+        // Spread rather than `type: opts.log ? … : undefined`: a `type` key that is present
+        // and undefined is not the same as an absent one. Chart.js infers a bar or line
+        // chart's category axis from the scale *id* only when the key is missing, and a
+        // present-but-undefined one leaves it linear — which draws tick indices, 0 to 22,
+        // where the years should be.
+        ...(opts.log ? { type: 'logarithmic' } : {}),
         grid: { display: val, color: pal.grid, drawTicks: false, drawOnChartArea: true },
         border: { display: false, dash: [3, 3] },
         ticks,
@@ -443,8 +453,8 @@
         animation: reduced() ? false : { duration: 320 },
         layout: { padding: { top: 4, right: 8 } },
         interaction: { mode: 'nearest', intersect: true },
-        scales: { x: axis(true, { fmt: spec.xfmt, text: spec.xlabel }),
-                  y: axis(true, { fmt: spec.fmt, text: spec.ylabel }) },
+        scales: { x: axis(true, { fmt: spec.xfmt, text: spec.xlabel, log: spec.xlog }),
+                  y: axis(true, { fmt: spec.fmt, text: spec.ylabel, log: spec.log }) },
         plugins: { legend: { display: false },
                    tooltip: { enabled: false, external: tooltip, position: 'nearest' } },
       },
@@ -453,7 +463,9 @@
     // stacking is what turns "how many of each" into "of which how many" — two series
     // side by side compare, two stacked compose
     const stack = spec.stacked && (bar || kind === 'area');
-    const vscale = () => Object.assign(axis(true), stack ? { stacked: true } : {});
+    // only a box asks for a log value axis; a bar's length is measured from zero and a log
+    // scale has no zero to measure it from
+    const vscale = () => Object.assign(axis(true, { log: box && spec.log }), stack ? { stacked: true } : {});
     const cscale = () => Object.assign(axis(false), stack ? { stacked: true } : {});
 
     return {
@@ -574,6 +586,10 @@
     const foot = canvas.closest('.chart-card')?.querySelector('.chart-foot');
     if (!foot) return;
     const bits = [];
+    // an axis whose gridlines are not evenly spaced in value has to announce itself
+    if (spec.log && spec.xlog) bits.push('both axes logarithmic');
+    else if (spec.log) bits.push(spec.kind === 'scatter' ? 'y axis logarithmic' : 'logarithmic scale');
+    else if (spec.xlog) bits.push('x axis logarithmic');
     if (spec.note) bits.push(spec.note);
     // a place the geometry has no shape for is dropped, and a map that dropped rows
     // silently is a map you would read as "nothing there"

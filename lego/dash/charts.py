@@ -117,6 +117,22 @@ def _val(q):
     if q.agg == 'avg' and s.get('distinct') == 2 and (s.get('lo'), s.get('hi')) == (0, 1): fmt = 'pct'
     return f'{q.agg}({BASE}.{q.yq})', fmt, _h(q.y)
 
+def _log(vals):
+    '''Should this axis be logarithmic?
+
+    Only when the numbers make it necessary and legal. Necessary: they span at least
+    `cfg.log_span` orders of magnitude, which is where a linear axis stops being a scale
+    and becomes a picture of its own maximum — Factbook populations run from ten thousand
+    to a billion, and every country but three lands on the baseline. Legal: every value is
+    strictly positive, because log has nothing to say about zero or a negative delay.
+
+    Bars never get one, which is why this is only called from the box and scatter builders.
+    A bar means its length, that length is measured from zero, and a log axis has no zero —
+    a "twice as long" bar on one would be ten times the value.'''
+    vs = [v for v in vals if v is not None]
+    if len(vs) < 3 or min(vs) <= 0: return False
+    return max(vs) / min(vs) >= 10 ** cfg.log_span
+
 def _groups(totals):
     '''Which split values get a series, and in what order.
 
@@ -221,11 +237,16 @@ def _box(q):
     xl = _labeller(q.db, q.ax.t, q.ax.c)
     lo = min(r['p05'] for r in keep)
     hi = max(r['p95'] for r in keep)
-    pad = (hi - lo) * 0.08 or abs(hi) * 0.08 or 1
     # Chart.js scales to the floating bar, which is only the middle half — left to itself
     # it crops the whiskers it is drawn to show
+    log = _log([v for r in keep for v in (r['p05'], r['p95'])])
+    if log: rng = [lo / 1.3, hi * 1.3]      # padding on a log axis is a ratio, not a gap
+    else:
+        pad = (hi - lo) * 0.08 or abs(hi) * 0.08 or 1
+        # padding a price down to −$600 to make room for a whisker invents a negative price
+        rng = [max(0, lo - pad) if lo >= 0 else lo - pad, hi + pad]
     out = _out(q, [xl(r['k']) for r in keep], [dict(label=_h(q.y), data=data)], fmt_of(q.y, ''),
-               omitted=len(rows) - len(keep), range=[lo - pad, hi + pad])
+               omitted=len(rows) - len(keep), range=rng, log=log)
     return _clickable(out, [r['k'] for r in keep], q.ax.t, q.ax.c)
 
 # ── the choropleth ────────────────────────────────────────────────────────────
@@ -438,6 +459,7 @@ def _scatter(q):
     rows = db.q(f'select {sel} from {q.tq} {BASE} {q.joins} {w} limit :_lim', dict(_lim=SCATTER_MAX, **p))
     out = dict(kind='scatter', agg='raw', labels=[], fmt=fmt_of(q.y, ''), xfmt=fmt_of(q.x, ''),
                xlabel=_h(q.x), ylabel=_h(q.y),
+               xlog=_log([r['x'] for r in rows]), log=_log([r['y'] for r in rows]),
                note=f'every {step:,}th row · {len(rows):,} of {n:,}' if step > 1 else None)
     if not q.sp:
         out['series'] = [dict(label=f'{_h(q.y)} vs {_h(q.x)}', data=[dict(x=r['x'], y=r['y']) for r in rows])]

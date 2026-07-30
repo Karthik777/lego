@@ -33,6 +33,7 @@ cfg = AttrDict(
     geo_min      = 6,       # distinct values below which a column is not worth mapping
     geo_share    = 0.6,     # fraction of them that must resolve to shapes before it is one
     map_classes  = 6,       # quantile classes a choropleth colours by
+    log_span     = 3,       # orders of magnitude past which an axis goes logarithmic
     max_charts   = 8,
     rel_preview  = 5,       # child rows shown per nested relation before "view all"
     max_filters  = 8,       # active filters per request — bounds the SQL a URL can ask for
