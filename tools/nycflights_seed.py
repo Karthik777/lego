@@ -6,16 +6,16 @@
     uv pip install rdata
     uv run python tools/nycflights_seed.py ~/src/nycflights13
 
-**This one is not committed.** Every other seed in `lego/dash/seed/` together comes to
-about a megabyte; this one is nine, because it is 336,776 flights. That is a reasonable
-thing to want and an unreasonable thing to put in every clone of a starter template, so the
-builder ships and the output does not. `DBS` drops any database whose dump is missing, so
-`nycflights` simply is not on /dash until you run this.
+This is the heaviest seed by an order of magnitude — nine megabytes against about one for
+every other one put together, because it is 336,776 flights. It earns it: nothing else here
+is a large time series, and 336k rows at hourly resolution over a full year against weather
+at the same resolution is the shape that exercises date bucketing, density and the ordered
+axis properly. The next biggest table in the block is fifty-four thousand diamonds with no
+dates in them at all.
 
-It is worth running. Nothing else here is a large time series: 336k rows at hourly
-resolution over a full year, against weather at the same resolution, is the shape that
-exercises date bucketing, density and the ordered axis properly, and the block's biggest
-table without it is fifty-four thousand diamonds with no dates at all.
+If you are vendoring this block into something where nine megabytes is not worth it, delete
+`lego/dash/seed/nycflights.sql.gz`: `DBS` drops any database whose dump is missing, and
+`/dash` will simply not list it.
 
 Two things happen on the way in. The flight tables ship as R binaries (`.rda`), so `rdata`
 reads them — the repo has CSVs for everything *except* the flights themselves. And the six
@@ -112,4 +112,4 @@ if __name__ == '__main__':
     p, counts, refused = build(sys.argv[1] if len(sys.argv) > 1 else '.')
     for t, n in counts.items(): print(f'  {t:<10} {n:>7,} rows')
     for r in refused: print(f'  key not declared — the data does not keep it: {r}')
-    print(f'-> {p.name} ({p.stat().st_size / 1e6:,.1f} MB) — not committed; see the module docstring')
+    print(f'-> {p.name} ({p.stat().st_size / 1e6:,.1f} MB)')

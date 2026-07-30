@@ -374,7 +374,7 @@ Reflects a database, profiles its columns, and picks charts from what it finds. 
 
 Ships with eighteen, in three groups. **Business** — Chinook, Northwind and Sakila: normalised, dated, monetary, what rollups and running totals are for. **Geographic** — the CIA World Factbook, one row per country. **Statistical** — the fourteen seaborn teaching sets: one wide fact table of measurements, a few lookups, no dates and nothing to add up. Half the chart kinds exist because the second and third groups did not fit the first group's rules.
 
-A nineteenth, `nycflights` (336,776 flights against hourly weather), is registered but **not committed** — its dump is nine megabytes, ten times the rest put together. `tools/nycflights_seed.py` builds it; `DBS` drops any database whose dump is absent, so it appears on `/dash` once you run it and not before. Dropping your own `data/db/<name>.db` in works the same way, with no dump at all.
+A nineteenth, `nycflights` — 336,776 flights against hourly weather — is the only large time series here, and the only seed that costs anything: nine megabytes, ten times the rest put together. `DBS` drops any database whose dump is absent, so deleting `lego/dash/seed/nycflights.sql.gz` removes it from `/dash` with no other change. Dropping your own `data/db/<name>.db` in works the same way from the other direction, with no dump at all. `tools/nycflights_seed.py` rebuilds it.
 
 **Routes** (from `lego/dash/cfg.py` `Routes`):
 

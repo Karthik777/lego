@@ -17,12 +17,18 @@ __all__ = ['DBS', 'get_db', 'seed', 'schema', 'table_names', 'reflect', 'profile
 def _db(nm, about, group='Statistical'):
     return AttrDict(nm=nm, dump=None, about=about, group=group)
 
-# only databases listed here are reachable from /dash. `dump` defaults to `<key>.sql.gz`.
-# The two business schemas make the relational charts — money over time, rollups through a
-# foreign key. The fourteen below them are the seaborn teaching sets, converted by
-# tools/dash_seeds.py: one wide fact table, a handful of lookups, and no dates or money at
-# all. They are here because a picker that only ever sees invoices is a picker tuned to
-# invoices, and half the chart kinds in this block exist because these did not fit.
+# Only databases listed here are reachable from /dash. `dump` defaults to `<key>.sql.gz`,
+# and `group` decides which heading the card sits under on the index.
+#
+# Three shapes, on purpose. The **business** schemas are normalised, dated and monetary —
+# rollups through a foreign key, money over time, the charts those rules were written for.
+# **Geographic** is one row per place. **Statistical** is the seaborn teaching sets,
+# converted by tools/dash_seeds.py: one wide fact table of measurements, a few lookups, no
+# dates and nothing worth adding up.
+#
+# The last two groups are here because a picker that only ever sees invoices is a picker
+# tuned to invoices. Box plots, density, correlation and the map all exist because those
+# datasets did not fit the rules the first group had produced.
 DBS = AttrDict(
     chinook   = _db('Chinook', 'The classic digital-media store sample: artists, albums, tracks, invoices.', 'Business'),
     northwind = _db('Northwind', 'The other classic: a specialty-foods importer, its orders, products and staff.', 'Business'),
@@ -64,11 +70,10 @@ DBS = AttrDict(
 for _k, _v in DBS.items(): _v.dump = _v.dump or f'{_k}.sql.gz'
 
 # A database is only reachable once something can supply it: its packaged dump, or a file
-# already sitting in the db directory. This is what lets a heavy dataset be optional —
-# `nycflights` is nine megabytes of gzipped SQL, which is ten times the rest of the seeds
-# put together and not a cost every clone of a starter template should pay. Its builder
-# ships in tools/; run it and the database appears. Dropping your own `<name>.db` into
-# data/db works the same way, with no dump at all.
+# already sitting in the db directory. So a seed is deletable — `nycflights` is nine
+# megabytes of gzipped SQL, ten times the rest put together, and removing the file is all
+# it takes to drop it from a build that does not want the weight. Dropping your own
+# `<name>.db` into data/db works the same way from the other direction, with no dump at all.
 def _available(k, v):
     return (cfg.seed_dir / v.dump).exists() or (get_db_dir() / f'{k}.db').exists()
 
