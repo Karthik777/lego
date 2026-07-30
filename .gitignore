@@ -5,3 +5,4 @@ data/
 backups/
 .sesskey
 static/assets/
+node_modules/

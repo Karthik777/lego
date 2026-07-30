@@ -50,6 +50,11 @@
 .chart-why { font-size: var(--text-8); color: var(--muted-foreground); margin: 0.15rem 0 0; }
 .chart-box { position: relative; height: 16rem; }
 .chart-box.tall { height: 22rem; }
+/* a density grid and a correlation matrix are both square: letting them stretch to a
+   16rem-high, 40rem-wide card would distort the one and strand the other */
+.chart-box.square { height: 28rem; }
+/* a world map at half a screen wide is a picture of continents, not of countries */
+.chart-box.map { height: 30rem; }
 .chart-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-block-start: 0.5rem; }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: var(--text-8); color: var(--muted-foreground); }
 .chart-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
@@ -81,6 +86,13 @@
    absurd and make flexbox wrap it even where it fits */
 .filt-add select, .filt-add input { font-size: var(--text-8); padding: 0.2rem 0.4rem; margin: 0; width: 10rem; }
 .filt-add select[name="fop"] { width: 7.5rem; }
+/* the builder puts six controls on the same row as the filter's four, so its own are
+   narrower — each holds one table's columns rather than a whole schema's */
+.filt-add select[name="bkind"], .filt-add select[name="bagg"] { width: 8.5rem; }
+.filt-add select[name="by"], .filt-add select[name="bs"] { width: 8rem; }
+.filt-check { display: inline-flex; align-items: center; gap: 0.25rem; font-size: var(--text-8);
+              color: var(--muted-foreground); margin: 0; }
+.filt-check input { width: auto; margin: 0; }
 .filt-off { color: var(--chart-2); }
 .filt-of { display: block; font-size: 0.625rem; color: var(--muted-foreground); font-weight: 400; }
 table.dash-tbl a.filt-cell { color: inherit; text-decoration-line: underline; text-decoration-style: dotted;
@@ -88,6 +100,41 @@ table.dash-tbl a.filt-cell { color: inherit; text-decoration-line: underline; te
 table.dash-tbl a.filt-cell:hover { color: var(--primary); text-decoration-style: solid; }
 
 /* relief channel for the sub-3:1 light-mode slots: every chart can show its numbers */
+/* ── Choropleth ───────────────────────────────────────────────────────────────
+   Inline SVG rather than a canvas, so every place is a real element: hoverable,
+   focusable, and readable by a screen reader off its own <title>. */
+.map-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.map-wrap svg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; }
+.map-wrap path { stroke: var(--card); stroke-width: 0.6; stroke-linejoin: round; }
+/* a place with no row is not zero — it is absent, and it has to look different from the
+   bottom class rather than like the smallest value */
+.map-wrap path.geo-nil { fill: var(--muted); }
+.map-wrap path.geo-on { cursor: pointer; transition: opacity 0.12s ease; }
+.map-wrap path.geo-on:hover { opacity: 0.72; }
+.map-wrap path.geo-on:focus-visible { outline: none; stroke: var(--foreground); stroke-width: 1.4; }
+.map-key { display: flex; flex-wrap: wrap; gap: 0.15rem 0.7rem; font-size: var(--text-8);
+           color: var(--muted-foreground); font-variant-numeric: tabular-nums; flex: none; }
+.map-key span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.map-key i { width: 0.85rem; height: 0.6rem; border-radius: 2px; display: inline-block; }
+@media (prefers-reduced-motion: reduce) { .map-wrap path.geo-on { transition: none; } }
+
+/* ── Correlation matrix ───────────────────────────────────────────────────────
+   Not a canvas: the numbers are the chart, and colour only ranks them. Which also
+   means it reads without colour, prints, and needs no separate table view. */
+.corr-grid { position: absolute; inset: 0; overflow: auto; display: flex; flex-direction: column; }
+.corr-grid table { border-collapse: separate; border-spacing: 2px; font-size: var(--text-8);
+                   font-variant-numeric: tabular-nums; margin: auto; }
+.corr-grid th { font-weight: 500; color: var(--muted-foreground); text-align: right;
+                padding-inline-end: 0.4rem; white-space: nowrap; }
+.corr-grid thead th { text-align: center; padding: 0 0.15rem 0.3rem; vertical-align: bottom; }
+/* the column heads are as long as the row heads and there is no room for them upright */
+.corr-grid thead th span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); }
+.corr-grid td { text-align: center; padding: 0.4rem 0.5rem; border-radius: var(--radius-small);
+                min-width: 3rem; color: var(--foreground); }
+.corr-grid td.corr-diag { color: var(--muted-foreground); background: var(--muted); }
+.corr-grid td.corr-na { color: var(--muted-foreground); }
+.corr-grid .chart-why { flex: none; margin-block-start: 0.6rem; text-align: center; }
+
 details.chart-data { margin-block-start: 0.5rem; }
 details.chart-data > summary { cursor: pointer; font-size: var(--text-8); color: var(--muted-foreground); }
 details.chart-data > summary:hover { color: var(--foreground); }
