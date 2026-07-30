@@ -1,0 +1,173 @@
+/* Embedding atlas block — everything /atlas renders.
+   Ships with the block, so copying lego/atlas/ into another lego app brings its styling
+   along. Consumes core design tokens (--card, --border, --radius-*, --text-*); the
+   cluster palette below is the block's own.
+
+   Same eight hues as the dashboards block, in the same order, and for the same reason:
+   the *order* is what keeps adjacent categories apart under protanopia and deuteranopia,
+   so a cluster colour is never the only thing carrying a meaning — every dot on the map
+   is paired with a named cluster in the table under it. */
+:root {
+  --atlas-1: light-dark(#2a78d6, #3987e5);
+  --atlas-2: light-dark(#eb6834, #d95926);
+  --atlas-3: light-dark(#1baf7a, #199e70);
+  --atlas-4: light-dark(#eda100, #c98500);
+  --atlas-5: light-dark(#e87ba4, #d55181);
+  --atlas-6: light-dark(#008300, #008300);
+  --atlas-7: light-dark(#4a3aa7, #9085e9);
+  --atlas-8: light-dark(#e34948, #e66767);
+  --atlas-grid: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.atlas-wrap { max-width: 76rem; margin-inline: auto; padding: 1rem; }
+.atlas-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; margin-block-end: 1rem; }
+.atlas-why { font-size: var(--text-8); color: var(--muted-foreground); margin: 0.15rem 0 0; }
+.atlas-wrap h1 { margin: 0; }
+
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; font-size: var(--text-8); color: var(--muted-foreground); }
+.crumbs a { color: inherit; text-decoration: none; }
+.crumbs a:hover { color: var(--foreground); text-decoration: underline; }
+.crumbs .sep { opacity: 0.45; }
+
+/* ── chips ─────────────────────────────────────────────────────────────────── */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.45rem;
+        border: 1px solid var(--border); border-radius: 999px; font-size: var(--text-9, 0.72rem);
+        line-height: 1.6; white-space: nowrap; }
+.chip.ghost { color: var(--muted-foreground); }
+.chip.ok   { border-color: color-mix(in srgb, var(--atlas-3) 55%, var(--border)); color: var(--atlas-3); }
+.chip.warn { border-color: color-mix(in srgb, var(--atlas-4) 55%, var(--border)); color: var(--atlas-4); }
+.chip.bad  { border-color: color-mix(in srgb, var(--atlas-8) 55%, var(--border)); color: var(--atlas-8); }
+.chip.off  { color: var(--muted-foreground); opacity: 0.55; text-decoration: line-through; }
+
+.dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; display: inline-block; flex: none; }
+.c0 { background: var(--atlas-1); } .c1 { background: var(--atlas-2); }
+.c2 { background: var(--atlas-3); } .c3 { background: var(--atlas-4); }
+.c4 { background: var(--atlas-5); } .c5 { background: var(--atlas-6); }
+.c6 { background: var(--atlas-7); } .c7 { background: var(--atlas-8); }
+
+.note { display: flex; align-items: flex-start; gap: 0.45rem; font-size: var(--text-8);
+        color: var(--muted-foreground); border: 1px solid var(--border); border-radius: var(--radius-medium);
+        padding: 0.5rem 0.7rem; margin-block-end: 0.5rem; }
+.note svg { flex: none; margin-block-start: 0.15rem; }
+.note.warn { border-color: color-mix(in srgb, var(--atlas-4) 45%, var(--border));
+             background: color-mix(in srgb, var(--atlas-4) 7%, transparent); color: var(--foreground); }
+
+.enc-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.75rem; margin-block: 0.5rem 1rem; }
+.enc-bar .atlas-why { margin: 0; }
+
+/* ── index ─────────────────────────────────────────────────────────────────── */
+.db-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.75rem; margin-block: 1.5rem 0.5rem; }
+.db-head h2 { font-size: var(--text-4); }
+.path { font-size: var(--text-9, 0.72rem); color: var(--muted-foreground); overflow-wrap: anywhere; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 0.85rem; }
+.store-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium);
+              padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.card-head a { text-decoration: none; color: inherit; }
+.card-head a:hover h3 { text-decoration: underline; }
+.card-db { font-size: var(--text-9, 0.72rem); color: var(--muted-foreground); }
+.mini-form { display: flex; gap: 0.35rem; }
+.mini-q { flex: 1; min-width: 0; }
+.empty { border: 1px dashed var(--border); border-radius: var(--radius-medium); padding: 1.25rem; }
+
+/* ── search bar ────────────────────────────────────────────────────────────── */
+.search-bar { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium);
+              padding: 0.75rem 0.85rem; display: flex; flex-direction: column; gap: 0.6rem; margin-block-end: 0.75rem; }
+.q-row { display: flex; gap: 0.5rem; }
+.big-q { flex: 1; min-width: 0; font-size: var(--text-5); }
+.opt-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; font-size: var(--text-8); }
+.opt-row label { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted-foreground); }
+.opt-row .num { width: 4.5rem; }
+.opt-row .check { gap: 0.3rem; }
+
+.facet-bar { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; align-items: baseline; margin-block-end: 1rem;
+             font-size: var(--text-8); }
+.facet-lbl, .facet-k { color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.06em;
+                       font-size: var(--text-9, 0.72rem); }
+.facets { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.facet { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.5rem; }
+.facet-v { text-decoration: none; border: 1px solid var(--border); border-radius: 999px; padding: 0 0.4rem;
+           color: var(--muted-foreground); }
+.facet-v:hover { color: var(--foreground); border-color: var(--foreground); }
+
+/* ── tiles ─────────────────────────────────────────────────────────────────── */
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 0.65rem;
+             margin-block-end: 1rem; }
+.tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium);
+        padding: 0.6rem 0.75rem; min-width: 0; }
+.tile-label { font-size: var(--text-9, 0.72rem); color: var(--muted-foreground); text-transform: uppercase;
+              letter-spacing: 0.06em; }
+.tile-value { font-size: var(--text-4); line-height: 1.15; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.tile-value.ok { color: var(--atlas-3); } .tile-value.warn { color: var(--atlas-4); }
+.tile-value.bad { color: var(--atlas-8); }
+.tile-sub { font-size: var(--text-9, 0.72rem); color: var(--muted-foreground); }
+
+/* ── results ───────────────────────────────────────────────────────────────── */
+.hits { display: flex; flex-direction: column; gap: 0.6rem; }
+.hit { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium);
+       padding: 0.7rem 0.85rem; min-width: 0; }
+.hit-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem; }
+.pos { font-variant-numeric: tabular-nums; color: var(--muted-foreground); font-size: var(--text-8); min-width: 1.4rem; }
+.hit-title { font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.hit-title:hover { text-decoration: underline; }
+.snip { font-size: var(--text-7); margin: 0.35rem 0 0.4rem; white-space: pre-wrap; overflow-wrap: anywhere;
+        max-height: 7.5rem; overflow: hidden; }
+.snip mark { background: color-mix(in srgb, var(--atlas-4) 30%, transparent); color: inherit;
+             border-radius: 2px; padding: 0 1px; }
+.hit-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem;
+            font-size: var(--text-9, 0.72rem); color: var(--muted-foreground); }
+.rank { font-variant-numeric: tabular-nums; }
+.rank.keyword { color: var(--atlas-1); } .rank.vector { color: var(--atlas-7); }
+.hit-more { display: inline-flex; align-items: center; gap: 0.2rem; color: var(--muted-foreground); }
+.hit-more:hover { color: var(--foreground); }
+.pager { display: flex; gap: 0.5rem; justify-content: flex-end; margin-block-start: 0.75rem; }
+
+/* ── panels, tables ────────────────────────────────────────────────────────── */
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium);
+         padding: 0.85rem 1rem; margin-block-start: 1.25rem; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 0.75rem; }
+.panel-head h2 { font-size: var(--text-4); }
+.legs > summary { cursor: pointer; font-size: var(--text-7); }
+
+.tbl-scroll { overflow-x: auto; }
+.atlas-tbl { width: 100%; border-collapse: collapse; font-size: var(--text-8); }
+.atlas-tbl th, .atlas-tbl td { text-align: left; padding: 0.4rem 0.6rem; border-block-end: 1px solid var(--border);
+                               white-space: nowrap; }
+.atlas-tbl th { color: var(--muted-foreground); font-weight: 500; text-transform: uppercase;
+                letter-spacing: 0.05em; font-size: var(--text-9, 0.72rem); }
+.atlas-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
+.col-head { display: inline-flex; align-items: center; gap: 0.4rem; }
+.exs { display: flex; gap: 0.35rem; }
+.ex { color: var(--muted-foreground); text-decoration: none; }
+.ex:hover { color: var(--foreground); text-decoration: underline; }
+
+/* ── projection ────────────────────────────────────────────────────────────── */
+.proj-box { position: relative; height: 26rem; margin-block-start: 0.5rem; }
+.proj-box canvas { width: 100%; height: 100%; display: block; border: 1px solid var(--border);
+                   border-radius: var(--radius-medium); cursor: crosshair; }
+.proj-skel { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--text-8);
+             color: var(--muted-foreground); }
+.proj-tip { position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.1s;
+            background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-small, 4px);
+            padding: 0.3rem 0.5rem; font-size: var(--text-9, 0.72rem); max-width: 22rem; z-index: 5;
+            box-shadow: 0 2px 8px rgb(0 0 0 / 0.15); }
+.proj-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 0.85rem; font-size: var(--text-9, 0.72rem);
+               color: var(--muted-foreground); margin-block-start: 0.5rem; }
+.proj-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+
+/* ── document page ─────────────────────────────────────────────────────────── */
+.doc-body { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-medium);
+            padding: 0.75rem 0.9rem; overflow-x: auto; max-height: 40rem; }
+.doc-body pre { margin: 0; }
+.doc-body code { font-size: var(--text-8); white-space: pre-wrap; overflow-wrap: anywhere; }
+.field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.5rem 1rem;
+              margin-block-start: 1rem; }
+.field dt { font-size: var(--text-9, 0.72rem); color: var(--muted-foreground); text-transform: uppercase;
+            letter-spacing: 0.05em; }
+.field dd { margin: 0; font-size: var(--text-8); overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .opt-row { gap: 0.4rem 0.6rem; }
+  .proj-box { height: 20rem; }
+}

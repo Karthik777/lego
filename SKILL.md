@@ -492,6 +492,60 @@ Sequential and diverging ramps are mixed from the same tokens: the density heatm
 
 Charts fetch their data from `/dash/chart.json` on intersection, so a page of eight charts issues eight small parallel queries rather than one slow render.
 
+## Atlas block (`lego/atlas/`)
+
+```python
+import lego.atlas as at
+at.connect(lego)   # before auth
+```
+
+The dash block explores relational databases. This one explores **litesearch stores** — a table with `content`, `embedding` and `metadata`, an FTS5 index kept in sync by triggers, and optionally an HNSW sidecar registered in `usearch_indices`. One search box that embeds what you type, keyword and vector search run side by side and fused with RRF, clusters over the whole store, and a map of the vector space.
+
+**Routes** (from `lego/atlas/cfg.py` `Routes`):
+
+| attribute | path |
+|---|---|
+| `Routes.index` | `/atlas` |
+| `Routes.store` | `/atlas/{db}/{store}` — search, clusters, projection |
+| `Routes.doc` | `/atlas/{db}/{store}/doc/{id}` — one chunk, its metadata, its nearest neighbours |
+| `Routes.proj` | `/atlas/{db}/{store}/proj.json` (the map's points; registered first — `/atlas/{db}/{store}` would otherwise match it) |
+| `Routes.legs` | `/atlas/{db}/{store}/legs` (htmx partial: every strategy compared; likewise) |
+| `Routes.score` | `/atlas/{db}/{store}/score` (htmx partial: an index card's clustering headline; likewise) |
+
+**Finding databases.** Nothing is registered. `_dirs()` walks `data/db/atlas/`, every path in `ATLAS_DIRS`, and a `.kosha/` index in the working directory or `~/.local/share/kosha` — so a repo that has run `k.sync()` gets its code search at `/atlas` with no configuration. Every `.db` under those directories is opened, and only tables that have a `content` and an `embedding` column are reachable: a directory that also holds an application database exposes none of it.
+
+**The demo corpus.** On first start, `seed_demo()` indexes the app's own Markdown and Python into `data/db/atlas/lego.db` as two stores, `docs` and `code`. `Table.sync` diffs content hashes, so restarts re-embed only what changed. `ATLAS_SEED=false` turns it off; `ATLAS_SEED_DIRS` chooses what it walks.
+
+**Encoders** (`lego/atlas/encode.py`). Named, lazy, loaded once: `retrieval`, `code`, `science`, `multi` (model2vec statics), `bge`, `nomic`, `coderank`, `gemma` (ONNX via `FastEncode`), and `hash`. Set `ATLAS_EMBEDDER`, or `ATLAS_EMBEDDERS='lego.code=code,papers.store=science'` per store. A model that will not load leaves the block running — the keyword leg answers and the page says why the vector leg is dark.
+
+`hash` is the offline fallback: signed hashing over words and character trigrams, pure numpy, nothing to download. Real vectors, lexical only — every surface that uses it says so.
+
+**An encoder may only answer for a store it could have written** (`check()`). Dimensions must agree, and where the store records its encoder in `atlas_stores`, the name must too. A 512-d query against 384-d rows is not a worse search, it is a different question, so the vector leg goes dark with that sentence rather than returning confident nonsense.
+
+**Vector dtype is inferred, not trusted.** A store keeps vectors as raw bytes and the scalar width is not written down beside them. `get_store(ann=True)` defaults its registry row to `f16` while model2vec statics — what kosha indexes with — return `f32`; when those disagree the bytes still decode, into twice as many numbers of the wrong magnitude, and nothing raises. `_dtype()` decodes a sample every way it could have been written and keeps the reading that looks like an embedding (finite, bounded, unit norm), using the registry only as a tie-breaker. `ann_ok` then reports whether the HNSW sidecar was built under that same reading, and the store page says so in a banner. **If you see it: `store.rebuild_index()`.**
+
+**Search** (`lego/atlas/search.py`). `db.search()` fuses and returns one list; this block runs the legs itself and fuses with a copy of `rrf_merge` that keeps the ranks, because "keyword #14, vector #2" is the answer to *why is this here* and fusing is the step that throws it away. Every hit carries its rank in each leg, its cosine distance, and its RRF score; every leg carries its own wall time.
+
+`key:value` tokens filter before either index sees the query — `path:lego/*`, `lang:.py`, `-type:ClassDef`, `package!:fastcore`. A key that is a real column is matched as one, otherwise as `json_extract(metadata, '$.key')`; `*` and `?` become `LIKE`. Values are always bound, never interpolated. The same shape kosha's SKILL.md teaches.
+
+`ann_search` grew a `WHERE` clause after litesearch 0.0.35; `_ann()` works with either, re-selecting survivors from a deeper slice on the versions that cannot filter, so a filtered ANN search never silently returns fewer rows than asked for.
+
+**Compare strategies** (`Routes.legs`) runs keyword, exact vector, ANN vector and both hybrids over one query and reports **ANN agreement**: the share of the exact top-20 that HNSW also returned. Approximate search trades a few percent for speed, so ~0.9 up is the trade working. Near zero means the sidecar no longer matches the table — which looks exactly like a working index from a result list alone.
+
+**Clustering** (`lego/atlas/cluster.py`) is spherical k-means: vectors L2-normalised, centroids renormalised each pass, similarity is a dot product. That is the geometry `distance_cosine_*` uses inside the store, so the clusters describe the space the search ranks in. k-means++ seeding, and `k` chosen by silhouette over `KS`.
+
+Reported, never hidden: **silhouette** (high is good; under ~0.15 there is no cluster structure and k-means split it anyway), **Davies–Bouldin** (low is good), per-cluster **cohesion** (mean similarity to own centre) and **separation** (cosine distance to the nearest other centre). Clusters are named by TF-IDF across clusters, not term frequency — weighting by frequency alone names every cluster after the same words.
+
+`k` is capped twice: at `sqrt(n/2)`, because a centroid silhouette rises monotonically toward singletons and a cluster of one scores perfectly while meaning nothing; and at 8, because the palette has eight slots whose *order* carries the colour-blind guarantee.
+
+**Projection** is PCA, and it reports the share of variance its two axes carry. Two components out of several hundred usually carry little, so points that look adjacent may not be neighbours — the number sits next to the picture. Raw component bounds travel with the payload so a query embedded later lands on the same axes; the query is drawn as a cross, not a dot, because it is not a row.
+
+`atlas.js` draws the map straight onto a canvas rather than through Chart.js: one dot is one row, never a bucket, and the nearest-point scan for hover is a flat loop over the payload. Colour tokens are read with the same one-probe-per-token trick `dash/chart.js` uses, and the same `MutationObserver` repaints on a theme change.
+
+**Config** (`lego/atlas/cfg.py`): `public` (`ATLAS_PUBLIC`), `dirs` (`ATLAS_DIRS`), `embedder` (`ATLAS_EMBEDDER`), `embedders` (`ATLAS_EMBEDDERS`), `seed` (`ATLAS_SEED`), `seed_dirs` (`ATLAS_SEED_DIRS`), `hits`, `max_hits`, `depth`, `snippet`, `rrf_k`, `nbrs`, `proj_max`, `cluster_max`, `kmin`, `kmax`, `kiter`, `sil_sample`, `label_terms`, `facet_vals`, `facet_share`, `facet_scan`, `ann_recall_k`.
+
+Store descriptions and clusterings are cached through `lego.core.cache` under the database file's row counts, so both invalidate when something writes to the file and never otherwise.
+
 ## Adding a new block
 
 1. Create `lego/myblock/` with `__init__.py`, `cfg.py`, `data.py`, `ui.py`, `app.py`

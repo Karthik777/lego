@@ -1,7 +1,7 @@
 from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P
 from fasthtml.common import *
 from .core import *
-from lego import auth as a, blog as b, dash as d
+from lego import auth as a, blog as b, dash as d, atlas as at
 
 __all__ = ['launch', 'lego']
 
@@ -39,7 +39,8 @@ for _d in ('vendor', 'assets'):
 
 # connect your blocks
 b.connect(lego)
-d.connect(lego) # dashboards
+d.connect(lego)  # dashboards — charts and tables over relational data
+at.connect(lego) # atlas — search, clusters and projections over litesearch embedding stores
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 
 # optionally add a scheduled backup of data folders

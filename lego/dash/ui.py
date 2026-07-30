@@ -181,6 +181,20 @@ GROUPS = {'Business': 'Normalised schemas with dates and money: what the rollup,
           'Statistical': 'One wide table of measurements and a few lookups. No dates, nothing to '
                          'add up — the charts here are distributions, spreads and correlations.'}
 
+def _atlas_link():
+    '''A pointer to the other half of the explorer, when there is one.
+
+    These databases are relational: rows, keys, aggregates. The atlas block reads a
+    different shape of database — litesearch stores, where a row is a chunk of text and a
+    vector — and a reader looking for one in here will otherwise conclude the app cannot
+    do it. Soft import, because a lego app that did not connect that block should not
+    grow a dead link because this one mentions it.'''
+    try: from lego.atlas.cfg import Routes as A
+    except ImportError: return None
+    return P('Embeddings rather than columns? ', dlink('The atlas', href=A.index),
+             ' searches litesearch stores — keyword and vector at once, with clusters and a map '
+             'of the vector space.', cls='chart-why')
+
 def index_view():
     out = []
     for g, about in GROUPS.items():
@@ -190,7 +204,7 @@ def index_view():
                 Div(*[_db_card(k, d) for k, d in ks], cls='chart-grid')]
     return wrap(Div(H1('Dashboards', cls='m-0'),
                     P('Charts and tables inferred from whatever the database happens to contain.', cls='chart-why'),
-                    cls='dash-head'),
+                    _atlas_link(), cls='dash-head'),
                 *out)
 
 # ── /dash/{db} ────────────────────────────────────────────────────────────────

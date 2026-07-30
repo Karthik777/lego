@@ -48,6 +48,17 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 ```
 ````
 
+**dash** reflects a relational database and picks the charts from what it finds — column roles, filters carried in the URL, a chart builder, maps.
+
+**atlas** is the other half of that: an explorer for [litesearch](https://github.com/Karthik777/litesearch) stores. One box that embeds what you type, keyword and vector search running side by side and fused with RRF, with or without the HNSW index, plus clusters over the whole store and a map of the vector space. It finds its databases rather than being given them — `data/db/atlas/`, anything in `ATLAS_DIRS`, and a [kosha](https://github.com/Karthik777/kosha) index in `.kosha/`, so a synced repo gets code search at `/atlas` with nothing configured. On first start it indexes this app's own docs and source so there is something to search.
+
+```bash
+ATLAS_EMBEDDER=code uv run python main.py     # query encoder: any of retrieval, code, science, multi, bge, nomic, coderank, gemma, hash
+ATLAS_DIRS=~/indexes,/srv/corpora uv run python main.py
+```
+
+Every score it can show, it shows: each hit's rank in each leg, cosine distance, RRF score, per-leg timings, cluster cohesion and separation, silhouette, Davies–Bouldin, how much variance the drawn axes carry, and how far the approximate index agrees with an exact scan.
+
 ## Project structure
 
 ```
@@ -55,11 +66,14 @@ lego/
 ├── main.py
 ├── lego/
 │   ├── app.py           # wire up blocks, scheduled jobs
+│   ├── atlas/           # atlas block — embedding search over litesearch stores
 │   ├── auth/            # auth block
 │   ├── blog/            # blog block
+│   ├── dash/            # dashboards block
 │   └── core/            # config, cache, logging, backups, UI
 ├── data/
 │   ├── db/              # SQLite databases
+│   │   └── atlas/       # litesearch stores the atlas searches
 │   ├── logs/
 │   └── cache/           # DiskCache
 └── static/
