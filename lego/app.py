@@ -1,3 +1,4 @@
+import os
 from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P
 from fasthtml.common import *
 from starlette.middleware import Middleware
@@ -85,5 +86,26 @@ def showcase(auth):
 # lego.get('/')(showcase)
 lego.get('/health')(lambda req: JSONResponse({'status': 'ok'}))
 
-def launch(): serve('lego', 'lego', port=cfg.port)
+def n_workers():
+    '''How many processes to serve on.
+
+    Rendering a page is Python holding the GIL, so one process answers requests strictly
+    one at a time however many threads are behind it — the whole app tops out around 800
+    requests a second no matter how little each one costs. Processes are what lifts that,
+    and every worker gets its own copy of the memos in dash and ui, which is fine: they
+    are all derived from files on disk and none of them is authoritative.
+
+    Capped rather than one per core because each worker holds its own sqlite connections
+    and its own reflection cache, and a 32-core box does not want 32 of those. Set
+    WEB_CONCURRENCY to override.'''
+    if cfg.workers: return cfg.workers
+    return max(1, min(4, (os.cpu_count() or 1)))
+
+def launch():
+    # reload=True is `serve`'s default, and it was running in production: a file-watching
+    # supervisor and a stat sweep of the tree, for a container whose files never change.
+    # It is also incompatible with workers, so this is one switch.
+    if not_prod(): return serve('lego', 'lego', port=cfg.port, reload=True)
+    serve('lego', 'lego', port=cfg.port, reload=False, workers=n_workers())
+
 if __name__ == '__main__': launch()
