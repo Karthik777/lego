@@ -14,7 +14,8 @@ __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
            'welcome', 'not_found', 'email_template', 'main', 'themes', 'github_star', 'stringify',
            'ButtonT', 'TextT', 'ThemeRadii', 'ThemeShadows', 'ThemeFont', 'NavBarT', 'THEMES',
-           'LabelInput', 'LabelTextArea', 'LabelSelect', 'modal', 'CmdPalette', 'asset_js', 'asset_css', 'vendor_js']
+           'LabelInput', 'LabelTextArea', 'LabelSelect', 'modal', 'CmdPalette', 'asset_js', 'asset_css', 'vendor_js', 'vlink',
+           'vendor_hdrs']
 
 def stringify(o):
     'Join class fragments (str | list | tuple, arbitrarily nested) into one class string.'
@@ -250,12 +251,31 @@ def email_template(content, title=s.app_nm, usr=None):
 def welcome(usr=None): return landing(placeholder(f'Welcome to {s.app_nm}'), usr=usr)
 def not_found(): return landing(placeholder("The page you're looking for doesn't exist or has been moved."))
 
-def _nosleep(): return Script(src='https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js', defer=True)
+def _nosleep(): return vendor_js('nosleep.min.js', defer=True)
+
+def vendor_hdrs():
+    '''What `fast_app(default_hdrs=True)` would put in the head, served from static/vendor.
+
+    Every one of these was a separate origin — two jsdelivr paths, cdnjs, and the font CSS
+    that chains to a fourth host for the files it names. A cold visit paid a DNS lookup, a
+    TLS handshake and a round trip before it could finish the head, and three of the URLs
+    were `@latest` or `@main`, which cannot be cached for long and can change under a
+    deployed app. Locally they are the connection the browser already has, behind the
+    immutable mount and a content-hashed ?v=.
+
+    Refresh with tools/vendor_fetch.py. Order follows fasthtml's `def_hdrs` so nothing
+    that expects htmx to be defined runs before it is.'''
+    return [Meta(charset='utf-8'),
+            Meta(name='viewport', content='width=device-width, initial-scale=1, viewport-fit=cover'),
+            vendor_js('htmx.min.js'), vendor_js('fasthtml.js'),
+            vendor_js('surreal.js'), vendor_js('css-scope-inline.js'),
+            vendor_js('htmx-ext-preload.js'),
+            Link(rel='stylesheet', href=vlink('/static/vendor/fonts.css'))]
 
 _css, _js = Path(__file__).parent / 'theme.css', Path(__file__).parent / 'theme.js'
 _assets = Path('static') / 'assets'
 
-def _vlink(path):
+def vlink(path):
     'Content-hashed URL (?v=) so immutable caching busts when the file changes; plain path if unhashable.'
     try: return vurl(path)
     except Exception: return path
@@ -273,15 +293,15 @@ def asset_js(path, **kw):
     'Script tag for a package .js file — served from static/assets when writable, inlined when not.'
     p = Path(path)
     c = loadX(p)
-    return Script(src=_vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Script(c, **kw)
+    return Script(src=vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Script(c, **kw)
 
 def asset_css(path, **kw):
     'Link tag for a block-local .css file, so a block can ship its own styles instead of adding to the core theme.'
     p = Path(path)
     c = loadX(p)
-    return Link(rel='stylesheet', href=_vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Style(c, **kw)
+    return Link(rel='stylesheet', href=vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Style(c, **kw)
 
-def vendor_js(nm, **kw): return Script(src=_vlink(f'/static/vendor/{nm}'), **kw)
+def vendor_js(nm, **kw): return Script(src=vlink(f'/static/vendor/{nm}'), **kw)
 
 @timed_cache(seconds=3600)
 def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
@@ -289,8 +309,8 @@ def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=The
     d = AttrDict(mode='auto', theme='theme-%s' % color, radii=radii, shadows=shadows, font=font)
     j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')
     c = loadX(_css)
-    oat = [Link(rel='stylesheet', href=_vlink('/static/vendor/oat.min.css')),
-           Script(src=_vlink('/static/vendor/oat.min.js'), type='module')]
-    thm = [Link(rel='stylesheet', href=_vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
-           Script(src=_vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
+    oat = [Link(rel='stylesheet', href=vlink('/static/vendor/oat.min.css')),
+           Script(src=vlink('/static/vendor/oat.min.js'), type='module')]
+    thm = [Link(rel='stylesheet', href=vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
+           Script(src=vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
     return oat + thm + [_nosleep(), Surreal("me('body').remove_class('hidden');")]

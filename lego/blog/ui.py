@@ -10,7 +10,7 @@ from mistletoe import Document
 try: from mistletoe.html_renderer import HtmlRenderer
 except ImportError: from mistletoe.html_renderer import HTMLRenderer as HtmlRenderer
 from lego.blog.data import posts
-from lego.core import RouteOverrides, init_js_then_use, lc_icon, TextT, ButtonT
+from lego.core import RouteOverrides, init_js_then_use, lc_icon, TextT, ButtonT, vendor_js, vlink
 from lego.blog.cfg import Routes
 
 class BlogRenderer(HtmlRenderer):
@@ -247,10 +247,10 @@ def locked_teaser(post):
     cls='max-w-2xl mx-auto px-4 py-12')
 
 def _hljs():
-    base = 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@latest/build'
-    hjc  = 'https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy@latest/dist'
-    dark_href  = f'{base}/styles/atom-one-dark.min.css'
-    light_href = f'{base}/styles/atom-one-light.min.css'
+    # served from static/vendor rather than jsdelivr@latest — see tools/vendor_fetch.py.
+    # The theme hrefs go through _vlink too: the swap below assigns them at runtime, so
+    # they have to carry the same ?v= as the tag rendered into the head.
+    dark_href, light_href = vlink('/static/vendor/highlight-dark.min.css'), vlink('/static/vendor/highlight-light.min.css')
     init = (f"const _hd='{dark_href}',_hl='{light_href}',_he=document.getElementById('hljs-theme');"
             "function _st(){if(_he)_he.href=document.documentElement.classList.contains('dark')?_hl:_hd;}"
             "_st();"
@@ -259,12 +259,12 @@ def _hljs():
             "htmx.onLoad(hljs.highlightAll);")
     return [
         Link(id='hljs-theme', rel='stylesheet', href=dark_href),
-        Script(src=f'{base}/highlight.min.js'),
-        Script(src=f'{base}/languages/python.min.js'),
-        Link(rel='stylesheet', href=f'{hjc}/highlightjs-copy.min.css'),
+        vendor_js('highlight.min.js'),
+        vendor_js('highlight-python.min.js'),
+        Link(rel='stylesheet', href=vlink('/static/vendor/highlightjs-copy.min.css')),
         Style('code.hljs{display:block;padding:1.25rem;border-radius:.75rem;font-size:.875rem;line-height:1.625;overflow-x:auto}'
               'pre:has(>code.hljs){background:transparent!important;padding:0!important;margin:0!important}'),
-        *init_js_then_use(f'{hjc}/highlightjs-copy.min.js', 'CopyButtonPlugin', init),
+        *init_js_then_use(vlink('/static/vendor/highlightjs-copy.min.js'), 'CopyButtonPlugin', init),
         ]
 _NP_STYLE= Style('''.np-body{column-count:1} @media(min-width:768px){
 .np-body{column-count:2;column-gap:2.5rem}.np-body p,.np-body h2,.np-body h3,.np-body h4,.np-body ul,
