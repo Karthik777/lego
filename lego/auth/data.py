@@ -4,7 +4,7 @@ from email_validator import validate_email, EmailNotValidError, EmailSyntaxError
 from fasthtml.oauth import *
 from fastlite import Table, NotFoundError
 import hashlib, hmac, time, jwt, re
-from lego.core import landing, placeholder, send_email, email_template, database, home
+from lego.core import landing, placeholder, send_email, email_template, thread_db, home
 from .ui import *
 from .cfg import *
 g_oath = git_oath = None
@@ -35,9 +35,11 @@ def setup_oath(app):
 class Status(StrEnum): pending, active, suspended, deleted = 'pending', 'active', 'suspended', 'deleted'
 class TokenT(StrEnum): em_verify, pwd_reset, access_tkn = 'email_verification', 'password_reset', 'access_token'
 
-def get_db():
-    _db = database(cfg.db)
-    u,ct = _db.t.users, _db.t.confirmation_tokens
+def _setup(_db, first):
+    # `.dataclass()` is per connection — a table on a thread that never had it called
+    # hands back plain dicts, and every `usr.id` in this module would be an AttributeError
+    u, ct = _db.t.users, _db.t.confirmation_tokens
+    if not first: return u.dataclass() and ct.dataclass()
     CT = 'CURRENT_TIMESTAMP'
     u.create(id=int, email=str, password_hash=bytes, phone_number=str, status=str, display_name=str,
              avatar_url=str, auth_provider=str, provider_user_id=str, last_active_at=float, preferences=str,
@@ -50,11 +52,10 @@ def get_db():
 
     u.create_index(['email'], unique=True, if_not_exists=True)
     u.create_index(['provider_user_id', 'auth_provider'], unique=True, if_not_exists=True)
-    return _db
+    u.dataclass(); ct.dataclass()
 
-db = get_db()
-users, confirmation_tokens = db.t.users, db.t.confirmation_tokens
-users.dataclass(); confirmation_tokens.dataclass()
+db = thread_db(cfg.db, setup=_setup)
+users, confirmation_tokens = db.table('users'), db.table('confirmation_tokens')
 hsh_key = hashlib.sha256(cfg.jwt_scrt.encode()).digest()
 
 

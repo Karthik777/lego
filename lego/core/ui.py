@@ -7,14 +7,15 @@ from fasthtml.components import Ot_dropdown, Dialog, Menu
 from fastcore.all import timed_cache, ifnone, NotStr, globtastic, Path, AttrDict
 from itertools import islice, cycle
 from .cfg import cfg as s, RouteOverrides as r, not_prod
-from .icons import lc_icon, lc_sprites
+from .icons import lc_icon, lc_sprites, lc_sprite_nms
 from .utils import loadX
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
-           'welcome', 'not_found', 'email_template', 'main', 'themes', 'github_star', 'stringify',
+           'welcome', 'not_found', 'email_template', 'main', 'themes', 'github_star', 'stringify', 'sprites', 'rendered',
            'ButtonT', 'TextT', 'ThemeRadii', 'ThemeShadows', 'ThemeFont', 'NavBarT', 'THEMES',
-           'LabelInput', 'LabelTextArea', 'LabelSelect', 'modal', 'CmdPalette', 'asset_js', 'asset_css', 'vendor_js']
+           'LabelInput', 'LabelTextArea', 'LabelSelect', 'modal', 'CmdPalette', 'asset_js', 'asset_css', 'vendor_js', 'vlink',
+           'vendor_hdrs']
 
 def stringify(o):
     'Join class fragments (str | list | tuple, arbitrarily nested) into one class string.'
@@ -104,6 +105,26 @@ def CmdPalette(*items, id='cmd-palette', placeholder='Type to search…', hotkey
                   Script(js), id=id, cls='cmd-palette')
 
 # ── App chrome ───────────────────────────────────────────────────────────────
+#
+# The chrome is the same markup on nearly every response. Building it costs four times
+# what serialising it costs — a navbar is a few hundred FT objects, each one a __setattr__
+# per attribute and an isinstance sweep per child — and then fasthtml walks the finished
+# tree again looking for hx- targets to resolve.
+#
+# Rendered once and kept as a NotStr, all three go away: no objects to build, nothing to
+# serialise, and the walk skips it because it is no longer a tree. What is left is a string
+# concatenated into the page.
+#
+# Only for markup that is genuinely invariant. Anything that can differ has to be in the
+# key, which is why `navbar` keys on the star count and the nav list and not just on `usr`.
+_chrome = {}
+
+def rendered(key, build):
+    'Serialise `build()` once per distinct `key` and hand back the same NotStr after that.'
+    v = _chrome.get(key)
+    if v is None: v = _chrome[key] = NotStr(to_xml(build()))
+    return v
+
 def logout(usr=None):
     if not usr or not r.lgt: return None
     btn_cls = f'{ButtonT.icon} {ButtonT.sm} text-danger'
@@ -118,6 +139,10 @@ def _fetch_stars(repo):
     try: n = urlread(f'https://api.github.com/repos/{repo}', return_json=True, timeout=3).get('stargazers_count', 0)
     except: n=0
     return f'{n / 1000:.1f}k' if n >= 1000 else str(n)
+
+def _stars(repo=None):
+    repo = ifnone(repo, s.github_repo)
+    return _fetch_stars(repo) if repo else None
 
 def github_star(repo=None):
     repo = ifnone(repo, s.github_repo)
@@ -150,6 +175,13 @@ def nav_links(usr=None):
     return Div(*[nav_link(*x, usr=usr) for x in r.nav], cls='flex items-center gap-2')
 
 def navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobile_cls=''):
+    # `usr` only ever reaches this as a boolean — the bar shows a log-out icon or a login
+    # button, never a name — so two signed-in readers get the same bar and the same string.
+    # The star count is in the key because _fetch_stars refreshes hourly behind us.
+    return rendered(('nav', bool(usr), title, style, cls, mobile_cls, _stars(), r.lgn, r.lgt, tuple(r.nav)),
+                    lambda: _navbar(usr, title, style, cls, mobile_cls))
+
+def _navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobile_cls=''):
     usr_ok = bool(usr)
     inc_fnt_sz, inc_mode_sw, inc_th_sw, inc_avtr = True, True, not_prod(), usr_ok
     sep = Div('|', cls='text-light text-xl px-2')
@@ -234,8 +266,14 @@ def welcome_page(img_dir=s.svg, content=None, title=None, cls=None, cont_cls=Non
 def landing(content, title=s.app_nm, usr=None):
     return base(welcome_page(content=content, title=title), usr=usr, style=NavBarT.glass)
 
+def sprites():
+    'The symbol sheet, serialised once per set of seeded names.'
+    # keyed on the names themselves: lc_icon seeds a new one the first time a fragment asks
+    # for an icon nothing had used yet, and the sheet has to grow to match
+    return rendered(('sprites', tuple(lc_sprite_nms())), lc_sprites)
+
 def base(content=None, usr=None, title=s.app_nm, sh=s.app_sh, style=NavBarT.glass, **kwargs):
-    return Title(title), Div(lc_sprites(), navbar(usr=usr, title=sh, style=style), main(content, **kwargs))
+    return Title(title), Div(sprites(), navbar(usr=usr, title=sh, style=style), main(content, **kwargs))
 
 def main(content=None, cls=None, **kw):
     return Div(content if content else None, cls=stringify(['w-full', cls]), id='main-content', **kw)
@@ -250,12 +288,31 @@ def email_template(content, title=s.app_nm, usr=None):
 def welcome(usr=None): return landing(placeholder(f'Welcome to {s.app_nm}'), usr=usr)
 def not_found(): return landing(placeholder("The page you're looking for doesn't exist or has been moved."))
 
-def _nosleep(): return Script(src='https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js', defer=True)
+def _nosleep(): return vendor_js('nosleep.min.js', defer=True)
+
+def vendor_hdrs():
+    '''What `fast_app(default_hdrs=True)` would put in the head, served from static/vendor.
+
+    Every one of these was a separate origin — two jsdelivr paths, cdnjs, and the font CSS
+    that chains to a fourth host for the files it names. A cold visit paid a DNS lookup, a
+    TLS handshake and a round trip before it could finish the head, and three of the URLs
+    were `@latest` or `@main`, which cannot be cached for long and can change under a
+    deployed app. Locally they are the connection the browser already has, behind the
+    immutable mount and a content-hashed ?v=.
+
+    Refresh with tools/vendor_fetch.py. Order follows fasthtml's `def_hdrs` so nothing
+    that expects htmx to be defined runs before it is.'''
+    return [Meta(charset='utf-8'),
+            Meta(name='viewport', content='width=device-width, initial-scale=1, viewport-fit=cover'),
+            vendor_js('htmx.min.js'), vendor_js('fasthtml.js'),
+            vendor_js('surreal.js'), vendor_js('css-scope-inline.js'),
+            vendor_js('htmx-ext-preload.js'),
+            Link(rel='stylesheet', href=vlink('/static/vendor/fonts.css'))]
 
 _css, _js = Path(__file__).parent / 'theme.css', Path(__file__).parent / 'theme.js'
 _assets = Path('static') / 'assets'
 
-def _vlink(path):
+def vlink(path):
     'Content-hashed URL (?v=) so immutable caching busts when the file changes; plain path if unhashable.'
     try: return vurl(path)
     except Exception: return path
@@ -273,15 +330,15 @@ def asset_js(path, **kw):
     'Script tag for a package .js file — served from static/assets when writable, inlined when not.'
     p = Path(path)
     c = loadX(p)
-    return Script(src=_vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Script(c, **kw)
+    return Script(src=vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Script(c, **kw)
 
 def asset_css(path, **kw):
     'Link tag for a block-local .css file, so a block can ship its own styles instead of adding to the core theme.'
     p = Path(path)
     c = loadX(p)
-    return Link(rel='stylesheet', href=_vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Style(c, **kw)
+    return Link(rel='stylesheet', href=vlink(f'/static/assets/{p.name}'), **kw) if _asset(p.name, c) else Style(c, **kw)
 
-def vendor_js(nm, **kw): return Script(src=_vlink(f'/static/vendor/{nm}'), **kw)
+def vendor_js(nm, **kw): return Script(src=vlink(f'/static/vendor/{nm}'), **kw)
 
 @timed_cache(seconds=3600)
 def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
@@ -289,8 +346,8 @@ def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=The
     d = AttrDict(mode='auto', theme='theme-%s' % color, radii=radii, shadows=shadows, font=font)
     j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')
     c = loadX(_css)
-    oat = [Link(rel='stylesheet', href=_vlink('/static/vendor/oat.min.css')),
-           Script(src=_vlink('/static/vendor/oat.min.js'), type='module')]
-    thm = [Link(rel='stylesheet', href=_vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
-           Script(src=_vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
+    oat = [Link(rel='stylesheet', href=vlink('/static/vendor/oat.min.css')),
+           Script(src=vlink('/static/vendor/oat.min.js'), type='module')]
+    thm = [Link(rel='stylesheet', href=vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
+           Script(src=vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
     return oat + thm + [_nosleep(), Surreal("me('body').remove_class('hidden');")]
