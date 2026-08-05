@@ -7,12 +7,12 @@ after. A file per database is also what keeps the explorer honest — it reports
 tables its connection has, and this one has only the sample data, never the `users` table
 auth keeps on the app's own database.
 '''
-import gzip, hashlib, json, threading
+import gzip, hashlib, json, threading, time
 from fastcore.all import AttrDict
 from lego.core.cfg import database, get_db_pth, get_db_dir
 from .cfg import cfg
 
-__all__ = ['DBS', 'get_db', 'seed', 'schema', 'table_names', 'reflect', 'profile', 'rowcount', 'ident', 'cached']
+__all__ = ['DBS', 'get_db', 'seed', 'schema', 'table_names', 'reflect', 'profile', 'rowcount', 'ident', 'cached', 'forget']
 
 def _db(nm, about, group='Statistical'):
     return AttrDict(nm=nm, dump=None, about=about, group=group)
@@ -83,6 +83,54 @@ for _k in [k for k, v in DBS.items() if not _available(k, v)]: del DBS[_k]
 # anybody wants to chart
 _INTERNAL = ('sqlite_',)
 
+# ── reflection memo ───────────────────────────────────────────────────────────
+#
+# Reflection is pure PRAGMA work and `rowcount` is a `count(*)`, so neither is slow once.
+# They were slow because nothing remembered them: rendering /dash asks all nineteen
+# databases for their schema and every table's row count to draw the cards, and the
+# profile cache in dash.db then asks for both again to build the key it looks itself up
+# by. That came to 1147 statements a request for a page whose answer never changes.
+#
+# The stamp is the database file's (mtime_ns, size). These files are seeded once and read
+# from for the rest of the process's life, so the memo is nearly always a hit — but a file
+# swapped underneath a running app still invalidates itself, without anything having to
+# call a clear function.
+_memo, _memo_lock = {}, threading.Lock()
+
+# A page asks the memo a few hundred times, and stat-ing the file that many times costs
+# more than the lookups it guards. Re-stat at most once a second per database: these files
+# are written once at seed time, so the window only bounds how long a hand-swapped file
+# takes to be noticed, and a second is well inside "before anyone reloads".
+_STAT_EVERY = 1.0
+_stamps = {}
+
+def _stamp(nm):
+    now, ent = time.monotonic(), _stamps.get(nm)
+    if ent is not None and now - ent[0] < _STAT_EVERY: return ent[1]
+    try:
+        st = (get_db_dir() / f'{nm}.db').stat()
+        v = (st.st_mtime_ns, st.st_size)
+    except OSError: v = None
+    _stamps[nm] = (now, v)
+    return v
+
+def _memoed(nm, key, fn):
+    'Memoise `fn()` against the database file, dropping everything cached for `nm` when it changes.'
+    st = _stamp(nm)
+    ent = _memo.get(nm)
+    if ent is None or ent[0] != st:
+        with _memo_lock:
+            ent = _memo.get(nm)
+            if ent is None or ent[0] != st: ent = _memo[nm] = (st, {})
+    vals = ent[1]
+    if key not in vals: vals[key] = fn()   # a lost race recomputes, which is only ever wasted work
+    return vals[key]
+
+def forget(nm=None):
+    'Drop memoised reflection — for a writer that has just changed a schema out of band.'
+    with _memo_lock:
+        _memo.pop(nm, None) if nm else _memo.clear()
+
 # One connection per database per thread.
 #
 # Starlette runs sync handlers on a threadpool, and a dashboard page fires one chart
@@ -149,11 +197,17 @@ def ident(name, allowed):
 
 def _tables(db): return sorted(t for t in db.table_names() if not t.startswith(_INTERNAL))
 
-def table_names(nm): return _tables(get_db(nm))
+def table_names(nm): return _memoed(nm, 'tables', lambda: _tables(get_db(nm)))
 
 def reflect(nm, tbl):
     'Columns, primary key and foreign keys, straight off the PRAGMAs fastlite exposes.'
     if tbl not in table_names(nm): raise KeyError(tbl)
+    # via schema() so a table and the whole-database view are the same object: the reverse
+    # references schema() hangs off each table are then there for a caller that only asked
+    # for the one table, and neither view can be reflected twice
+    return schema(nm)[tbl]
+
+def _reflect(nm, tbl):
     t = get_db(nm).t[tbl]
     cols = [AttrDict(name=c.name, type=c.type, nullable=not c.notnull) for c in t.columns]
     order = {c.name: i for i, c in enumerate(t.columns)}
@@ -168,7 +222,10 @@ def reflect(nm, tbl):
 
 def schema(nm):
     'Whole-database shape: every table with its columns, keys and inbound child references.'
-    tbls = {t: reflect(nm, t) for t in table_names(nm)}
+    return _memoed(nm, 'schema', lambda: _schema(nm))
+
+def _schema(nm):
+    tbls = {t: _reflect(nm, t) for t in table_names(nm)}
     for t in tbls.values(): t.children = []
     for t in tbls.values():
         for f in t.fks:
@@ -177,7 +234,9 @@ def schema(nm):
 
 def rowcount(nm, tbl):
     if tbl not in table_names(nm): raise KeyError(tbl)
-    return get_db(nm).t[tbl].count
+    # `count` is `select count(*)`, and the cards on /dash want one per table while the
+    # profile key wants the same number again for every column of every table
+    return _memoed(nm, f'rows.{tbl}', lambda: get_db(nm).t[tbl].count)
 
 # ── profiling ─────────────────────────────────────────────────────────────────
 
@@ -202,6 +261,9 @@ def _cache():
     return t
 
 def _schema_hash(nm, tbl):
+    return _memoed(nm, f'hash.{tbl}', lambda: _hash(nm, tbl))
+
+def _hash(nm, tbl):
     r = reflect(nm, tbl)
     body = json.dumps([[c.name, c.type] for c in r.cols], sort_keys=True)
     return hashlib.md5(f'{_PROFILE_V}.{nm}.{tbl}.{body}.{rowcount(nm, tbl)}'.encode()).hexdigest()[:16]
@@ -209,7 +271,14 @@ def _schema_hash(nm, tbl):
 def cached(nm, tbl, tag, fn):
     '''Any derived fact about a table, memoised beside its profile and invalidated by the
     same schema-and-rowcount hash. What is expensive about the picker is never the rules,
-    it is the scans they need to apply them.'''
+    it is the scans they need to apply them.
+
+    dash.db survives a restart, so it is what keeps a cold start off the scans; the memo in
+    front of it is what keeps a warm page off a query and a `json.loads` per column per
+    card. Both are keyed the same way and go stale together.'''
+    return _memoed(nm, f'cached.{tbl}.{tag}', lambda: _cached(nm, tbl, tag, fn))
+
+def _cached(nm, tbl, tag, fn):
     key = f'{nm}.{tbl}.{tag}.{_schema_hash(nm, tbl)}'
     row = _cache().get(key, as_cls=False, default=None)
     if row:
@@ -221,15 +290,19 @@ def cached(nm, tbl, tag, fn):
 
 def profile(nm, tbl, force=False):
     'Per-column stats used by the chart picker. Cached in dash.db against a schema+rowcount hash.'
+    if force: _memo.get(nm, (None, {}))[1].pop(f'profile.{tbl}', None)
+    return _memoed(nm, f'profile.{tbl}', lambda: AttrDict(_profile(nm, tbl, force)))
+
+def _profile(nm, tbl, force=False):
     key = f'{nm}.{tbl}.{_schema_hash(nm, tbl)}'
     if not force:
         row = _cache().get(key, as_cls=False, default=None)
         if row:
-            try: return AttrDict(json.loads(row['body']))
+            try: return json.loads(row['body'])
             except (ValueError, KeyError): pass
     p = _measure(nm, tbl)
     _cache().upsert(dict(k=key, body=json.dumps(p)), pk='k')
-    return AttrDict(p)
+    return p
 
 def _measure(nm, tbl):
     '''Per-column statistics.

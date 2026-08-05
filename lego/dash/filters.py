@@ -17,7 +17,7 @@ charts that honoured it would be read as data.
 import re
 from fastcore.all import AttrDict
 from .cfg import cfg
-from .data import get_db, table_names, reflect, schema, profile, ident
+from .data import get_db, table_names, reflect, schema, profile, ident, cached
 from .infer import roles, _h
 
 __all__ = ['OPS', 'SEP', 'parse', 'wire', 'describe', 'applies', 'where', 'merge',
@@ -210,6 +210,11 @@ def values_for(db, t, c):
     punctuation.'''
     s = profile(db, t)['cols'][c]
     if s['distinct'] > cfg.filter_values: return None
+    # `select distinct` is a scan of the whole column however few values come back, and the
+    # filter bar asks for one on every table page. Cached like any other derived fact.
+    return cached(db, t, f'vals.{c}', lambda: _values(db, t, c))
+
+def _values(db, t, c):
     qc = ident(c, _cols(db, t))
     rows = get_db(db).q(f'select distinct {qc} as v from {ident(t, table_names(db))} '
                         f'where {qc} is not null order by 1 limit :n', dict(n=cfg.filter_values))

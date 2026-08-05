@@ -475,9 +475,25 @@ def _scatter(q):
 # ── stats & sparklines (server-rendered, no JS) ───────────────────────────────
 
 def stats(db, tbl, col, fs=()):
-    'Mean, σ and the quantiles that make a stat tile worth reading.'
+    '''Mean, σ and the quantiles that make a stat tile worth reading.
+
+    A quantile is `order by ... limit 1 offset k`, which sqlite answers by sorting the
+    whole column into a temp b-tree: on 336,776 flights that is a third of a second, twice,
+    for a tile that says the same thing every time the page is drawn. Unfiltered, it is a
+    fact about the table, so it is cached like one. Filtered, it has to be measured.'''
     s = profile(db, tbl)['cols'][col]
     if s['kind'] != 'num' or not s.get('sd'): return None
+    if fs: return _stats(db, tbl, col, fs)
+    # `fs` rather than the compiled `where`: a filter that does not reach this table
+    # compiles to nothing, and caching that under the unfiltered key would be right by
+    # accident today and wrong the first time the compiler learns a new route
+    v = cached(db, tbl, f'stats.{col}', lambda: _as_dict(_stats(db, tbl, col)))
+    return AttrDict(v) if v else None
+
+def _as_dict(o): return dict(o) if o else None
+
+def _stats(db, tbl, col, fs=()):
+    s = profile(db, tbl)['cols'][col]
     t, qc = _t(db, tbl), ident(col, _cols(db, tbl))
     w = where(db, tbl, fs)
     nn = f'{qc} is not null' + (f' and {w.sql}' if w.sql else '')
