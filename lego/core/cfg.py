@@ -2,6 +2,7 @@ import hashlib as hl
 import logging
 import os
 import secrets
+import threading
 from diskcache import Cache as DiskCache, memoize_stampede
 from fasthtml.common import Redirect, FT, dataclass
 from fastcore.all import threaded, AttrDictDefault, str2bool, str2int, startthread, to_xml, Path
@@ -10,7 +11,7 @@ from logging.handlers import RotatingFileHandler as RFH
 
 __all__ = ['cfg', 'database', 'AppErr', 'home', 'send_email', 'RouteOverrides', 'get_pth', 'get_db_pth', 'in_static',
            'get_log_pth', 'get_db_dir', 'not_prod', 'get_caller_fn', 'slug', 'rot_log', 'get_logger', 'quick_lgr',
-           'cache', 'clear_cache', 'kv', 'get_lock', 'release_lock']
+           'cache', 'clear_cache', 'kv', 'get_lock', 'release_lock', 'thread_db']
 
 # === Paths ===
 data_root, backups, static = Path('data'), Path('backups'), Path('static')
@@ -68,6 +69,52 @@ cfg = AttrDictDefault(app_nm=os.getenv('APP_NAME','Lego'),
 def not_prod(): return cfg.mode != 'production'
 def get_db_dir(): return Path(cfg.db).parent if cfg.db else Path(data_root) / 'db'
 def slug(word: str): return hl.md5(word.lower().encode()).hexdigest()[:11]
+
+# === Databases ===
+#
+# A connection per thread, and a table object bound to the connection of whichever thread
+# is asking.
+#
+# Starlette runs sync handlers on a threadpool, so two requests for the same page are two
+# threads on the same connection, and apsw refuses to run a cursor on a connection that is
+# busy in another thread — eight concurrent readers of the blog index is a
+# ThreadingViolationError and a dropped response, not a slow one. A module-level `posts =
+# db.t.posts` is what makes it one connection: the table holds the connection it was built
+# from, so it has to be looked up per thread too, not just the database.
+#
+# `setup` runs against every thread's connection, because a table only returns dataclass
+# rows on a connection where `.dataclass()` has been called. It is passed `first=True`
+# exactly once per process, for the DDL that should not run again per thread.
+class thread_db:
+    'A `database` opened once per thread. `setup(db, first)` prepares each new connection.'
+    def __init__(self, path, setup=None, **kw):
+        self.path, self.setup, self.kw = path, setup, kw
+        self._local, self._lock, self._first = threading.local(), threading.Lock(), True
+
+    @property
+    def db(self):
+        d = getattr(self._local, 'db', None)
+        if d is None:
+            d = self._local.db = database(self.path, **self.kw)
+            if self.setup:
+                with self._lock: first, self._first = self._first, False
+                self.setup(d, first)
+        return d
+
+    def __getattr__(self, k): return getattr(self.db, k)
+    def table(self, nm): return _thread_table(self, nm)
+
+class _thread_table:
+    "One table, resolved against the calling thread's connection on every use."
+    def __init__(self, tdb, nm): self._tdb, self._nm = tdb, nm
+    @property
+    def _t(self): return self._tdb.db.t[self._nm]
+    def __getattr__(self, k): return getattr(self._t, k)
+    def __call__(self, *a, **kw): return self._t(*a, **kw)
+    def __getitem__(self, k): return self._t[k]
+    def __contains__(self, k): return k in self._t
+    def __iter__(self): return iter(self._t)
+    def __repr__(self): return f'<thread table {self._nm}>'
 
 class AppErr(Exception):
     def __init__(self, msg=None, fields=None):

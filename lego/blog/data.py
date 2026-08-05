@@ -1,22 +1,23 @@
 from fastcore.all import L
-from lego.core.cfg import database, get_db_pth
+from lego.core.cfg import thread_db, get_db_pth
 from lego.blog.cfg import cfg
 
 __all__ = ['blog_db', 'posts', 'seed_posts']
 
 
-def blog_db(path=None):
-    from fastcore.all import ifnone
-    path = ifnone(path, get_db_pth('blog'))
-    db = database(path)
+def _setup(db, first):
+    if not first: return
     db.t.posts.create(slug=str, title=str, summary=str, body=str, author_id=int, author_name=str, visibility=str,
         created_at=float, updated_at=float, layout=str, pk='slug', if_not_exists=True, transform=True,
         not_null={'title', 'body', 'visibility'}, defaults=dict(visibility='public', layout='single'))
     db.t.posts.create_index(['slug'], unique=True, if_not_exists=True)
-    return db
+
+def blog_db(path=None):
+    from fastcore.all import ifnone
+    return thread_db(ifnone(path, get_db_pth('blog')), setup=_setup)
 
 _db   = blog_db()
-posts = _db.t.posts
+posts = _db.table('posts')
 
 def _parse_md(path):
     from datetime import datetime
