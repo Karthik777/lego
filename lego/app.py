@@ -25,6 +25,13 @@ hdrs = [
     *Socials(title=cfg.app_nm, description=cfg.site_description, site_name=cfg.domain, image='/static/favicon.svg',
              url=cfg.domain), *themes()]
 
+# fasthtml does `req.hdrs = deepcopy(self.hdrs)` on every request so a handler can add to
+# the head for that response alone. Nothing here does, and the copy is not free: this list
+# is thirty-odd nodes including the whole theme stylesheet, which came to ~350 recursive
+# deepcopy calls on every request — including /health, which has no head at all.
+# Serialised up front it is one string, and deepcopy of a str hands back the same object.
+hdrs = [NotStr(to_xml(tuple(hdrs)))]
+
 def nf(req, exc): return not_found()
 kw,exh = {'class': 'hidden', 'hx-ext': 'preload', 'hx-boost': 'true'}, {404: nf, 500: nf, 403: nf}
 

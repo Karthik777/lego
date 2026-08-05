@@ -1,14 +1,25 @@
 from fasthtml.svg import *
 from fastlucide.core import SvgSprites
 
-__all__ = ['icon_auto', 'icon_toc', 'lc_icon', 'lc_sprites']
+__all__ = ['icon_auto', 'icon_toc', 'lc_icon', 'lc_sprites', 'lc_sprite_nms']
 
 # every lucide icon the app renders (incl. via htmx fragments) must be seeded here
 # so the sprite sheet emitted on full page loads contains all symbols
 _NMS = ('lock', 'log-out', 'moon', 'sun', 'sun-moon', 'palette', 'notebook', 'case-lower', 'triangle-alert',
         'search', 'circle-help', 'table-2')
 _ALIASES = {'warning': 'triangle-alert'}
+
+class _Nms(set):
+    '''The seeded names, iterating in a fixed order.
+
+    SvgSprites keeps them in a plain set and emits the sheet in iteration order, so the
+    same page came out with its symbols shuffled between one process and the next — which
+    makes every full page response a different set of bytes for no reason, and defeats
+    anything downstream that would rather serve the one it already has.'''
+    def __iter__(self): return iter(sorted(super().__iter__()))
+
 _sprites = SvgSprites('lc-', nms=_NMS)
+_sprites.nms = _Nms(_sprites.nms)
 
 def lc_icon(nm, w=16, h=None, cls='', **kw):
     'Lucide icon by name (drop-in for the old UkIcon). Renders a <use> ref into the sprite sheet.'
@@ -20,6 +31,10 @@ def lc_icon(nm, w=16, h=None, cls='', **kw):
 def lc_sprites():
     'Hidden <defs> sheet with all seeded symbols. Include once per full page render.'
     return _sprites.__ft__()
+
+def lc_sprite_nms():
+    'The seeded names, in the order the sheet emits them.'
+    return tuple(_sprites.nms)
 
 def icon_auto(cls='', stroke_width=1, stroke_color='currentColor', w=24, h=24):
     return Svg(Path(stroke='none', d='M0 0h24v24H0z', fill='none'), Circle(cx='12', cy='12', r='9'),
