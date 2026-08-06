@@ -10,6 +10,7 @@ jobs:
       MODE: ${{ vars.MODE }}
       PORT: ${{ vars.PORT }}
       DOMAIN: ${{ vars.DOMAIN }}
+      HORA_DOMAIN: ${{ vars.HORA_DOMAIN }}
       TOKEN_EXP: ${{ vars.TOKEN_EXP }}
       PURGE: ${{ vars.PURGE }}
       JWT_SCRT: ${{ secrets.JWT_SCRT }}
