@@ -13,14 +13,12 @@ inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Docker
 exc = ['data/','backups/', 'mrsladjoe/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
 tunnel_nm = f'{sd}_{domain}'
-# The second domain. It is the same server, the same container and the same tunnel — the
-# hora block answers at /hora, and on its own apex that is what the root should serve.
-hora_domain, hora_route = os.getenv('HORA_DOMAIN', 'sankalpa.com'), '/hora'
+
+hora_domain, hora_route = os.getenv('HORA_DOMAIN', domain), '/hora'
 app_svc, app_port = 'app', 5001
 # caddy_stack writes Dockerfile, docker-compose.yml and Caddyfile relative to the cwd, and
 # the compose mounts ./Caddyfile — so this has to stay a relative path or the mount would
-# point at a directory that only exists on the machine that ran the deploy.
-CADDYFILE = Path('Caddyfile')
+# point at a directory that only exists on the machine that ran the deploy.CADDYFILE = Path('Caddyfile')
 RSYNC_FORCE = {'checksum': '--checksum', 'ignore-times': '--ignore-times'}
 
 def caddy_site(host, *directives):
@@ -32,10 +30,10 @@ def caddy_site(host, *directives):
     return f'http://{host} {{\n' + ''.join(f'\t{d}\n' for d in directives) + f'\treverse_proxy {app_svc}:{app_port}\n}}\n'
 
 def mk_caddyfile(path=CADDYFILE):
-    '''Both domains, one Caddy, one app container.
+    '''Both hostnames, one Caddy, one app container.
 
     dockeasy's `caddy_svc` writes a Caddyfile for a single site, so caddy_stack's copy is
-    replaced with this one after the fact. Nothing else about the stack changes: sankalpa.com
+    replaced with this one after the fact. Nothing else about the stack changes: the apex
     reaches the same container through the same tunnel, and Caddy tells the two apart by the
     Host header it was going to read anyway.
 
@@ -51,22 +49,25 @@ def mk_compose():
     return c
 
 def add_hora_dns(cf, tid):
-    '''Point the second domain at the tunnel that already exists.
+    '''Point the apex at the tunnel that already exists.
 
     One tunnel, not two: cloudflared runs with `--url http://caddy`, so every hostname routed
-    through it arrives at the same Caddy whatever zone it came from. sankalpa.com is an apex,
-    which Cloudflare serves by flattening the CNAME.
+    through it arrives at the same Caddy. An apex cannot hold a CNAME in plain DNS; Cloudflare
+    serves one anyway by flattening it, which is why this needs to stay proxied.
 
-    A failure here costs the second domain and nothing else: the tunnel and the lego record
-    are already in place by the time this runs. So it warns with the record to add by hand
-    rather than aborting a deploy that is otherwise fine.'''
+    `upsert_record` clears any same-name record first, so an A record or a parked CNAME
+    already sitting on the apex is replaced rather than fought with.
+
+    A failure here costs the apex and nothing else: the tunnel and the lego record are both
+    in place by the time this runs. So it warns with the record to add by hand rather than
+    aborting a deploy that is otherwise fine.'''
     try:
         cf.tunnel_cname(hora_domain, hora_domain, tid)
         print(f'hora dns: {hora_domain} -> tunnel {tid}')
     except Exception as e:
         print(f'WARNING: could not point {hora_domain} at the tunnel: {e}\n'
-              f'         {joins(".", [sd, domain])} is unaffected. Check the zone is in this Cloudflare '
-              f'account, or add a proxied CNAME {hora_domain} -> {tid}.cfargotunnel.com by hand.')
+              f'         {joins(".", [sd, domain])} is unaffected. Add a proxied CNAME '
+              f'{hora_domain} -> {tid}.cfargotunnel.com by hand.')
 
 def deploy2prod(force=None, password=False):
     '''Idempotent: provisions Hetzner VPS if needed, then deploys.
@@ -91,7 +92,10 @@ def deploy2prod(force=None, password=False):
     print(f'deployed: {r.ip}')
 
 def rm_hora_dns(cf):
-    'Drop the second domain’s CNAME, which would otherwise outlive the tunnel it names.'
+    '''Drop the apex CNAME, which would otherwise outlive the tunnel it names.
+
+    The name match is exact on purpose: lego's own record lives in this same zone now, and a
+    prefix or suffix test would take `lego.sankalpa.sh` out with the apex.'''
     zid = cf.zone_id(hora_domain)
     for r in cf.dns_records(zid):
         if r.get('name') == hora_domain and r.get('type') == 'CNAME':
@@ -99,7 +103,7 @@ def rm_hora_dns(cf):
             print(f'prod dns {hora_domain} deleted')
 
 def nuke_prod():
-    'Nuke prod server, Cloudflare tunnel, and the hora domain record. Use with caution!'
+    'Nuke prod server, Cloudflare tunnel, and the apex record. Use with caution!'
     typ = secrets.token_urlsafe(8)
     ans = input(f'WARNING: This will irreversibly delete the production server and tunnel. Type {typ} to proceed: ')
     if ans != typ: return print('Aborting nuke.')

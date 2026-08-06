@@ -41,6 +41,7 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **auth** covers email/password registration with Resend verification, Google OAuth, and GitHub OAuth. One `connect()` call sets up all routes and session middleware. Route paths are overridable via `RouteOverrides`.
 
+
 **hora** is Vedic planetary hours, computed in the browser from the local sunrise and sunset. It is the block that shows what "self-contained" can stretch to: it brings its own head, its own Tailwind stylesheet and its own document, so none of the app-wide chrome reaches it. It serves `/hora` here and the whole of [sankalpa.com](https://sankalpa.com).
 
 **blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
@@ -173,23 +174,25 @@ uv run lego-push             # push .env values to GitHub Actions
 
 The app runs at [lego.sankalpa.sh](https://lego.sankalpa.sh).
 
-### Two domains, one deployment
+### Two hostnames, one deployment
 
-[sankalpa.com](https://sankalpa.com) is the same deployment. Not a second server, a second container or a second tunnel — the hora block already answers at `/hora`, so all the apex needs is for Caddy to know about it:
+[sankalpa.sh](https://sankalpa.sh) is the same deployment. Not a second server, a second container, a second tunnel or even a second Cloudflare zone — the hora block already answers at `/hora`, so all the apex needs is for Caddy to know about it:
+
 
 ```
 http://lego.sankalpa.sh {
 	reverse_proxy app:5001
 }
+http://sankalpa.sh {
 http://sankalpa.com {
 	rewrite / /hora
 	reverse_proxy app:5001
 }
 ```
 
-`cloudflared` runs with `--url http://caddy`, so every hostname routed through the tunnel arrives at that same Caddy whatever zone it came from, and Caddy tells the two apart by the Host header it was going to read anyway. `deploy2prod` adds the second zone's apex as a proxied CNAME to the tunnel it just set up; if that zone isn't in the Cloudflare account, it warns with the record to add by hand and the lego deploy carries on regardless.
+cloudflared` runs with `--url http://caddy`, so every hostname routed through the tunnel arrives at that same Caddy, and Caddy tells the two apart by the Host header it was going to read anyway. `deploy2prod` adds the apex as a proxied CNAME to the tunnel it just set up — proxied because an apex cannot hold a CNAME in plain DNS and Cloudflare serves one by flattening it. Any A record or parked CNAME already on the apex is replaced. If that step fails it warns with the record to add by hand, and the lego deploy carries on regardless.
 
-Only the bare `/` is rewritten, so `/static` and every other path still resolve normally on both domains. To move hora to a different apex, set `HORA_DOMAIN` — it feeds both the Caddyfile and the block's canonical and `og:` URLs.
+Only the bare `/` is rewritten, so `/static` and every other path still resolve normally on both hostnames. To move hora elsewhere, set `HORA_DOMAIN` — it feeds both the Caddyfile and the block's canonical and `og:` URLs.
 
 For remote storage, point `get_pth` in `core/cfg.py` at an S3 bucket via fsspec.
 

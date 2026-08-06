@@ -56,7 +56,7 @@ for _d in ('vendor', 'assets'):
 # connect your blocks
 b.connect(lego)
 d.connect(lego) # dashboards
-h.connect(lego) # hora — also the whole of sankalpa.com, which Caddy rewrites / to /hora
+h.connect(lego) # hora — also the whole of sankalpa.sh, which Caddy rewrites / to /hora
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 
 # optionally add a scheduled backup of data folders

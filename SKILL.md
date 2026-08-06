@@ -531,9 +531,10 @@ because the hora cards are built at runtime from template literals — the grid'
 nowhere else. They survive extraction only because they are written as literal strings; a
 class assembled from fragments at runtime would be purged.
 
-**Second domain.** `deploy.py` serves this block at the root of `sankalpa.com` — same server,
-same container, same tunnel as `lego.sankalpa.sh`, with Caddy rewriting `/` to `/hora` for
-that Host. See *Deployment* in `README.md`.
+**Second hostname.** `deploy.py` serves this block at the root of `sankalpa.sh` — same server,
+same container, same tunnel and same Cloudflare zone as `lego.sankalpa.sh`, with Caddy
+rewriting `/` to `/hora` for that Host. `HORA_DOMAIN` moves it. See *Deployment* in
+`README.md`.
 
 ## Adding a new block
 
