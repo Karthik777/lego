@@ -12,19 +12,71 @@ vols = ['/app/data', '/app/backups', '/app/static']
 inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Dockerfile','Caddyfile','.env','uv.lock']
 exc = ['data/','backups/', 'mrsladjoe/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
+tunnel_nm = f'{sd}_{domain}'
+# The second domain. It is the same server, the same container and the same tunnel — the
+# hora block answers at /hora, and on its own apex that is what the root should serve.
+hora_domain, hora_route = os.getenv('HORA_DOMAIN', 'sankalpa.com'), '/hora'
+app_svc, app_port = 'app', 5001
+# caddy_stack writes Dockerfile, docker-compose.yml and Caddyfile relative to the cwd, and
+# the compose mounts ./Caddyfile — so this has to stay a relative path or the mount would
+# point at a directory that only exists on the machine that ran the deploy.
+CADDYFILE = Path('Caddyfile')
 RSYNC_FORCE = {'checksum': '--checksum', 'ignore-times': '--ignore-times'}
+
+def caddy_site(host, *directives):
+    '''One site block for the shared Caddy.
+
+    http:// because the tunnel terminates TLS in front of it — the same prefix dockeasy
+    writes for `cloudflared=True`, for the same reason: there is no public port 80 to run
+    an ACME challenge against.'''
+    return f'http://{host} {{\n' + ''.join(f'\t{d}\n' for d in directives) + f'\treverse_proxy {app_svc}:{app_port}\n}}\n'
+
+def mk_caddyfile(path=CADDYFILE):
+    '''Both domains, one Caddy, one app container.
+
+    dockeasy's `caddy_svc` writes a Caddyfile for a single site, so caddy_stack's copy is
+    replaced with this one after the fact. Nothing else about the stack changes: sankalpa.com
+    reaches the same container through the same tunnel, and Caddy tells the two apart by the
+    Host header it was going to read anyway.
+
+    The rewrite matches the bare root only, which is all hora needs — it is one page, and
+    /static and every other path still resolve untouched on both domains.'''
+    Path(path).write_text(caddy_site(joins('.', [sd, domain])) + caddy_site(hora_domain, f'rewrite / {hora_route}'))
+    print(f'caddy: {joins(".", [sd, domain])} + {hora_domain} -> {app_svc}:{app_port}')
 
 def mk_compose():
     df = fasthtml_app(pkgs=pkgs, vols=vols, healthcheck='/health', cmd=['python', 'main.py'])
-    return caddy_stack(joins('.', [sd, domain]), df, vols=vols)
+    c = caddy_stack(joins('.', [sd, domain]), df, vols=vols)
+    mk_caddyfile()
+    return c
+
+def add_hora_dns(cf, tid):
+    '''Point the second domain at the tunnel that already exists.
+
+    One tunnel, not two: cloudflared runs with `--url http://caddy`, so every hostname routed
+    through it arrives at the same Caddy whatever zone it came from. sankalpa.com is an apex,
+    which Cloudflare serves by flattening the CNAME.
+
+    A failure here costs the second domain and nothing else: the tunnel and the lego record
+    are already in place by the time this runs. So it warns with the record to add by hand
+    rather than aborting a deploy that is otherwise fine.'''
+    try:
+        cf.tunnel_cname(hora_domain, hora_domain, tid)
+        print(f'hora dns: {hora_domain} -> tunnel {tid}')
+    except Exception as e:
+        print(f'WARNING: could not point {hora_domain} at the tunnel: {e}\n'
+              f'         {joins(".", [sd, domain])} is unaffected. Check the zone is in this Cloudflare '
+              f'account, or add a proxied CNAME {hora_domain} -> {tid}.cfargotunnel.com by hand.')
 
 def deploy2prod(force=None, password=False):
     '''Idempotent: provisions Hetzner VPS if needed, then deploys.
     force= \'\' | \'checksum\' | \'ignore-times\' (falls back to $RSYNC_FORCE).'''
     mk_env(env2push(), path=root/'.env')
     mk_compose()
-    tid, tok = CF().setup_tunnel(domain, sd, tunnel_name=f'{sd}_{domain}')
+    cf = CF()
+    tid, tok = cf.setup_tunnel(domain, sd, tunnel_name=tunnel_nm)
     print('created Cloudflare tunnel:', tid)
+    add_hora_dns(cf, tid)
     env_set('CF_TUNNEL_TOKEN',tok, path=root/'.env')
     force = force or os.getenv('RSYNC_FORCE', '')
     extra = RSYNC_FORCE.get(force)
@@ -38,17 +90,30 @@ def deploy2prod(force=None, password=False):
     if (ROOT / '.gheasy/config.json').exists() :push_gh_vars()
     print(f'deployed: {r.ip}')
 
+def rm_hora_dns(cf):
+    'Drop the second domain’s CNAME, which would otherwise outlive the tunnel it names.'
+    zid = cf.zone_id(hora_domain)
+    for r in cf.dns_records(zid):
+        if r.get('name') == hora_domain and r.get('type') == 'CNAME':
+            cf.delete_record(zid, r['id'])
+            print(f'prod dns {hora_domain} deleted')
+
 def nuke_prod():
-    'Nuke prod server and Cloudflare tunnel. Use with caution!'
+    'Nuke prod server, Cloudflare tunnel, and the hora domain record. Use with caution!'
     typ = secrets.token_urlsafe(8)
     ans = input(f'WARNING: This will irreversibly delete the production server and tunnel. Type {typ} to proceed: ')
     if ans != typ: return print('Aborting nuke.')
-    hz_nm = env_get('server_name', sd)
+    # SERVER_NAME, and as a keyword: env_get's second positional is the .env path, so the
+    # old call was reading the key out of a file called "lego" and always getting the default.
+    hz_nm = env_get('SERVER_NAME', path=root/'.env', default=sd)
     Hetzner().delete(hz_nm)
     print(f'prod server {hz_nm} deleted')
     try:
         cf = CF()
-        tid = cf.tunnel_id(sd)
+        # deploy2prod names the tunnel `{sd}_{domain}`; looking it up as `sd` never found it
+        tid = cf.tunnel_id(tunnel_nm)
+        try: rm_hora_dns(cf)
+        except Exception as e: print(f'Error removing {hora_domain} record: {e}')
         cf.delete_tunnel(tid)
         print(f'prod tunnel {tid} deleted')
     except ValueError: print('No prod tunnel found, skipping tunnel nuke.')
@@ -61,6 +126,6 @@ def deploy_cli():
     elif cmd == 'deploy': deploy2prod(force=args[1] if len(args) > 1 else None)
     elif cmd == 'nuke': nuke_prod()
     elif cmd == 'env': mk_env(env2push(), path=root/'.env')
-    else: print('usage: lego-deploy compose | deploy')
+    else: print('usage: lego-deploy compose | deploy | nuke | env')
 
 if __name__ == '__main__': deploy2prod(password=True)
