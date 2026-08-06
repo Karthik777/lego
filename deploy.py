@@ -13,15 +13,12 @@ inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Docker
 exc = ['data/','backups/', 'mrsladjoe/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
 tunnel_nm = f'{sd}_{domain}'
-# The second hostname: the apex of the zone lego is already in. Same server, same container,
-# same tunnel and now the same zone — the hora block answers at /hora, and on the apex that
-# is what the root should serve.
+
 hora_domain, hora_route = os.getenv('HORA_DOMAIN', domain), '/hora'
 app_svc, app_port = 'app', 5001
 # caddy_stack writes Dockerfile, docker-compose.yml and Caddyfile relative to the cwd, and
 # the compose mounts ./Caddyfile — so this has to stay a relative path or the mount would
-# point at a directory that only exists on the machine that ran the deploy.
-CADDYFILE = Path('Caddyfile')
+# point at a directory that only exists on the machine that ran the deploy.CADDYFILE = Path('Caddyfile')
 RSYNC_FORCE = {'checksum': '--checksum', 'ignore-times': '--ignore-times'}
 
 def caddy_site(host, *directives):
