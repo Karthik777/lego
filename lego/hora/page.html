@@ -1,0 +1,618 @@
+        <!-- App bar -->
+        <header
+            class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur"
+        >
+            <div
+                class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6"
+            >
+                <div class="min-w-0">
+                    <h1
+                        class="truncate text-base font-bold tracking-tight text-slate-900 sm:text-lg"
+                    >
+                        Hora Viewer
+                    </h1>
+                    <p
+                        id="subtitle"
+                        class="truncate text-xs text-slate-600 sm:text-sm"
+                    >
+                        Responsive planetary hours • sunrise-based
+                    </p>
+                </div>
+                <div class="flex shrink-0 items-center gap-2">
+                    <button
+                        id="btn-search"
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-full bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                        Search city
+                    </button>
+                    <button
+                        id="btn-use-location"
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                        Use GPS
+                    </button>
+                    <button
+                        id="btn-share"
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-full bg-white px-3 py-2 text-xs font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                        Share
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="mx-auto max-w-6xl px-4 pb-28 pt-4 sm:px-6 sm:pb-8 sm:pt-6">
+            <!-- Top summary -->
+            <section class="grid gap-4">
+                <!-- Current (most important) -->
+                <div>
+                    <div
+                        class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-6"
+                    >
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <div
+                                    class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    Current
+                                </div>
+                                <div
+                                    id="current-hora"
+                                    class="mt-2 text-xl font-extrabold tracking-tight text-indigo-700 sm:text-2xl"
+                                >
+                                    —
+                                </div>
+                                <div
+                                    id="current-sub"
+                                    class="mt-1 text-base font-semibold text-slate-800 sm:text-lg"
+                                >
+                                    —
+                                </div>
+                                <div
+                                    id="current-range"
+                                    class="mt-2 text-sm text-slate-600"
+                                >
+                                    —
+                                </div>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <div
+                                    class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    Next
+                                </div>
+                                <div
+                                    id="current-countdown"
+                                    class="mt-2 inline-flex items-center rounded-full bg-indigo-50 px-4 py-2 text-sm font-extrabold tabular-nums text-indigo-700 ring-1 ring-indigo-100 sm:text-base"
+                                >
+                                    —
+                                </div>
+                                <div
+                                    class="mt-3 flex items-center justify-end gap-2"
+                                >
+                                    <button
+                                        id="btn-jump-current"
+                                        type="button"
+                                        class="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-900 ring-1 ring-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        Jump
+                                    </button>
+                                    <button
+                                        id="btn-update"
+                                        type="button"
+                                        class="rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    >
+                                        Update
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                            <div
+                                class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 sm:p-4"
+                            >
+                                <div
+                                    class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    Location
+                                </div>
+                                <div
+                                    id="location-label"
+                                    class="mt-2 truncate text-sm font-semibold text-slate-900"
+                                >
+                                    —
+                                </div>
+                                <div
+                                    id="location-meta"
+                                    class="mt-1 truncate text-xs text-slate-500"
+                                >
+                                    —
+                                </div>
+                            </div>
+
+                            <div
+                                class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 sm:p-4"
+                            >
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
+                                    <div class="min-w-0">
+                                        <div
+                                            class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                        >
+                                            Local time
+                                        </div>
+                                        <div
+                                            id="clock"
+                                            class="mt-1 text-lg font-extrabold tabular-nums text-slate-900"
+                                        >
+                                            —
+                                        </div>
+                                        <div
+                                            id="clock-date"
+                                            class="mt-1 text-xs text-slate-500"
+                                        >
+                                            —
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div
+                                            class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                        >
+                                            Now mode
+                                        </div>
+                                        <label
+                                            class="mt-2 inline-flex items-center gap-2"
+                                        >
+                                            <input
+                                                id="now-mode"
+                                                type="checkbox"
+                                                checked
+                                                class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span
+                                                class="text-sm font-semibold text-slate-800"
+                                                >Now</span
+                                            >
+                                        </label>
+                                    </div>
+                                </div>
+                                <div
+                                    class="mt-3 flex items-center justify-between rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200"
+                                >
+                                    <div
+                                        class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                    >
+                                        Timezone
+                                    </div>
+                                    <div
+                                        id="tz"
+                                        class="truncate text-xs font-semibold text-slate-700"
+                                    >
+                                        —
+                                    </div>
+                                </div>
+                                <div
+                                    id="when-controls"
+                                    class="mt-3 grid gap-2 sm:grid-cols-2"
+                                >
+                                    <div>
+                                        <label
+                                            for="date"
+                                            class="block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                            >Date</label
+                                        >
+                                        <div
+                                            class="mt-1 flex items-center gap-2"
+                                        >
+                                            <button
+                                                id="btn-date-prev"
+                                                type="button"
+                                                class="rounded-lg bg-white px-2 py-2 text-xs font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                title="Previous day"
+                                            >
+                                                ←
+                                            </button>
+                                            <input
+                                                id="date"
+                                                type="date"
+                                                class="w-full flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                            <button
+                                                id="btn-date-next"
+                                                type="button"
+                                                class="rounded-lg bg-white px-2 py-2 text-xs font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                                title="Next day"
+                                            >
+                                                →
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label
+                                            for="time"
+                                            class="block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                            >Time</label
+                                        >
+                                        <input
+                                            id="time"
+                                            type="time"
+                                            class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                        >
+                            <div
+                                class="rounded-xl bg-slate-900 p-4 text-white shadow-sm ring-1 ring-slate-900/10"
+                            >
+                                <div
+                                    class="text-xs font-semibold uppercase tracking-wide text-indigo-100"
+                                >
+                                    Panchang
+                                </div>
+                                <div
+                                    id="panchang-source"
+                                    class="mt-1 text-[0.7rem] font-semibold text-indigo-200"
+                                >
+                                    —
+                                </div>
+                                <div class="mt-3 space-y-3">
+                                    <div class="space-y-0.5">
+                                        <div
+                                            class="flex items-center justify-between gap-3"
+                                        >
+                                            <div
+                                                class="text-sm font-medium text-slate-100"
+                                            >
+                                                Tithi
+                                            </div>
+                                            <div
+                                                id="panchang-tithi-snap"
+                                                class="text-sm font-extrabold text-white"
+                                            >
+                                                —
+                                            </div>
+                                        </div>
+                                        <div
+                                            id="panchang-tithi-snap-range"
+                                            class="text-xs text-indigo-100/90"
+                                        >
+                                            —
+                                        </div>
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <div
+                                            class="flex items-center justify-between gap-3"
+                                        >
+                                            <div
+                                                class="text-sm font-medium text-slate-100"
+                                            >
+                                                Nakshatra
+                                            </div>
+                                            <div
+                                                id="panchang-nakshatra-snap"
+                                                class="text-sm font-extrabold text-white"
+                                            >
+                                                —
+                                            </div>
+                                        </div>
+                                        <div
+                                            id="panchang-nakshatra-snap-range"
+                                            class="text-xs text-indigo-100/90"
+                                        >
+                                            —
+                                        </div>
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <div
+                                            class="flex items-center justify-between gap-3"
+                                        >
+                                            <div
+                                                class="text-sm font-medium text-slate-100"
+                                            >
+                                                Rasi
+                                            </div>
+                                            <div
+                                                id="panchang-rasi-snap"
+                                                class="text-sm font-extrabold text-white"
+                                            >
+                                                —
+                                            </div>
+                                        </div>
+                                        <div
+                                            id="panchang-rasi-snap-range"
+                                            class="text-xs text-indigo-100/90"
+                                        >
+                                            —
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                class="rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200 sm:p-5 lg:col-span-2"
+                            >
+                                <div
+                                    class="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                    Sun times
+                                </div>
+                                <div class="mt-3 grid gap-2">
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <div
+                                            class="text-sm font-semibold text-slate-900"
+                                        >
+                                            Sunrise
+                                        </div>
+                                        <div
+                                            id="sunrise"
+                                            class="text-sm font-semibold tabular-nums text-slate-700"
+                                        >
+                                            —
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <div
+                                            class="text-sm font-semibold text-slate-900"
+                                        >
+                                            Sunset
+                                        </div>
+                                        <div
+                                            id="sunset"
+                                            class="text-sm font-semibold tabular-nums text-slate-700"
+                                        >
+                                            —
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <div
+                                            class="text-sm font-semibold text-slate-900"
+                                        >
+                                            Next sunrise
+                                        </div>
+                                        <div
+                                            id="next-sunrise"
+                                            class="text-sm font-semibold tabular-nums text-slate-700"
+                                        >
+                                            —
+                                        </div>
+                                    </div>
+                                    <div
+                                        id="sun-note"
+                                        class="pt-1 text-xs text-slate-500"
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Controls (collapsed by default on mobile) -->
+            <section class="mt-4 sm:mt-6">
+                <details
+                    id="controls"
+                    class="group rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+                >
+                    <summary
+                        class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4"
+                    >
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">
+                                Controls
+                            </div>
+                            <div class="text-xs text-slate-500">
+                                Location coordinates (advanced)
+                            </div>
+                        </div>
+                        <div
+                            class="text-xs font-semibold text-indigo-700 group-open:hidden"
+                        >
+                            Show
+                        </div>
+                        <div
+                            class="hidden text-xs font-semibold text-indigo-700 group-open:block"
+                        >
+                            Hide
+                        </div>
+                    </summary>
+                    <div
+                        class="border-t border-slate-200 px-4 pb-4 pt-4 sm:px-6"
+                    >
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label
+                                    for="lat"
+                                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                    >Latitude</label
+                                >
+                                <input
+                                    id="lat"
+                                    type="number"
+                                    step="0.000001"
+                                    placeholder="e.g. 37.7749"
+                                    class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    for="lon"
+                                    class="block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                    >Longitude</label
+                                >
+                                <input
+                                    id="lon"
+                                    type="number"
+                                    step="0.000001"
+                                    placeholder="e.g. -122.4194"
+                                    class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                        </div>
+                        <div
+                            class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div
+                                id="status"
+                                class="min-h-[1.25rem] text-sm text-slate-600"
+                            ></div>
+                            <div class="flex items-center gap-2">
+                                <button
+                                    id="btn-clear"
+                                    type="button"
+                                    class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    Clear
+                                </button>
+                                <button
+                                    id="btn-recalc"
+                                    type="button"
+                                    class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                >
+                                    Recalculate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- Horas -->
+            <section class="mt-4 sm:mt-6">
+                <div class="mb-3 flex items-end justify-between gap-3">
+                    <h2 class="text-base font-bold text-slate-900 sm:text-lg">
+                        Horas
+                    </h2>
+                    <div class="text-xs text-slate-500">
+                        Tap a card to expand sub‑horas
+                    </div>
+                </div>
+                <div
+                    id="hora-grid"
+                    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                ></div>
+            </section>
+
+            <footer
+                class="mt-8 border-t border-slate-200 pt-6 text-xs text-slate-500"
+            >
+                Data sources: Open‑Meteo (geocoding + sunrise/sunset). The
+                “Current” card shows the most relevant hora/sub‑hora for the
+                chosen moment.
+            </footer>
+        </main>
+
+        <!-- Mobile bottom strip emphasizing current -->
+        <div
+            class="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur safe-bottom sm:hidden"
+        >
+            <div class="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+                <div class="min-w-0 flex-1">
+                    <div
+                        id="bottom-hora"
+                        class="truncate text-sm font-extrabold text-slate-900"
+                    >
+                        —
+                    </div>
+                    <div class="mt-0.5 flex min-w-0 items-center gap-2">
+                        <div
+                            id="bottom-sub"
+                            class="min-w-0 truncate text-xs font-semibold text-slate-700"
+                        >
+                            —
+                        </div>
+                        <div
+                            id="bottom-countdown"
+                            class="shrink-0 text-xs font-extrabold tabular-nums text-indigo-700"
+                        >
+                            —
+                        </div>
+                    </div>
+                </div>
+                <button
+                    id="btn-bottom-jump"
+                    type="button"
+                    class="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 ring-1 ring-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                    Jump
+                </button>
+            </div>
+        </div>
+
+        <!-- Search modal -->
+        <div id="search-modal" class="fixed inset-0 z-[60] hidden bg-black/30">
+            <div
+                class="mx-auto flex h-full max-w-3xl flex-col bg-white shadow-xl"
+            >
+                <div class="border-b border-slate-200 px-4 py-3 sm:px-6">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div
+                                class="truncate text-sm font-semibold text-slate-900"
+                            >
+                                Search city
+                            </div>
+                            <div class="truncate text-xs text-slate-500">
+                                Autocomplete + timezone + local time
+                            </div>
+                        </div>
+                        <button
+                            id="btn-close-search"
+                            type="button"
+                            class="rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-900 ring-1 ring-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            Close
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <input
+                            id="city-query"
+                            type="text"
+                            inputmode="search"
+                            autocomplete="off"
+                            placeholder="Type a city name…"
+                            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <div class="mt-2 text-xs text-slate-500">
+                            Data: Open‑Meteo geocoding.
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-auto">
+                    <div
+                        id="search-status"
+                        class="px-4 py-2 text-sm text-slate-600 sm:px-6"
+                    ></div>
+                    <div
+                        id="search-results"
+                        class="divide-y divide-slate-100"
+                    ></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading overlay -->
+        <div id="loading-overlay" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div class="rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+                <div class="flex items-center gap-4">
+                    <div class="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600"></div>
+                    <div class="text-base font-semibold text-slate-900">Calculating...</div>
+                </div>
+            </div>
+        </div>
+

@@ -42,6 +42,9 @@ PKGS = {
     'highlightjs-copy.min.js':  'https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy@v1.0.6/dist/highlightjs-copy.min.js',
     'highlightjs-copy.min.css': 'https://cdn.jsdelivr.net/gh/arronhunt/highlightjs-copy@v1.0.6/dist/highlightjs-copy.min.css',
     'nosleep.min.js':           'https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js',
+    # the hora block: date/timezone maths and the ephemeris the planetary hours are built from
+    'luxon.min.js':             'https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js',
+    'astronomy.browser.min.js': 'https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js',
 }
 
 # A UA modern enough that Google serves woff2 rather than the ttf fallback, which is
@@ -50,6 +53,10 @@ UA = ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
       'Chrome/126.0.0.0 Safari/537.36')
 FAMILIES = ['Libre+Baskerville', 'Fira+Code', 'Playfair+Display']
 WEIGHTS = '300;400;500;600;700'
+# The hora block is a standalone document — it does not carry the core head — and Inter is
+# the only face it wants, so it gets its own sheet rather than the 20KB one every other
+# page links.
+HORA_FAMILIES = ['Inter']
 
 def get(url, ua=False):
     req = Request(url, headers={'User-Agent': UA} if ua else {})
@@ -62,13 +69,13 @@ def fetch_pkgs():
         (VENDOR / nm).write_bytes(b)
         print(f'  {nm:26s} {len(b)/1024:7.1f}KB  sha256:{sha256(b).hexdigest()[:16]}  {url}')
 
-def fetch_fonts():
+def fetch_fonts(families=None, out='fonts.css'):
     '''The @font-face CSS, with every file it names pulled down beside it.
 
     Google returns one src per family/weight/subset; the CSS is rewritten to point at the
     local copies so the browser never learns fonts.gstatic.com exists.'''
     FONTS.mkdir(parents=True, exist_ok=True)
-    q = '&'.join(f'family={f}:wght@{WEIGHTS}' for f in FAMILIES) + '&display=swap'
+    q = '&'.join(f'family={f}:wght@{WEIGHTS}' for f in (families or FAMILIES)) + '&display=swap'
     css = get(f'https://fonts.googleapis.com/css2?{q}', ua=True).decode()
     seen, total = {}, 0
     for url in dict.fromkeys(re.findall(r'url\((https://[^)]+)\)', css)):
@@ -78,10 +85,11 @@ def fetch_fonts():
         (FONTS / nm).write_bytes(b)
         seen[url], total = nm, total + len(b)
         css = css.replace(url, f'/static/vendor/fonts/{nm}')
-    (VENDOR / 'fonts.css').write_text(css)
-    print(f'  fonts.css                  {len(css)/1024:7.1f}KB  {len(seen)} files, {total/1024:.0f}KB of woff2')
+    (VENDOR / out).write_text(css)
+    print(f'  {out:26s} {len(css)/1024:7.1f}KB  {len(seen)} files, {total/1024:.0f}KB of woff2')
 
 if __name__ == '__main__':
     print('packages:'); fetch_pkgs()
     print('fonts:');    fetch_fonts()
+    fetch_fonts(HORA_FAMILIES, out='inter.css')
     print('\nvendored into', VENDOR.resolve())

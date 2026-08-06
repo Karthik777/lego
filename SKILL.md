@@ -41,6 +41,7 @@ Connect order matters. Auth reads `RouteOverrides.skip` at connect time to build
 ```python
 # lego/app.py — correct order
 b.connect(lego)   # blog: appends its public routes to skip list
+h.connect(lego)   # hora: likewise
 a.connect(lego)   # auth: always last, reads the complete skip list
 ```
 
@@ -491,6 +492,48 @@ Reading a custom property with `getComputedStyle` returns its raw token stream, 
 Sequential and diverging ramps are mixed from the same tokens: the density heatmap runs `--card` → `--chart-1` on `sqrt(count)`, and the correlation grid runs `--chart-2` ← surface → `--chart-1`, so the neutral midpoint is the card itself and never a hue.
 
 Charts fetch their data from `/dash/chart.json` on intersection, so a page of eight charts issues eight small parallel queries rather than one slow render.
+
+## Hora block (`lego/hora/`)
+
+```python
+import lego.hora as h
+h.connect(lego)   # before auth
+```
+
+Vedic planetary hours, computed in the browser from the local sunrise and sunset. It is the
+one block that **does not use the app-wide head**: the page is styled by Tailwind, whose
+preflight and Oat's reset would otherwise fight over the same elements, so `ui.page()`
+renders a whole `<html>` document and the handler returns it as an `HTMLResponse`. Anything
+returned as an FT tree would have been wrapped in `lego/app.py`'s `hdrs`.
+
+| route | purpose |
+|---|---|
+| `GET /hora` | the page (one document, no partials) |
+
+**Files.** `page.html` is the body markup, `hora.js` the whole application, `hora.src.css`
+the Tailwind input and `hora.css` its compiled output. `ui.py` reads `page.html` and serves
+it inside a head it builds itself; nothing about the response varies by request, so the
+document is serialised once through `rendered()`.
+
+**Assets.** All four of the page's original CDN dependencies are served from `static/vendor`
+with a content-hashed `?v=`: luxon and astronomy-engine are pinned in `tools/vendor_fetch.py`,
+Inter has its own `inter.css` (the block does not link the 20KB `fonts.css` every other page
+uses), and Tailwind is compiled ahead of time rather than JIT-compiled in the browser.
+
+**Rebuilding the stylesheet.** After editing `page.html`, `hora.js` or `hora.src.css`:
+
+```bash
+uv run python tools/tailwind_build.py   # needs node; commit lego/hora/hora.css
+```
+
+`tools/tailwind.hora.js` lists both `page.html` and `hora.js` as content. `hora.js` matters
+because the hora cards are built at runtime from template literals — the grid's classes exist
+nowhere else. They survive extraction only because they are written as literal strings; a
+class assembled from fragments at runtime would be purged.
+
+**Second domain.** `deploy.py` serves this block at the root of `sankalpa.com` — same server,
+same container, same tunnel as `lego.sankalpa.sh`, with Caddy rewriting `/` to `/hora` for
+that Host. See *Deployment* in `README.md`.
 
 ## Adding a new block
 

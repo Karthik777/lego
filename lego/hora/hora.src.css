@@ -1,0 +1,47 @@
+/* Tailwind source for the hora block. Compile to hora.css with:
+     uv run python tools/tailwind_build.py
+   The compiled file is what ships; nothing at runtime needs node or the Tailwind CDN. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    color-scheme: light;
+}
+body {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+.planet-sun {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+}
+.planet-venus {
+    background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+}
+.planet-mercury {
+    background: linear-gradient(135deg, #d4e4fc, #bfdbfe);
+}
+.planet-moon {
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+}
+.planet-saturn {
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+}
+.planet-jupiter {
+    background: linear-gradient(135deg, #fefce8, #fef9c3);
+}
+.planet-mars {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+}
+
+.safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        scroll-behavior: auto !important;
+        transition: none !important;
+        animation: none !important;
+    }
+}
