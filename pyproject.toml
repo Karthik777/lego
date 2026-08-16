@@ -28,6 +28,7 @@ dependencies = [
     "resend>=2.22.0",
     "rjsmin>=1.2.5",
     "ujson>=5.11.0",
+    "faststripe>=2026.5.27.2",
 ]
 
 [project.scripts]

@@ -1,0 +1,26 @@
+.pay-sec { max-width: 64rem; margin: 0 auto; padding: 0 1rem 3rem; }
+
+.pay-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; align-items: stretch; }
+@media (min-width: 768px) { .pay-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.pay-card { display: flex; flex-direction: column; height: 100%; }
+.pay-card > .pay-foot { margin-top: auto; padding-top: 0.5rem; }
+.pay-price { font-size: 2.75rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.pay-price-row { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 1rem; }
+
+.pay-perks { list-style: none; padding: 0; margin: 0 0 1.5rem; }
+.pay-perks li { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.3rem 0; font-size: 0.875rem; }
+.pay-perks svg { flex: none; margin-top: 0.15rem; color: var(--primary); }
+
+.pay-steps { display: grid; grid-template-columns: 1fr; gap: 1rem; counter-reset: paystep; }
+@media (min-width: 768px) { .pay-steps { grid-template-columns: repeat(4, 1fr); } }
+.pay-steps li { list-style: none; counter-increment: paystep; font-size: 0.875rem; }
+.pay-steps li::before { content: counter(paystep); display: block; font-family: var(--font-mono, monospace);
+  font-size: 0.75rem; color: var(--primary); border-top: 2px solid currentColor; padding-top: 0.4rem;
+  margin-bottom: 0.4rem; }
+
+.pay-tbl { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.pay-tbl th { text-align: left; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-weight: 500; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+.pay-tbl td { padding: 0.6rem 0.75rem 0.6rem 0; border-bottom: 1px solid var(--border); }
+.pay-tbl td:first-child, .pay-tbl th:first-child { padding-left: 0; }

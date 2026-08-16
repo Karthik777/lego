@@ -4,7 +4,7 @@ from fasthtml.common import *
 from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware
 from .core import *
-from lego import auth as a, blog as b, dash as d, hora as h
+from lego import auth as a, blog as b, dash as d, hora as h, pay as p
 
 __all__ = ['launch', 'lego']
 
@@ -57,6 +57,7 @@ for _d in ('vendor', 'assets'):
 b.connect(lego)
 d.connect(lego) # dashboards
 h.connect(lego) # hora — also the whole of sankalpa.sh, which Caddy rewrites / to /hora
+p.connect(lego) # pay — stripe checkout, one-off and subscription
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 
 # optionally add a scheduled backup of data folders

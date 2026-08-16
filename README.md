@@ -43,6 +43,8 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **hora** is Vedic planetary hours, computed in the browser from the local sunrise and sunset. It is the block that shows what "self-contained" can stretch to: it brings its own head, its own Tailwind stylesheet and its own document, so none of the app-wide chrome reaches it. It serves `/hora` here and the whole of [sankalpa.sh](https://sankalpa.sh).
 
+**pay** sells things with Stripe, through [faststripe](https://github.com/AnswerDotAI/faststripe). It carries a catalogue, two Checkout flows and a signed webhook, and it needs nothing set up in the Stripe dashboard first: prices go inline on each Checkout Session. `/pay` prices a desktop app at $200 paid once and a hosted plan at $19 a month, so both Stripe workflows sit on one page. See [Payments](#payments).
+
 **blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
 
 ````md
@@ -59,7 +61,9 @@ lego/
 │   ├── app.py           # wire up blocks, scheduled jobs
 │   ├── auth/            # auth block
 │   ├── blog/            # blog block
+│   ├── dash/            # dashboards block
 │   ├── hora/            # hora block — also serves sankalpa.sh
+│   ├── pay/             # stripe block
 │   └── core/            # config, cache, logging, backups, UI
 ├── data/
 │   ├── db/              # SQLite databases
@@ -147,6 +151,66 @@ RouteOverrides.lgn = "/login"
 RouteOverrides.home = "/dashboard"
 RouteOverrides.skip += ["/public"]
 ```
+
+## Payments
+
+The pay block talks to Stripe through [faststripe](https://github.com/AnswerDotAI/faststripe). Five routes:
+
+| route | purpose |
+|---|---|
+| `GET /pay` | the catalogue, and what the signed-in reader already owns |
+| `POST /pay/buy/{key}` | opens a Checkout Session and sends the buyer to Stripe |
+| `GET /pay/done` | reads the session the buyer came back with, writes the order, shows a receipt |
+| `POST /pay/portal` | sends a subscriber to Stripe's billing portal |
+| `POST /pay/hook` | signed webhook: payment and subscription events |
+
+### Without a key
+
+With no `STRIPE_SECRET_KEY` set, the block runs in sandbox. Buying writes the order Stripe would have sent back straight into `data/db/pay.db`. Pages, receipts and the owned list all work, so you can style the flow before you have an account.
+
+### With a test key
+
+1. Create a Stripe account and copy the secret key from the [test dashboard](https://dashboard.stripe.com/test/apikeys). It starts with `sk_test_`.
+2. Put it in `.env` as `STRIPE_SECRET_KEY=sk_test_...`
+3. Restart. Buying now opens Stripe's hosted Checkout. Card `4242 4242 4242 4242`, any future expiry, any CVC.
+
+Stripe sends the buyer back to `/pay/done?sid=...` and the block reads that session to write the order. Recording a sale needs no webhook, which is what makes a bare test key enough to see the whole flow.
+
+### Webhooks
+
+Subscriptions change while nobody is on the site: renewals, failed cards, cancellations. That is what the webhook is for.
+
+```bash
+stripe listen --forward-to localhost:5001/pay/hook
+```
+
+The CLI prints a signing secret. Put it in `.env` as `STRIPE_WEBHOOK_SECRET` and restart. In production, add the endpoint at `{DOMAIN}/pay/hook` in the Stripe dashboard and copy its secret from there. `/pay/hook` sits in the block's skip list so it bypasses auth; `parse_webhook` checks the signature and the route answers 400 when it fails.
+
+### Going live
+
+Swap the test key for the live one and add the live webhook endpoint. Set `STRIPE_CURRENCY` if you do not price in dollars.
+
+| env var | default | purpose |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | `''` | `sk_test_…` or `sk_live_…`. Empty means sandbox |
+| `STRIPE_WEBHOOK_SECRET` | `''` | `whsec_…`, from `stripe listen` or the dashboard endpoint |
+| `STRIPE_PUBLISHABLE_KEY` | `''` | only needed if you add client-side Stripe.js |
+| `STRIPE_CURRENCY` | `usd` | three-letter code the catalogue prices in |
+
+### The catalogue
+
+`CATALOG` in `lego/pay/cfg.py` is the whole product list. An `interval` is what makes an item a subscription:
+
+```python
+AttrDict(key='cloud', nm='Lego Cloud', kind='Subscription', mode='subscription',
+         amount=1900, interval='month', blurb='...', perks=[...], cta='Subscribe at $19/mo')
+```
+
+`amount` is in cents. Because prices go inline on the Checkout Session, changing a number here changes what Stripe charges on the next click, with no product to edit in the dashboard.
+
+### Carrying it to another app
+
+Copy `lego/pay/` across, add `p.connect(app)` before auth connects, and edit `CATALOG`. The block owns its table, its stylesheet and its routes. All it borrows from core is `base()`, `RouteOverrides`, and the per-thread database helper.
 
 ## Extensions
 
