@@ -1,4 +1,4 @@
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 from fasthtml.common import JSONResponse, RedirectResponse
 from fastcore.xml import Div
 from lego.core import base, not_found, RouteOverrides

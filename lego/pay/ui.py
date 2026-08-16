@@ -4,7 +4,7 @@ from fasthtml.common import *
 from fastcore.all import timed_cache
 from lego.core import RouteOverrides, TextT, ButtonT, asset_css, lc_icon
 from .cfg import Routes, cfg, CATALOG
-from .data import live, sub_of
+from .data import item, live, sub_of
 
 __all__ = ['pay_head', 'pricing', 'receipt', 'money', 'mode_chip']
 
@@ -17,10 +17,15 @@ def money(cents, cur=None):
 @timed_cache(seconds=3600)
 def pay_head(): return [asset_css(Path(__file__).parent / 'pay.css')]
 
+def _chip(txt, tone, note): return Span(txt, cls=f'badge chip-{tone}'), note
+
 def mode_chip():
-    if not live(): return Span('Sandbox', cls='badge chip-yellow'), 'No Stripe key set. Orders are written to the local database so you can walk the flow.'
-    if cfg.scrt.startswith('sk_test'): return Span('Stripe test mode', cls='badge chip-blue'), 'Test key in use. Pay with card 4242 4242 4242 4242, any future expiry, any CVC.'
-    return Span('Live', cls='badge chip-green'), 'Live key in use. Cards are charged for real.'
+    'Which key the block is running on, said out loud on the page.'
+    if not live(): return _chip('Sandbox', 'yellow',
+                                'No Stripe key set. Orders are written to the local database so you can walk the flow.')
+    if cfg.scrt.startswith('sk_test'): return _chip('Stripe test mode', 'blue',
+                                                    'Test key in use. Pay with card 4242 4242 4242 4242, any future expiry, any CVC.')
+    return _chip('Live', 'green', 'Live key in use. Cards are charged for real.')
 
 def _icon(it): return lc_icon('cloud' if it.get('interval') else 'monitor', 18)
 
@@ -55,7 +60,7 @@ def _hero(err=None):
 def _owned(rows):
     if not rows: return None
     def _row(o):
-        it = next((i for i in CATALOG if i.key == o['item']), None)
+        it = item(o['item'])
         chip = 'chip-green' if o['status'] in ('paid', 'active') else 'chip-gray'
         return Tr(Td(it.nm if it else o['item']),
                   Td(money(o['amount'], o['currency']), cls='font-mono'),
@@ -78,19 +83,19 @@ _STEPS = [('Get a key', 'Create a Stripe account and copy the test secret key fr
 def _connect():
     return Section(
         Div(H2('Point it at your own account', cls='mb-2 tracking-tight'),
-            P('The catalogue is four fields per item and the prices are built inline, so nothing has to '
-              'exist in the Stripe dashboard before the first sale.', cls=f'{TextT.sm} mb-6'),
+            P('The catalogue is a list of dicts and the prices go inline on the Checkout Session, so '
+              'nothing has to exist in the Stripe dashboard before the first sale.', cls=f'{TextT.sm} mb-6'),
             Ol(*[Li(Strong(t), Br(), Span(d, cls=TextT.sm)) for t, d in _STEPS], cls='pay-steps'),
             cls='card'), cls='pay-sec')
 
-def pricing(usr=None, rows=(), err=None):
+def pricing(rows=(), err=None):
     owned = {o['item']: o for o in rows if o['status'] in ('paid', 'active')}
     return Div(_hero(err),
                Section(Div(*[_card(it, owned.get(it.key)) for it in CATALOG], cls='pay-grid'), cls='pay-sec'),
                _owned(rows), _connect())
 
 def receipt(o, usr=None):
-    it = next((i for i in CATALOG if i.key == o['item']), None)
+    it = item(o['item'])
     rows = [('Item', it.nm if it else o['item']), ('Amount', money(o['amount'], o['currency'])),
             ('Billing', 'Monthly, until you cancel' if o['sub'] else 'One payment'),
             ('Status', o['status']), ('Email', o['email'] or '—'),

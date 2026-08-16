@@ -1,14 +1,13 @@
 import time
 from fastcore.all import AttrDict, first
-from faststripe.core import StripeApi, StripeError
-from faststripe.core import StripeSignatureError
+from faststripe.core import StripeApi, StripeError, StripeSignatureError
 from lego.core import cfg as app_cfg, thread_db, get_db_pth, quick_lgr, slug
 from .cfg import Routes, cfg, CATALOG
 
 __all__ = ['orders', 'sapi', 'live', 'item', 'mine', 'sub_of', 'buy', 'settle', 'portal_url', 'apply_hook',
            'StripeError', 'StripeSignatureError']
 
-info, error, warn = quick_lgr()
+info = quick_lgr()[0]
 
 def _setup(db, first):
     if not first: return
@@ -24,8 +23,10 @@ sapi = StripeApi(api_key=cfg.scrt, webhook_key=cfg.hook, publishable_key=cfg.pub
 
 def live(): return bool(cfg.scrt)
 def item(key): return first(CATALOG, lambda i: i.key == key)
-def mine(auth): return orders(where='email = ?', where_args=[auth['email']], order_by='created_at desc') if auth else []
 def sub_of(rows): return first(rows, lambda o: o['sub'] and o['status'] == 'active')
+def mine(auth):
+    if not auth: return []
+    return orders(where='email = ?', where_args=[auth['email']], order_by='created_at desc')
 
 def _line(it):
     'A price built inline, so the block needs no products set up in the dashboard first.'
@@ -33,15 +34,17 @@ def _line(it):
     if it.get('interval'): p['recurring'] = dict(interval=it.interval)
     return dict(quantity=1, price_data=p)
 
+def _status(s):
+    if s.get('subscription'): return 'active'
+    return 'paid' if s.get('payment_status') == 'paid' else s.get('status', '')
+
 def _save(s):
-    'One row per Checkout Session, whichever way it reached us — the return trip or the webhook.'
+    'One row per Checkout Session, written by the return trip or by the webhook.'
     d = dict(id=s.id, user_id=int(s.get('client_reference_id') or 0),
              email=(s.get('customer_details') or {}).get('email') or s.get('customer_email') or '',
              item=(s.get('metadata') or {}).get('item', ''), mode=s.get('mode', ''),
              amount=s.get('amount_total') or 0, currency=s.get('currency') or cfg.currency,
-             status='active' if s.get('subscription') else
-                    ('paid' if s.get('payment_status') == 'paid' else s.get('status', '')),
-             customer=s.get('customer') or '', sub=s.get('subscription') or '',
+             status=_status(s), customer=s.get('customer') or '', sub=s.get('subscription') or '',
              created_at=float(s.get('created') or time.time()))
     orders.insert(d, replace=True)
     return d
@@ -52,8 +55,7 @@ def _sandbox(it, auth):
                           currency=cfg.currency, payment_status='paid', created=time.time(),
                           subscription=f'sandbox_sub_{it.key}' if it.get('interval') else '',
                           client_reference_id=str(auth['id']) if auth else '',
-                          customer_email=auth['email'] if auth else 'buyer@example.com',
-                          metadata=dict(item=it.key)))
+                          customer_email=auth['email'] if auth else '', metadata=dict(item=it.key)))
 
 async def buy(it, auth):
     'Checkout Session for `it`, or a sandbox order when no key is configured.'
@@ -69,8 +71,8 @@ async def settle(sid):
     '''Record the session the buyer came back with.
 
     Webhooks are the source of truth in production, but they need a public URL and a
-    signing secret. Reading the session on return means a fresh test key pays and shows a
-    receipt with neither of those, and the webhook only ever writes the same row again.'''
+    signing secret. Reading the session on return needs neither, so a fresh test key pays
+    and shows a receipt. The webhook then only ever writes the same row again.'''
     if sid.startswith('sandbox_'): return orders[sid]
     return _save(await sapi.v1.checkout.sessions.session.get(session=sid))
 
@@ -80,6 +82,7 @@ async def portal_url(customer):
     return s.url
 
 async def apply_hook(req):
+    if not req.headers.get('stripe-signature'): raise StripeSignatureError('No signature header')
     evt = await sapi.parse_webhook(req)
     o = evt.data
     if evt.type == 'checkout.session.completed': _save(o)

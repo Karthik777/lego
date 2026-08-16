@@ -43,7 +43,7 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **hora** is Vedic planetary hours, computed in the browser from the local sunrise and sunset. It is the block that shows what "self-contained" can stretch to: it brings its own head, its own Tailwind stylesheet and its own document, so none of the app-wide chrome reaches it. It serves `/hora` here and the whole of [sankalpa.sh](https://sankalpa.sh).
 
-**pay** sells things with Stripe, through [faststripe](https://github.com/AnswerDotAI/faststripe). It carries a catalogue, two Checkout flows and a signed webhook, and it needs nothing set up in the Stripe dashboard first: prices go inline on each Checkout Session. `/pay` prices a desktop app at $200 paid once and a hosted plan at $19 a month, so both Stripe workflows sit on one page. See [Payments](#payments).
+**pay** sells things with Stripe, through [faststripe](https://github.com/AnswerDotAI/faststripe). It brings a catalogue, two Checkout flows, and a signed webhook. Nothing has to exist in the Stripe dashboard first, because prices go inline on each Checkout Session. `/pay` prices a desktop app at $200 paid once, and a hosted plan at $19 a month. See [Payments](#payments).
 
 **blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
 
@@ -166,7 +166,7 @@ The pay block talks to Stripe through [faststripe](https://github.com/AnswerDotA
 
 ### Without a key
 
-With no `STRIPE_SECRET_KEY` set, the block runs in sandbox. Buying writes the order Stripe would have sent back straight into `data/db/pay.db`. Pages, receipts and the owned list all work, so you can style the flow before you have an account.
+With no `STRIPE_SECRET_KEY` set, the block runs in sandbox. Buying writes the order Stripe would have sent back straight into `data/db/pay.db`. Pages, receipts and the owned list all work. You can style the whole flow before you have an account.
 
 ### With a test key
 
@@ -184,7 +184,7 @@ Subscriptions change while nobody is on the site: renewals, failed cards, cancel
 stripe listen --forward-to localhost:5001/pay/hook
 ```
 
-The CLI prints a signing secret. Put it in `.env` as `STRIPE_WEBHOOK_SECRET` and restart. In production, add the endpoint at `{DOMAIN}/pay/hook` in the Stripe dashboard and copy its secret from there. `/pay/hook` sits in the block's skip list so it bypasses auth; `parse_webhook` checks the signature and the route answers 400 when it fails.
+The CLI prints a signing secret. Put it in `.env` as `STRIPE_WEBHOOK_SECRET` and restart. In production, add the endpoint at `{DOMAIN}/pay/hook` in the Stripe dashboard and copy its secret from there. `/pay/hook` bypasses auth because it is in the block's skip list. `parse_webhook` checks the signature. A bad one gets a 400.
 
 ### Going live
 
@@ -206,7 +206,7 @@ AttrDict(key='cloud', nm='Lego Cloud', kind='Subscription', mode='subscription',
          amount=1900, interval='month', blurb='...', perks=[...], cta='Subscribe at $19/mo')
 ```
 
-`amount` is in cents. Because prices go inline on the Checkout Session, changing a number here changes what Stripe charges on the next click, with no product to edit in the dashboard.
+`amount` is in cents. Prices go inline on the Checkout Session, so change a number here and Stripe charges the new one on the next click. There is no product to edit in the dashboard.
 
 ### Carrying it to another app
 

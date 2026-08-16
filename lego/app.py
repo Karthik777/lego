@@ -1,5 +1,4 @@
 import os
-from fasthtml.common import Meta, Favicon, Socials, Link, serve, Script, JSONResponse, Div, P
 from fasthtml.common import *
 from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware

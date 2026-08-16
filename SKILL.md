@@ -560,25 +560,25 @@ both workflows: a one-off payment and a monthly subscription.
 | `POST /pay/hook` | signed webhook |
 
 **Catalogue.** `CATALOG` in `cfg.py`, one `AttrDict` per item. `amount` is in cents and an
-`interval` makes the item a subscription. Prices are built inline on the Checkout Session
-via `line_items[].price_data`, so no product has to exist in the Stripe dashboard and a
-price change takes effect on the next click.
+`interval` makes the item a subscription. Prices go inline on the Checkout Session, in
+`line_items[].price_data`. No product has to exist in the Stripe dashboard, and a price
+change takes effect on the next click.
 
 **Sandbox.** With `STRIPE_SECRET_KEY` unset, `buy()` writes the row Stripe would have
 returned and redirects to the receipt. Every page works with no account, and the pricing
 page says so. Set a key and the same routes hit Stripe.
 
 **Settling.** `/pay/done` reads the Checkout Session by id rather than waiting for the
-webhook, so a bare test key is enough to record a sale. The webhook writes the same row
-again and is what catches renewals and cancellations, which happen with nobody on the site.
-`/pay/hook` is in `Routes.skip`; `parse_webhook` verifies the signature and the route
-answers 400 when it does not match.
+webhook. A bare test key is then enough to record a sale. The webhook writes the same row
+again, and catches the renewals and cancellations that happen with nobody on the site.
+`/pay/hook` is in `Routes.skip`. `parse_webhook` verifies the signature, and a payload that
+fails it gets a 400.
 
 **Async.** faststripe is an async client, so `pay_buy`, `pay_done`, `pay_portal` and
-`pay_hook` are `async def`. Only `pay_index` is sync.
+`pay_hook` are `async def`. `pay_index` is the only plain `def`.
 
 **Env:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`,
-`STRIPE_CURRENCY` (default `usd`). Success and cancel URLs are built from `cfg.domain`, so
+`STRIPE_CURRENCY` (default `usd`). Success and cancel URLs come from `cfg.domain`, so
 `DOMAIN` has to be right in production.
 
 ## Adding a new block
