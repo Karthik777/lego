@@ -42,6 +42,7 @@ Connect order matters. Auth reads `RouteOverrides.skip` at connect time to build
 # lego/app.py — correct order
 b.connect(lego)   # blog: appends its public routes to skip list
 h.connect(lego)   # hora: likewise
+p.connect(lego)   # pay: likewise
 a.connect(lego)   # auth: always last, reads the complete skip list
 ```
 
@@ -78,6 +79,10 @@ from lego.core.backups import run_backup, clone
 | `CF_ACCESS_KEY_ID` | `''` | Cloudflare R2 access key |
 | `CF_SCRT_ACCESS_KEY` | `''` | Cloudflare R2 secret |
 | `CF_ENDPOINT` | `''` | Cloudflare R2 endpoint |
+| `STRIPE_SECRET_KEY` | `''` | `sk_test_…`/`sk_live_…`; empty runs the pay block in sandbox |
+| `STRIPE_WEBHOOK_SECRET` | `''` | `whsec_…` for `/pay/hook` |
+| `STRIPE_PUBLISHABLE_KEY` | `''` | only for client-side Stripe.js |
+| `STRIPE_CURRENCY` | `usd` | currency the catalogue prices in |
 
 `not_prod()` returns `True` when `MODE != 'production'`. Theme switcher only appears in dev mode.
 
@@ -535,6 +540,46 @@ class assembled from fragments at runtime would be purged.
 same container, same tunnel and same Cloudflare zone as `lego.sankalpa.sh`, with Caddy
 rewriting `/` to `/hora` for that Host. `HORA_DOMAIN` moves it. See *Deployment* in
 `README.md`.
+
+## Pay block (`lego/pay/`)
+
+```python
+import lego.pay as p
+p.connect(lego)   # before auth
+```
+
+Stripe Checkout through [faststripe](https://github.com/AnswerDotAI/faststripe), covering
+both workflows: a one-off payment and a monthly subscription.
+
+| route | purpose |
+|---|---|
+| `GET /pay` | catalogue, plus what the signed-in reader owns |
+| `POST /pay/buy/{key}` | opens a Checkout Session, 303s to Stripe |
+| `GET /pay/done?sid=` | reads the session, writes the order, renders the receipt |
+| `POST /pay/portal` | 303s a subscriber to Stripe's billing portal |
+| `POST /pay/hook` | signed webhook |
+
+**Catalogue.** `CATALOG` in `cfg.py`, one `AttrDict` per item. `amount` is in cents and an
+`interval` makes the item a subscription. Prices go inline on the Checkout Session, in
+`line_items[].price_data`. No product has to exist in the Stripe dashboard, and a price
+change takes effect on the next click.
+
+**Sandbox.** With `STRIPE_SECRET_KEY` unset, `buy()` writes the row Stripe would have
+returned and redirects to the receipt. Every page works with no account, and the pricing
+page says so. Set a key and the same routes hit Stripe.
+
+**Settling.** `/pay/done` reads the Checkout Session by id rather than waiting for the
+webhook. A bare test key is then enough to record a sale. The webhook writes the same row
+again, and catches the renewals and cancellations that happen with nobody on the site.
+`/pay/hook` is in `Routes.skip`. `parse_webhook` verifies the signature, and a payload that
+fails it gets a 400.
+
+**Async.** faststripe is an async client, so `pay_buy`, `pay_done`, `pay_portal` and
+`pay_hook` are `async def`. `pay_index` is the only plain `def`.
+
+**Env:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`,
+`STRIPE_CURRENCY` (default `usd`). Success and cancel URLs come from `cfg.domain`, so
+`DOMAIN` has to be right in production.
 
 ## Adding a new block
 

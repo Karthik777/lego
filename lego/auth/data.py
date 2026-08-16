@@ -181,7 +181,6 @@ class Register(Login):
 
     def __ft__(self, **kwargs):
         err = self.catch()
-        print('err:', err)
         return form(Step.em_ver, self.email) if not err else form(Step.reg, self.email, self.name, err=err)
 
     def catch(self):

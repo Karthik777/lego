@@ -2,11 +2,11 @@ from urllib.parse import urlencode, quote
 from fastcore.xml import *
 from fasthtml.common import *
 from fastcore.all import timed_cache
-from lego.core import lc_icon, TextT, ButtonT, PresetsT, asset_js, asset_css, vendor_js, Badge, BadgePresetsT
+from lego.core import lc_icon, ButtonT, PresetsT, asset_js, asset_css, vendor_js, Badge
 from .cfg import Routes, cfg
 from .data import DBS, schema, reflect, profile, table_names, rowcount
-from .infer import roles, specs_for_db, specs_for_table, label_col, fmt_of, _h
-from .charts import stats, sparkline, page_rows, row_get, child_rows, child_count, headline, count_rows
+from .infer import roles, specs_for_db, specs_for_table, label_col, _h
+from .charts import sparkline, page_rows, row_get, child_rows, child_count, headline, count_rows
 from .filters import SEP, wire, describe, applies, columns, ops_for, values_for
 from .build import KINDS, AGGS, options, pin_qs, wire_pin
 

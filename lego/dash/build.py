@@ -19,8 +19,8 @@ category even though the column holding it is an integer on another table.
 from urllib.parse import urlencode, parse_qsl
 from fastcore.all import AttrDict
 from .cfg import cfg
-from .data import DBS, table_names, reflect, rowcount
-from .infer import Spec, roles, _cats, _axes, agg_for, _h, _plural
+from .data import table_names, rowcount
+from .infer import Spec, roles, _cats, _axes, _h, _plural
 
 __all__ = ['KINDS', 'AGGS', 'options', 'compose', 'pins', 'pin_qs', 'wire_pin']
 
