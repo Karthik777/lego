@@ -43,6 +43,8 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **hora** is Vedic planetary hours, computed in the browser from the local sunrise and sunset. It is the block that shows what "self-contained" can stretch to: it brings its own head, its own Tailwind stylesheet and its own document, so none of the app-wide chrome reaches it. It serves `/hora` here and the whole of [sankalpa.sh](https://sankalpa.sh).
 
+**thrifty** prices the total cost of ownership of LLM and agent platforms — models, agents, iterations and volumes in, per-request and monthly cost out, against pricing it fetches live from LiteLLM and OpenRouter. Like hora it is a whole document of its own, on its own stylesheet. It serves `/thrifty` here and the whole of [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh).
+
 **blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
 
 ````md
@@ -60,6 +62,7 @@ lego/
 │   ├── auth/            # auth block
 │   ├── blog/            # blog block
 │   ├── hora/            # hora block — also serves sankalpa.sh
+│   ├── thrifty/         # thrifty block — also serves thrifty.sankalpa.sh
 │   └── core/            # config, cache, logging, backups, UI
 ├── data/
 │   ├── db/              # SQLite databases
@@ -173,9 +176,9 @@ uv run lego-push             # push .env values to GitHub Actions
 
 The app runs at [lego.sankalpa.sh](https://lego.sankalpa.sh).
 
-### Two hostnames, one deployment
+### Three hostnames, one deployment
 
-[sankalpa.sh](https://sankalpa.sh) is the same deployment. Not a second server, a second container, a second tunnel or even a second Cloudflare zone — the hora block already answers at `/hora`, so all the apex needs is for Caddy to know about it:
+[sankalpa.sh](https://sankalpa.sh) and [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh) are the same deployment. Not a second server, a second container, a second tunnel or even a second Cloudflare zone — the hora block already answers at `/hora` and thrifty at `/thrifty`, so all the extra hosts need is for Caddy to know about them:
 
 ```
 http://lego.sankalpa.sh {
@@ -185,11 +188,15 @@ http://sankalpa.sh {
 	rewrite / /hora
 	reverse_proxy app:5001
 }
+http://thrifty.sankalpa.sh {
+	rewrite / /thrifty
+	reverse_proxy app:5001
+}
 ```
 
-`cloudflared` runs with `--url http://caddy`, so every hostname routed through the tunnel arrives at that same Caddy, and Caddy tells the two apart by the Host header it was going to read anyway. `deploy2prod` adds the apex as a proxied CNAME to the tunnel it just set up — proxied because an apex cannot hold a CNAME in plain DNS and Cloudflare serves one by flattening it. Any A record or parked CNAME already on the apex is replaced. If that step fails it warns with the record to add by hand, and the lego deploy carries on regardless.
+`cloudflared` runs with `--url http://caddy`, so every hostname routed through the tunnel arrives at that same Caddy, and Caddy tells them apart by the Host header it was going to read anyway. `deploy2prod` adds each extra host as a proxied CNAME to the tunnel it just set up — proxied because an apex cannot hold a CNAME in plain DNS and Cloudflare serves one by flattening it. Any A record or parked CNAME already on the name is replaced. If a host fails it warns with the record to add by hand, carries on to the rest, and the lego deploy is unaffected.
 
-Only the bare `/` is rewritten, so `/static` and every other path still resolve normally on both hostnames. To move hora elsewhere, set `HORA_DOMAIN` — it feeds both the Caddyfile and the block's canonical and `og:` URLs.
+Only the bare `/` is rewritten, so `/static` and every other path still resolve normally on every hostname. `deploy.py`'s `SITES` is the whole list: a hostname to the route it should serve. To move a block elsewhere set `HORA_DOMAIN` or `THRIFTY_DOMAIN` — each feeds both the Caddyfile and its block's canonical and `og:` URLs.
 
 For remote storage, point `get_pth` in `core/cfg.py` at an S3 bucket via fsspec.
 

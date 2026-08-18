@@ -45,6 +45,10 @@ PKGS = {
     # the hora block: date/timezone maths and the ephemeris the planetary hours are built from
     'luxon.min.js':             'https://cdn.jsdelivr.net/npm/luxon@3.5.0/build/global/luxon.min.js',
     'astronomy.browser.min.js': 'https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js',
+    # the thrifty block. Upstream loaded this as `lodash@latest` at runtime and shipped a
+    # hand-written shim for when that failed; a pin here is both, and neither is a request
+    # to a third party on the critical path.
+    'lodash.min.js':            'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js',
 }
 
 # A UA modern enough that Google serves woff2 rather than the ttf fallback, which is

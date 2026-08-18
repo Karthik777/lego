@@ -42,6 +42,7 @@ Connect order matters. Auth reads `RouteOverrides.skip` at connect time to build
 # lego/app.py — correct order
 b.connect(lego)   # blog: appends its public routes to skip list
 h.connect(lego)   # hora: likewise
+t.connect(lego)   # thrifty: likewise
 a.connect(lego)   # auth: always last, reads the complete skip list
 ```
 
@@ -535,6 +536,49 @@ class assembled from fragments at runtime would be purged.
 same container, same tunnel and same Cloudflare zone as `lego.sankalpa.sh`, with Caddy
 rewriting `/` to `/hora` for that Host. `HORA_DOMAIN` moves it. See *Deployment* in
 `README.md`.
+
+## Thrifty block (`lego/thrifty/`)
+
+```python
+import lego.thrifty as t
+t.connect(lego)   # before auth
+```
+
+Total cost of ownership for LLM and agent platforms. Ported from the standalone
+[thrifty](https://github.com/Karthik777/thrifty) app, and the second block after hora that
+**does not use the app-wide head**: the page is laid out on its own stylesheet, on plain
+class names of its own, and Oat's reset and theme tokens would restyle every card and input
+in it. So `ui.page()` renders a whole `<html>` document and the handler returns it as an
+`HTMLResponse`.
+
+| route | purpose |
+|---|---|
+| `GET /thrifty` | the page (one document, no partials) |
+
+**Files.** `data.py` is the platform catalogue and the use-case templates, `thrifty.css` the
+stylesheet and `thrifty.js` the whole calculator. `ui.py` builds the body and the head; the
+document is serialised once through `rendered()`, since nothing in it varies by request.
+
+**Data, not generated code.** Upstream built the JS as one 54KB python f-string with the
+catalogue interpolated into it. Here `data.page_data()` serialises the catalogue to JSON once
+and `ui.py` renders it into a `<script type="application/json" id="thrifty-data">`, which
+`thrifty.js` reads on startup. That leaves the JS a static file served from `static/assets`
+with a content-hashed `?v=` — cacheable, and no doubled braces to edit around. `<` is escaped
+in the JSON so a `</script>` in any description cannot end the tag early.
+
+**Assets.** lodash is the one dependency and is served from `static/vendor` behind the
+immutable mount; upstream fetched `lodash@latest` from a CDN at runtime and carried a
+hand-written fallback shim for when that failed. Both are gone. Model pricing is still
+fetched live in the browser from LiteLLM and OpenRouter — that is the app's whole point.
+
+**Not ported.** `models.py` (the server-side pricing fetch — the client does that itself) and
+`get_recommendations` (the page computes it in the browser from the `scale_fit` and
+`complexity_fit` lists that `page_data` serialises). Both were dead code upstream.
+
+**Second hostname.** `deploy.py` serves this block at the root of `thrifty.sankalpa.sh` —
+same server, same container, same tunnel and same Cloudflare zone as `lego.sankalpa.sh`, with
+Caddy rewriting `/` to `/thrifty` for that Host. `THRIFTY_DOMAIN` moves it. See *Deployment*
+in `README.md`.
 
 ## Adding a new block
 

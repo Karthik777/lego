@@ -25,6 +25,7 @@ def mv_skill_md(dry_run=True, dir=None) -> None:
 ROOT = repo_root()
 LFS_PATTERNS = ['*.mp3', '*.ogg', '*.wav', '*.flac', '*.ico', '*.png', '*.jpg', '*.jpeg', '*.webp', '*.xml']
 ENV_KEYS = dict(MODE='prod', PORT='5001', DOMAIN='lego.sankalpa.sh', HORA_DOMAIN='sankalpa.sh',
+    THRIFTY_DOMAIN='thrifty.sankalpa.sh',
     TOKEN_EXP='691200', PURGE='false',
     JWT_SCRT=None, RESEND_API_KEY=None, WANT_GOOGLE='true', WANT_GIT='false', GOOGLE_CLI=None, GOOGLE_SCRT=None,
     GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='false', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
