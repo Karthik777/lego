@@ -303,9 +303,10 @@ def _rel(p, root):
 
 def _md_chunks(p, root):
     from litesearch.data import chunk_markdown
+    from chonkie import RecursiveChunker
     txt = p.read_text(errors='replace')
     return [dict(content=c, metadata=dict(path=_rel(p, root), lang='.md', type='prose', title=p.stem))
-            for c in chunk_markdown(txt) if c.strip()]
+            for c in chunk_markdown(txt, RecursiveChunker.from_recipe('markdown')) if c.strip()]
 
 def _py_chunks(p, root):
     from litesearch.data import file_parse

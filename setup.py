@@ -17,10 +17,9 @@ def mv_skill_md(dry_run=True, dir=None) -> None:
 	if not (src := base.joinpath('SKILL.md')).exists(): return
 	root = Path(dir or repo_root() or '.')
 	ts = [root/'.agents/skills/lego/SKILL.md', root/'.claude/skills/lego/SKILL.md']
-	if dry_run: print(f'Would copy {src} to: {list(map(str,ts))}')
-	else:
-		for p in ts: p.mk_write(src.read_text(encoding='utf-8'))
-		print(f'Installed -> {list(map(str,ts))}')
+	if dry_run: return print(f'Would copy {src} to: {list(map(str,ts))}')
+	for p in ts: p.mk_write(src.read_text(encoding='utf-8'))
+	print(f'Installed -> {list(map(str,ts))}')
 
 ROOT = repo_root()
 LFS_PATTERNS = ['*.mp3', '*.ogg', '*.wav', '*.flac', '*.ico', '*.png', '*.jpg', '*.jpeg', '*.webp', '*.xml']

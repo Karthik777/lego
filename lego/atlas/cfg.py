@@ -12,17 +12,14 @@ class Routes:
     score = '/atlas/{db}/{store}/score'
     skip  = ['/atlas', r'/atlas/.*']
 
-# ATLAS_DIRS points the explorer at directories of litesearch databases — a kosha index,
-# an eval run, whatever else. Every .db under them is opened read-only and only the tables
-# that are actually litesearch stores are reachable, so a directory that also holds an
-# application database exposes none of it.
+ATLAS_EMBEDDERS = 'code.store=code,lego.code=code,lego.docs=bge,env.store=code'
 cfg = AttrDict(
     public      = str2bool(os.getenv('ATLAS_PUBLIC', '1')),
     dirs        = [p for p in os.getenv('ATLAS_DIRS', '').split(',') if p.strip()],
     seed_dir    = Path('data') / 'db' / 'atlas',
-    embedder    = os.getenv('ATLAS_EMBEDDER', 'retrieval'),
+    embedder    = os.getenv('ATLAS_EMBEDDER', 'bge'),
     # per-store overrides: ATLAS_EMBEDDERS='code.code=code,papers.store=science'
-    embedders   = dict(p.split('=', 1) for p in os.getenv('ATLAS_EMBEDDERS', '').split(',') if '=' in p),
+    embedders   = dict(p.split('=', 1) for p in os.getenv('ATLAS_EMBEDDERS', ATLAS_EMBEDDERS).split(',') if '=' in p),
     seed        = str2bool(os.getenv('ATLAS_SEED', '1')),
     seed_dirs   = [p for p in os.getenv('ATLAS_SEED_DIRS', 'lego,static/blog').split(',') if p.strip()],
 
