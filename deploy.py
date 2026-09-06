@@ -21,7 +21,7 @@ tunnel_nm = f'{sd}_{domain}'
 # `${{ vars.KEY }}` — an unset repository variable arrives as the empty string, not as
 # absent, and getenv's default would not fire. That would put `http:// {` in the Caddyfile
 # and take every site down until someone read the generated config.
-SITES = {os.getenv('HORA_DOMAIN')    or domain:              '/hora',
+SITES = {os.getenv('HORA_DOMAIN')    or os.getenv('MUHURTHA_DOMAIN') or domain: os.getenv('APEX_ROUTE') or '/muhurtha',
          os.getenv('THRIFTY_DOMAIN') or f'thrifty.{domain}': '/thrifty'}
 app_svc, app_port = 'app', 5001
 # caddy_stack writes Dockerfile, docker-compose.yml and Caddyfile relative to the cwd, and
