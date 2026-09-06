@@ -8,7 +8,8 @@ import json
 from datetime import date as Date, datetime, timedelta
 from zoneinfo import ZoneInfo, available_timezones
 from calendar import month_name
-from fasthtml.common import JSONResponse, NotStr, RedirectResponse, to_xml
+from urllib.parse import quote, unquote
+from fasthtml.common import JSONResponse, NotStr, RedirectResponse, cookie, to_xml
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import Response
 from starlette.routing import Route
@@ -30,16 +31,59 @@ def _f(qp, k, d):
     try: return float(qp.get(k, d))
     except (TypeError, ValueError): return float(d)
 
-def place_of(req):
-    'The place a request is about: query string, else the block default.'
-    qp = req.query_params
+PLACE_COOKIE = 'mh_place'
+_COOKIE_AGE = 365*24*3600
+
+def _wrap_lon(x):
+    """Fold a longitude into -180..180, exactly, when it is already there.
+
+    `((x + 180) % 360) - 180` is the usual one-liner and it is not exact: 80.2707 comes back
+    as 80.27070000000003, which is close enough for the ephemeris and not close enough for
+    an equality test. That is how the default place lost its name and the page started
+    calling Chennai 13.08°N 80.27°E."""
+    return x if -180 <= x <= 180 else ((x + 180) % 360) - 180
+
+def _named(lat, lon, tz, nm):
+    'Fill in the configured name when the coordinates are the configured ones.'
+    if not nm and abs(lat - cfg.lat) < 1e-6 and abs(lon - cfg.lon) < 1e-6:
+        nm = cfg.place_name
+    return Place(lat, lon, tz, nm)
+
+def _default_place(): return _named(cfg.lat, cfg.lon, cfg.tz, '')
+
+def _from_qp(qp):
     lat = max(-89.9, min(89.9, _f(qp, 'lat', cfg.lat)))
-    lon = ((_f(qp, 'lon', cfg.lon) + 180) % 360) - 180
+    lon = _wrap_lon(_f(qp, 'lon', cfg.lon))
     tz = qp.get('tz') or cfg.tz
     if tz not in _TZS: tz = cfg.tz
-    nm = (qp.get('place') or '').strip()[:60]
-    if not nm and (lat, lon) == (cfg.lat, cfg.lon): nm = cfg.place_name
-    return Place(lat, lon, tz, nm)
+    return _named(lat, lon, tz, (qp.get('place') or '').strip()[:60])
+
+def _remembered(req):
+    'The place the reader last chose, off the cookie.'
+    raw = req.cookies.get(PLACE_COOKIE)
+    if not raw: return None
+    try:
+        lat, lon, tz, nm = unquote(raw).split('|', 3)
+        if tz not in _TZS: return None
+        return _named(max(-89.9, min(89.9, float(lat))), _wrap_lon(float(lon)), tz, nm[:60])
+    except (ValueError, KeyError): return None
+
+def chose_place(req): return any(k in req.query_params for k in ('lat', 'lon', 'tz', 'place'))
+
+def place_of(req):
+    """The place a request is about.
+
+    Query string first, then the place the reader last chose, then the block default. The
+    middle one is the whole point: the place used to live only in the URL, so the navbar
+    pill -- which cannot carry a query string, it is registered once at connect time -- and
+    any plain reload dropped it back to the default."""
+    return _from_qp(req.query_params) if chose_place(req) else (_remembered(req) or _default_place())
+
+def remember(place, req):
+    'Set-Cookie for a place the reader picked; nothing when they did not pick one.'
+    if not chose_place(req): return None
+    v = quote(f'{place.lat:.4f}|{place.lon:.4f}|{place.tzname}|{place.name}')
+    return cookie(PLACE_COOKIE, v, max_age=_COOKIE_AGE, path='/', samesite='lax')
 
 def layers_of(req, default=DEFAULT_LAYERS):
     raw = req.query_params.get('layers')
@@ -111,25 +155,26 @@ def month_page(req, auth=None):
     if not (1 <= m <= 12) or not (1900 <= y <= 2200): y, m = today.year, today.month
     key = f'{place.lat:.4f},{place.lon:.4f}'
     body, boot = _month_body(key, place.tzname, place.name, y, m, today.isoformat(), ui.UI_VERSION)
-    return ui.page(f'{month_name[m]} {y} · {place.name or ui.coords(place)} · Muhurtha', place, NotStr(body),
-                   auth, active='month', boot=boot)
+    return (*ui.page(f'{month_name[m]} {y} · {place.name or ui.coords(place)} · Muhurtha',
+                     place, NotStr(body), auth, active='month', boot=boot), remember(place, req))
 
 def day_page(req, auth=None):
     place = place_of(req)
     d = date_of(req, place)
     p = day_panchanga(place, d, planets=False, spans=False)
     body = ui.day_view(place, d, datetime.now(place.tz).date())
-    return ui.page(f"{d.isoformat()} · {p['tithi']['name']} · {place.name or ui.coords(place)}",
-                   place, body, auth, active='day', boot=_boot(day_panchanga(place, d)))
+    return (*ui.page(f"{d.isoformat()} · {p['tithi']['name']} · {place.name or ui.coords(place)}",
+                     place, body, auth, active='day', boot=_boot(day_panchanga(place, d))),
+            remember(place, req))
 
 def subscribe_page(req, auth=None):
     place = place_of(req)
     boot = json.dumps(dict(davBase=f'{base_url(req)}{Routes.dav}/',
                            place=[round(place.lat, 4), round(place.lon, 4),
                                   place.tzname, place.name]))
-    return ui.page(f'Subscribe · {place.name or ui.coords(place)} · Muhurtha', place,
-                   ui.subscribe_view(place, base_url(req)),
-                   auth, active='subscribe', boot=boot)
+    return (*ui.page(f'Subscribe · {place.name or ui.coords(place)} · Muhurtha', place,
+                     ui.subscribe_view(place, base_url(req)), auth, active='subscribe', boot=boot),
+            remember(place, req))
 
 def feed_ics(req):
     place, layers = place_of(req), layers_of(req)

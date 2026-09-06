@@ -96,19 +96,22 @@ def controls(place, active='month'):
 
 def page(title, place, body, auth=None, active='month', boot=None):
     'The block rendered into the app shell, navbar and theme and all.'
-    inner = Div(controls(place, active), body, footer(), place_dialog(), cls='mh')
+    inner = Div(controls(place, active), body, footer(place), place_dialog(), cls='mh')
     return (*base(inner, auth, title=title), *mh_head(boot))
 
-def footer():
+def footer(place=None):
+    # The links carry the place. A cookie keeps it for this reader in this browser; a link
+    # somebody copies into a calendar app or sends to a friend carries nothing but itself.
+    q = f'?{place_q(place)}' if place else ''
     return Footer(
         P(f'All positions are sidereal. The ayanamsa is {cfg.ayanamsa}.'),
         P('The sun and moon positions come from VSOP87 and ELP2000-82. They agree with '
           'JPL DE421 to a few arcseconds.'),
         P('This is a dṛk panchangam. It uses observed positions. A vākya almanac uses older '
           'tables. The two can differ by more than one hour. Both methods are correct.'),
-        P(A('Subscribe', href=f'{Routes.subscribe}'), ' · ',
-          A('JSON', href=Routes.api_day), ' · ',
-          A('iCalendar', href=Routes.feed)),
+        P(A('Subscribe', href=f'{Routes.subscribe}{q}'), ' · ',
+          A('JSON', href=f'{Routes.api_day}{q}'), ' · ',
+          A('iCalendar', href=f'{Routes.feed}{q}')),
         cls='foot')
 
 def place_q(place):
