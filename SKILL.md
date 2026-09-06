@@ -46,6 +46,23 @@ t.connect(lego)   # thrifty: likewise
 a.connect(lego)   # auth: always last, reads the complete skip list
 ```
 
+## Bricks
+
+`lego/bricks/` publishes a block's UI components to documents outside the app. A brick declares its
+ports, what it emits, and the code that fills it from the block that owns it.
+
+```python
+from lego.bricks.bricks import brick, Port
+
+brick('viz.tiles', 'Stat tiles', 'viz',
+      ports=[Port('tiles', 'list', '[{label, value, delta}]', sample=[...])],
+      emits=[Port('tile', 'dict', 'The tile clicked')],
+      height=130)
+```
+
+The drawing goes in `lego/bricks/bricks.js` under the same key. A brick declared without a renderer
+fails `tests/test_bricks.py`. `/bricks` is the gallery. `docs/bricks.md` is the rest.
+
 ## Core imports
 
 ```python

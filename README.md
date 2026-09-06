@@ -45,6 +45,10 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **thrifty** prices the total cost of ownership of LLM and agent platforms — models, agents, iterations and volumes in, per-request and monthly cost out, against pricing it fetches live from LiteLLM and OpenRouter. It uses a standalone document and stylesheet. It serves `/thrifty` here and the whole of [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh).
 
+**bricks** publishes the app's UI components to documents outside it. A brick declares the ports it draws from, the values it hands back when somebody clicks it, and the code that fills it from the block that owns it. `/bricks` is the gallery, `/bricks/manifest.json` the declaration, `/bricks/f/<name>` one component as a whole page a document can embed, and `/bricks/data/<name>` its ports filled here for a document whose interpreter does not have lego installed. Ten bricks over muhurtha, thrifty and two of their own. See [docs/bricks.md](docs/bricks.md).
+
+![The brick gallery](docs/screenshots/bricks-gallery.png)
+
 **blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
 
 ````md
@@ -61,6 +65,7 @@ lego/
 │   ├── app.py           # wire up blocks, scheduled jobs
 │   ├── auth/            # auth block
 │   ├── blog/            # blog block
+│   ├── bricks/          # embeddable UI components, their ports and their wiring
 │   ├── hora/            # hora block
 │   ├── muhurtha/        # panchangam calendar + ICS/CalDAV server — also serves sankalpa.sh
 │   ├── thrifty/         # thrifty block — also serves thrifty.sankalpa.sh

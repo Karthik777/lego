@@ -4,7 +4,7 @@ from fasthtml.common import *
 from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware
 from .core import *
-from lego import auth as a, blog as b, dash as d, muhurtha as mu, thrifty as t
+from lego import auth as a, blog as b, bricks as bk, dash as d, muhurtha as mu, thrifty as t
 
 __all__ = ['launch', 'lego']
 
@@ -58,6 +58,7 @@ for _d in ('vendor', 'assets'):
 b.connect(lego)
 mu.connect(lego) # muhurtha — the panchangam calendar, and the ICS/CalDAV server behind it
 t.connect(lego) # thrifty — also the whole of thrifty.sankalpa.sh, rewritten / to /thrifty
+bk.connect(lego) # bricks — the embeddable components, and the manifest a document wires them from
 d.connect(lego) # dashboards — last of the nav blocks, so its pill sits on the right
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 
