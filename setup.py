@@ -5,7 +5,7 @@ from dockeasy import env_set, env_get
 from gheasy import GheasyConfig, gh_lfs, gh_push_env
 from gheasy.workflow import Workflow
 
-__all__ = ['setup', 'push_gh_vars', 'mk_env','env2push']
+__all__ = ['setup', 'push_gh_vars', 'mk_env', 'env2push', 'docker_isolation']
 
 def repo_root() -> Path:
 	'Find the root of the current git repository, or None if not in a repo.'
@@ -24,6 +24,8 @@ def mv_skill_md(dry_run=True, dir=None) -> None:
 
 ROOT = repo_root()
 LFS_PATTERNS = ['*.mp3', '*.ogg', '*.wav', '*.flac', '*.ico', '*.png', '*.jpg', '*.jpeg', '*.webp', '*.xml']
+DOCKERIGNORE = '*\n!pyproject.toml\n!uv.lock\n!main.py\n!lego/\n!lego/**\n!static/\n!static/**\n'
+
 ENV_KEYS = dict(MODE='prod', PORT='5001', DOMAIN='lego.sankalpa.sh', MUHURTHA_DOMAIN='sankalpa.sh',
     THRIFTY_DOMAIN='thrifty.sankalpa.sh',
     TOKEN_EXP='691200', PURGE='false',
@@ -31,6 +33,12 @@ ENV_KEYS = dict(MODE='prod', PORT='5001', DOMAIN='lego.sankalpa.sh', MUHURTHA_DO
     GIT_CLI=None, GIT_SCRT=None, NEED_BACKUP='false', RC_TYPE='s3', RC_PROVIDER='Cloudflare', CF_ACCESS_KEY_ID=None,
     CF_SCRT_ACCESS_KEY=None, CF_ENDPOINT=None, CF_TUNNEL_TOKEN=None, CLOUDFLARE_API_TOKEN=None, HCLOUD_TOKEN=None,
     RSYNC_FORCE='false', SERVER_NAME=None, SERVER_USER=None, SERVER_PASSWORD=None)
+
+def docker_isolation(root=ROOT):
+	p = Path(root) / '.dockerignore'
+	p.write_text(DOCKERIGNORE)
+	print(f'docker: wrote {p}')
+	return p
 
 def _load_env(): return dict(os.environ) | (parse_env(fn=str(envf)) if (envf := ROOT / '.env').exists() else {})
 def env2push(): return ENV_KEYS | filter_keys(_load_env(),in_(ENV_KEYS))
@@ -91,6 +99,7 @@ def setup():
 	gh_lfs(LFS_PATTERNS, path=str(ROOT))
 	print(f'lfs: tracking {len(LFS_PATTERNS)} patterns')
 	mk_env()
+	docker_isolation()
 	gen_deploy_workflow()
 	install_skills()
 	print('Setup complete. Please review the generated .env.example, .github/workflows/deploy.yml, and SKILL.md files.'
@@ -109,6 +118,7 @@ if __name__ == '__main__':
 	if 'push' in sys.argv: push_cli()
 	elif 'mkenv' in sys.argv: mk_env(env2push(), path=ROOT/'.env')
 	elif 'workflow' in sys.argv: gen_deploy_workflow()
+	elif 'docker' in sys.argv: docker_isolation()
 	elif 'skills' in sys.argv: install_skills()
 	elif 'ssh-key' in sys.argv: push_ssh_key()
 	else: setup()
