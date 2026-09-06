@@ -95,6 +95,29 @@ forty steps a screen refresh, with absorbing edges so a wall reflection is not m
 At the default barrier of 1.02 times the packet energy over six cells it transmits about 15%.
 `learn.orbit` is velocity Verlet on two bodies.
 
+## On its way out of lego
+
+`bricks` is going to be its own package, depended on by Leela and by anything else that wants these
+components. The split is already made: `app.py` is the only file that names lego, and everything
+else lifts unchanged.
+
+| file | what it is |
+|---|---|
+| `bricks.py` | the declarations: ports, emits, wiring, height |
+| `bricks.js` | the drawings, keyed by the same names |
+| `frame.js`, `bricks.css` | the frame protocol and the frame's own styles |
+| `data.py` | running a wiring snippet here, and generating the remote form of it |
+| `ui.py` | the gallery, and one brick as a whole document |
+| `serve.py` | every route, taking a `page` for the host's shell |
+| `cfg.py` | the paths |
+| `app.py` | **the seam.** lego's nav, its skip list, and `base` as the shell |
+
+`tests/test_bricks.py` holds both halves of that: no file outside the seam imports lego, and
+`serve.connect` mounts into a fasthtml app that is not this one.
+
+A brick's `wire` names whatever package owns its data, which is a different question. `panchanga.day`
+will still name `lego.muhurtha` after the move, because that is where a panchangam comes from.
+
 ## Who consumes this
 
 Leela's canvas, on `claude/dynamic-document-canvas-ohgfud`. A canvas embeds a brick, picks its

@@ -89,3 +89,26 @@ def test_the_funnel_emits_a_stage_on_a_click_and_stages_on_a_drag():
     assert "emit('stage', stages[drag])" in js
     assert 'if (moved) emit(\'stages\', stages)' in js
     assert 'top = Math.max(1, ...stages.map(x => x.value))' in js
+
+def test_the_package_holds_no_import_of_the_application_it_is_mounted_in():
+    """`bricks` is going to be its own package. Only the seam may name lego, so the rest lifts out
+    unchanged and Leela can depend on it without depending on this app."""
+    import ast
+    seam = {'app.py'}
+    for f in sorted(HERE.glob('*.py')):
+        if f.name in seam: continue
+        for n in ast.walk(ast.parse(f.read_text())):
+            names = ([a.name for a in n.names] if isinstance(n, ast.Import) else
+                     [n.module or ''] if isinstance(n, ast.ImportFrom) else [])
+            assert not any(x.split('.')[0] == 'lego' for x in names), f'{f.name} imports lego'
+
+def test_the_routes_mount_in_an_application_that_is_not_this_one():
+    "What a future `bricks` package has to do: serve itself into any fasthtml app, shell or no shell."
+    from fasthtml.common import fast_app
+    from lego.bricks.serve import connect as serve
+    app, _ = fast_app(default_hdrs=False, pico=False, live=False)
+    serve(app)
+    c = TestClient(app)
+    assert c.get('/bricks').status_code == 200 and '<!doctype html>' in c.get('/bricks').text
+    assert c.get('/bricks/manifest.json').json()['bricks']
+    assert c.get('/bricks/f/viz.tiles').status_code == 200

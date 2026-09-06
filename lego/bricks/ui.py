@@ -6,7 +6,7 @@ from fasthtml.common import *
 from .bricks import BRICKS, GROUPS, find
 from .cfg import Routes
 
-__all__ = ['gallery', 'frame', 'asset']
+__all__ = ['gallery', 'frame', 'asset', 'bare']
 
 HERE = Path(__file__).parent
 
@@ -25,6 +25,12 @@ def frame(name, props=None, frame_id='', theme='light'):
                     data_props=json.dumps(props), data_manifest=json.dumps(b.dict())),
                 Script(src=Routes.js))
     return '<!doctype html>' + to_xml(Html(head, body, data_theme=theme))
+
+def bare(content, title='Bricks'):
+    "The gallery with no host shell around it, for a mount that has none of its own."
+    head = Head(Meta(charset='utf-8'), Meta(name='viewport', content='width=device-width,initial-scale=1'),
+                Title(title), Link(rel='stylesheet', href=Routes.css))
+    return '<!doctype html>' + to_xml(Html(head, Body(content)))
 
 def _card(b):
     ports = ', '.join(p.name for p in b.ports) or '—'
