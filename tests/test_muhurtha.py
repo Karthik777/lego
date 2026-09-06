@@ -304,3 +304,21 @@ def test_caldav_sync_over_http(client):
     assert hrefs
     r = client.get(hrefs[0])
     assert r.status_code == 200 and not _cal(r.text).errors
+
+
+def test_caldav_work_does_not_run_on_the_event_loop():
+    '''A depth-1 PROPFIND is seconds of arithmetic, so it must not sit on the event loop.
+
+    It did once, and one crawler on /.well-known/caldav was enough to starve /health in the
+    same worker and take every route on the box to 502 -- including the ones this block
+    never touched.'''
+    import inspect
+    from lego.muhurtha.app import dav_root
+    src = inspect.getsource(dav_root)
+    assert 'run_in_threadpool' in src, 'dav_handle must be offloaded, not awaited inline'
+
+def test_collection_get_redirects_instead_of_building_a_feed_inline(client):
+    'A browser on the collection is sent to the cached feed route, not served a fresh build.'
+    tok = encode_token(CHENNAI, ['day'])
+    r = client.get(f'/muhurtha/dav/{tok}/c/', follow_redirects=False)
+    assert r.status_code == 302 and '/muhurtha/feed.ics' in r.headers['location']

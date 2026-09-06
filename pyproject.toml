@@ -51,6 +51,7 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "cfeasy>=0.0.3",
+    "icalendar>=6.0",
     "fossick>=0.0.2",
     "gheasy>=0.0.2",
     "koshas>=0.0.16",
