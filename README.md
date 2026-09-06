@@ -41,7 +41,7 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **auth** covers email/password registration with Resend verification, Google OAuth, and GitHub OAuth. One `connect()` call sets up all routes and session middleware. Route paths are overridable via `RouteOverrides`.
 
-**muhurtha** is a panchangam that is also a calendar server. It computes the five limbs — tithi, vara, nakshatra, yoga, karana — the thirty muhurtas, the twenty-four horas and the kalams, and it publishes all of it as an iCalendar feed and a read-only CalDAV collection, so Google Calendar and Apple Calendar can subscribe to the traditional day. It serves `/muhurtha` here and the whole of [sankalpa.sh](https://sankalpa.sh).
+**muhurtha** is a panchangam that is also a calendar server. It computes the five limbs — tithi, vara, nakshatra, yoga, karana — the thirty muhurtas, the twenty-four horas and the kalams, and it publishes all of it as an iCalendar feed and a read-only CalDAV collection, so Google Calendar and Apple Calendar can subscribe to the traditional day. It renders into the app shell rather than a document of its own — same navbar, same theme as the blog and the dashboards — with its stylesheet scoped to `.mh` so nothing leaks. It serves `/muhurtha` here and the whole of [sankalpa.sh](https://sankalpa.sh).
 
 **thrifty** prices the total cost of ownership of LLM and agent platforms — models, agents, iterations and volumes in, per-request and monthly cost out, against pricing it fetches live from LiteLLM and OpenRouter. It uses a standalone document and stylesheet. It serves `/thrifty` here and the whole of [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh).
 

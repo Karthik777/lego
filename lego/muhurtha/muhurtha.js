@@ -103,13 +103,16 @@
         },
         gps() {
             if (!navigator.geolocation) return;
+            const btn = $("mh-gps");
+            if (btn) { btn.disabled = true; btn.textContent = "Locating\u2026"; }
+            const done = () => { if (btn) { btn.disabled = false; btn.textContent = "Use my location"; } };
             navigator.geolocation.getCurrentPosition(
-                (p) =>
-                    api.go(
-                        p.coords.latitude, p.coords.longitude,
-                        Intl.DateTimeFormat().resolvedOptions().timeZone, "My location",
-                    ),
-                () => alert("Could not read your location."),
+                async (p) => {
+                    const { latitude: lat, longitude: lon } = p.coords;
+                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    api.go(lat, lon, tz, await cityAt(lat, lon));
+                },
+                () => { done(); alert("Could not read your location."); },
                 { timeout: 8000 },
             );
         },
@@ -137,6 +140,25 @@
         },
     };
     window.mh = api;
+
+    /* Turn coordinates into a place name.
+
+       GPS used to label itself "My location", which is the one thing the reader already
+       knows and tells them nothing about what the almanac was computed for. A city name is
+       the answer; the coordinates are the honest fallback when the lookup fails, and the
+       page renders those itself when this returns nothing. */
+    async function cityAt(lat, lon) {
+        try {
+            const r = await fetch(
+                "https://api.bigdatacloud.net/data/reverse-geocode-client" +
+                `?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
+            );
+            const d = await r.json();
+            return d.city || d.locality || d.principalSubdivision || "";
+        } catch {
+            return "";
+        }
+    }
 
     // City search, debounced, against open-meteo's public geocoder.
     let timer;

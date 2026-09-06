@@ -98,7 +98,7 @@ def dash_chart(req):
 
 def connect(app):
     if cfg.public: RouteOverrides.skip += Routes.skip
-    RouteOverrides.nav = RouteOverrides.nav + [('Dashboards', Routes.index, 'new', not cfg.public)]
+    RouteOverrides.nav = RouteOverrides.nav + [('Dashboards', Routes.index, None, not cfg.public)]
     app.get(Routes.chart)(dash_chart)   # before /dash/{db}, which would otherwise swallow it
     app.get(Routes.fopts)(dash_fopts)   # likewise
     app.get(Routes.bopts)(dash_bopts)   # likewise

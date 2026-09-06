@@ -7,7 +7,8 @@ so neither do these handlers -- they differ only in what they serialise.'''
 import json
 from datetime import date as Date, datetime, timedelta
 from zoneinfo import ZoneInfo, available_timezones
-from fasthtml.common import HTMLResponse, JSONResponse, RedirectResponse
+from calendar import month_name
+from fasthtml.common import JSONResponse, NotStr, RedirectResponse, to_xml
 from starlette.concurrency import run_in_threadpool
 from starlette.responses import Response
 from starlette.routing import Route
@@ -72,12 +73,14 @@ def _feed(key, tz, nm, layers, back, days):
     return build_feed(Place(lat, lon, tz, nm), layers, back, days)
 
 @cache(ttl=cfg.cache_ttl)
-def _month_html(key, tz, nm, y, m, today, ui_version):
+def _month_body(key, tz, nm, y, m, today, ui_version):
+    """The month grid and its boot payload, memoised.
+
+    Only the block's own markup is cached, not the page around it: the navbar differs
+    between a signed-in and a signed-out reader, and the shell is cheap to rebuild."""
     place = _mk(key, tz, nm)
     d = Date.fromisoformat(today)
-    return ui.document(f'{y}-{m:02d} · Muhurtha · {nm or key}', place,
-                       ui.month_view(place, y, m, d), active='month',
-                       boot=_boot(day_panchanga(place, d)))
+    return to_xml(ui.month_view(place, y, m, d)), _boot(day_panchanga(place, d))
 
 def _mk(key, tz, nm):
     lat, lon = (float(x) for x in key.split(','))
@@ -101,31 +104,32 @@ def _boot(p, **extra):
 def index(req):
     return RedirectResponse(f'{Routes.month}?{req.url.query}' if req.url.query else Routes.month)
 
-def month_page(req):
+def month_page(req, auth=None):
     place = place_of(req)
     today = datetime.now(place.tz).date()
     y, m = _int(req, 'y', today.year), _int(req, 'm', today.month)
     if not (1 <= m <= 12) or not (1900 <= y <= 2200): y, m = today.year, today.month
     key = f'{place.lat:.4f},{place.lon:.4f}'
-    return HTMLResponse(_month_html(key, place.tzname, place.name, y, m, today.isoformat(), ui.UI_VERSION))
+    body, boot = _month_body(key, place.tzname, place.name, y, m, today.isoformat(), ui.UI_VERSION)
+    return ui.page(f'{month_name[m]} {y} · {place.name or ui.coords(place)} · Muhurtha', place, NotStr(body),
+                   auth, active='month', boot=boot)
 
-def day_page(req):
+def day_page(req, auth=None):
     place = place_of(req)
     d = date_of(req, place)
     p = day_panchanga(place, d, planets=False, spans=False)
     body = ui.day_view(place, d, datetime.now(place.tz).date())
-    return HTMLResponse(ui.document(
-        f"{d.isoformat()} · {p['tithi']['name']} · {p['nakshatra']['name']}",
-        place, body, active='day', boot=_boot(day_panchanga(place, d))))
+    return ui.page(f"{d.isoformat()} · {p['tithi']['name']} · {place.name or ui.coords(place)}",
+                   place, body, auth, active='day', boot=_boot(day_panchanga(place, d)))
 
-def subscribe_page(req):
+def subscribe_page(req, auth=None):
     place = place_of(req)
     boot = json.dumps(dict(davBase=f'{base_url(req)}{Routes.dav}/',
                            place=[round(place.lat, 4), round(place.lon, 4),
                                   place.tzname, place.name]))
-    return HTMLResponse(ui.document('Subscribe · Muhurtha', place,
-                                    ui.subscribe_view(place, base_url(req)),
-                                    active='subscribe', boot=boot))
+    return ui.page(f'Subscribe · {place.name or ui.coords(place)} · Muhurtha', place,
+                   ui.subscribe_view(place, base_url(req)),
+                   auth, active='subscribe', boot=boot)
 
 def feed_ics(req):
     place, layers = place_of(req), layers_of(req)
@@ -189,7 +193,8 @@ _DAV_METHODS = ['GET', 'HEAD', 'OPTIONS', 'PROPFIND', 'REPORT', 'PUT', 'DELETE',
 
 def connect(app):
     RouteOverrides.skip += Routes.skip
-    RouteOverrides.nav = RouteOverrides.nav + [('Muhurtha', Routes.index, None, False)]
+    # Prepended, not appended: this one sits leftmost whatever order the blocks connect in.
+    RouteOverrides.nav = [('Muhurtha', Routes.index, 'new', False)] + RouteOverrides.nav
     app.get(Routes.index)(index)
     app.get(Routes.month)(month_page)
     app.get(Routes.day)(day_page)
