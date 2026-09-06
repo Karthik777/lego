@@ -268,6 +268,13 @@ def client():
     import lego.app as A
     return TestClient(A.lego)
 
+@pytest.fixture
+def fresh():
+    'A client with no cookies. `client` is module-scoped and now remembers a chosen place.'
+    from starlette.testclient import TestClient
+    import lego.app as A
+    return TestClient(A.lego)
+
 Q = 'lat=13.0827&lon=80.2707&tz=Asia/Kolkata&place=Chennai'
 
 @pytest.mark.parametrize('path', [
@@ -384,3 +391,45 @@ def test_unnamed_place_falls_back_to_coordinates():
     from lego.muhurtha.ui import coords
     assert coords(Place(13.0827, 80.2707, 'Asia/Kolkata')) == '13.08°N 80.27°E'
     assert coords(Place(-33.8688, -70.6693, 'UTC')) == '33.87°S 70.67°W'
+
+
+# === the place has to survive a reload ===
+
+def test_default_place_keeps_its_name_on_a_bare_url(fresh):
+    '''The configured place is Chennai, not 13.08°N 80.27°E.
+
+    Normalising the longitude through `((x + 180) % 360) - 180` returned 80.27070000000003,
+    so the equality test against the configured default failed and the name was dropped.'''
+    assert 'Chennai' in fresh.get('/muhurtha/month').text
+
+def test_longitude_wrap_is_exact_inside_the_normal_range():
+    from lego.muhurtha.app import _wrap_lon
+    for x in (0.0, 80.2707, -0.1276, 151.2093, 180.0, -180.0):
+        assert _wrap_lon(x) == x
+    assert _wrap_lon(200.0) == -160.0
+    assert _wrap_lon(-200.0) == 160.0
+
+def test_a_chosen_place_survives_a_reload_and_the_navbar_pill(fresh):
+    'It used to live only in the URL, so anything without a query string lost it.'
+    c = fresh
+    r = c.get('/muhurtha/month?lat=-37.8136&lon=144.9631&tz=Australia/Melbourne&place=Melbourne')
+    assert 'mh_place' in r.headers.get('set-cookie', '')
+    for path in ('/muhurtha/month', '/muhurtha/day', '/muhurtha/subscribe'):
+        assert 'Melbourne' in c.get(path).text, path
+    assert 'Melbourne' in c.get('/muhurtha', follow_redirects=True).text
+
+def test_a_reader_who_never_chose_gets_the_default(fresh):
+    assert 'Chennai' in fresh.get('/muhurtha/month').text
+
+def test_a_bad_cookie_falls_back_instead_of_erroring(fresh):
+    c = fresh
+    for bad in ('garbage', 'a|b|c|d', '1|2|Mars/Olympus|x', ''):
+        c.cookies.set('mh_place', bad)
+        assert c.get('/muhurtha/month').status_code == 200
+
+def test_links_meant_for_other_people_carry_the_place(client):
+    'A cookie is for this browser. A copied link has to stand on its own.'
+    q = 'lat=-37.8136&lon=144.9631&tz=Australia/Melbourne&place=Melbourne'
+    t = client.get(f'/muhurtha/subscribe?{q}').text
+    assert 'lat=-37.8136' in t and 'place=Melbourne' in t
+    assert t.count('feed.ics?lat=-37.8136') >= 1
