@@ -30,7 +30,7 @@ def fill(name):
 def remote_wire(name, base):
     "The same wiring, for a document whose interpreter does not have this package installed."
     b = find(name)
-    if b is None or not b.wire: return ''
+    if b is None or not b.wire or not b.ports: return ''
     ports = ', '.join(p.name for p in b.ports)
     return (f"import json, urllib.request\n"
             f"_ports = json.load(urllib.request.urlopen('{base}/bricks/data/{name}'))\n"

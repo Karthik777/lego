@@ -146,7 +146,8 @@ B['viz.series'] = (root, p, emit) => {
 
 B['viz.funnel'] = (root, p, emit) => {
   let stages = (p.stages || []).map(s => ({...s, value: num(s.value)}));
-  const W = 560, H = 250, top = Math.max(1, ...stages.map(s => s.value));
+  const W = 560, H = 250;
+  let top = Math.max(1, ...stages.map(s => s.value));
   root.innerHTML = '<div class="bk-head"><b>Funnel</b><span>drag a bar: the document recomputes</span></div>';
   const s = sv('svg', {viewBox: `0 0 ${W} ${H}`, class: 'bk-svg bk-funnel'});
   const bw = (W - 40) / Math.max(1, stages.length);
@@ -157,6 +158,7 @@ B['viz.funnel'] = (root, p, emit) => {
     return Math.max(0, Math.round((H - 34 - (clientY - box.top) / box.height * H) / (H - 70) * top));
   };
   const paint = () => {
+    top = Math.max(1, ...stages.map(x => x.value));         // a bar dragged past the old ceiling stays in the box
     s.innerHTML = '';
     stages.forEach((st, i) => {
       const h = st.value / top * (H - 70), y = H - 34 - h;
@@ -171,16 +173,22 @@ B['viz.funnel'] = (root, p, emit) => {
       }
     });
   };
+  let moved = false;
   s.addEventListener('pointerdown', ev => {
     const i = ev.target.dataset?.i; if (i == null) return;
-    drag = +i; root.dataset.busy = '1'; s.setPointerCapture(ev.pointerId);
-    stages[drag].value = valueAt(ev.clientY); paint(); emit('stages', stages);
+    drag = +i; moved = false; root.dataset.busy = '1'; s.setPointerCapture(ev.pointerId);
+    emit('stage', stages[drag]);
   });
   s.addEventListener('pointermove', ev => {
     if (drag < 0) return;
+    moved = true;
     stages[drag].value = valueAt(ev.clientY); paint(); emit('stages', stages);
   });
-  const stop = () => { if (drag < 0) return; drag = -1; delete root.dataset.busy; paint(); emit('stages', stages); };
+  const stop = () => {
+    if (drag < 0) return;
+    drag = -1; delete root.dataset.busy; paint();
+    if (moved) emit('stages', stages);                     // a click picks a stage; only a drag rewrites them
+  };
   s.addEventListener('pointerup', stop);
   s.addEventListener('pointercancel', stop);
   paint();

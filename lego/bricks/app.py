@@ -37,6 +37,9 @@ def connect(app):
         "This brick's ports, filled by the package that owns them."
         r = fill(name)
         if r is None: return JSONResponse({'error': f'no brick named {name}'}, status_code=404)
+        # A document that got samples where it asked for data would draw invented numbers and say
+        # nothing. The failure travels as a failure.
+        if '_error' in r: return JSONResponse(r, status_code=502)
         return JSONResponse(r)
 
     @app.get(Routes.js)

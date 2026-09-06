@@ -67,3 +67,25 @@ def test_the_client_bundle_serves_from_a_path_with_no_extension(client):
     js = client.get('/bricks/js')
     assert js.status_code == 200 and 'LEGO_BRICKS' in js.text and 'brick:ready' in js.text
     assert client.get('/bricks/css').status_code == 200
+
+def test_a_wiring_snippet_that_fails_is_reported_as_a_failure(client):
+    "Samples where the data was asked for would draw invented numbers and say nothing."
+    from lego.bricks.bricks import BRICKS
+    was = BRICKS['thrifty.costs'].wire
+    BRICKS['thrifty.costs'].wire = 'from lego.nope import gone'
+    try:
+        r = client.get('/bricks/data/thrifty.costs')
+        assert r.status_code == 502 and 'ModuleNotFoundError' in r.json()['_error']
+    finally: BRICKS['thrifty.costs'].wire = was
+
+def test_the_remote_wiring_is_empty_for_a_brick_with_no_ports():
+    from lego.bricks.bricks import Brick, BRICKS
+    BRICKS['test.none'] = Brick(name='test.none', title='t', group='viz', wire='x = 1')
+    try: assert remote_wire('test.none', 'http://host') == ''
+    finally: BRICKS.pop('test.none')
+
+def test_the_funnel_emits_a_stage_on_a_click_and_stages_on_a_drag():
+    js = (HERE/'bricks.js').read_text()
+    assert "emit('stage', stages[drag])" in js
+    assert 'if (moved) emit(\'stages\', stages)' in js
+    assert 'top = Math.max(1, ...stages.map(x => x.value))' in js
