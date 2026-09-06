@@ -21,7 +21,12 @@ tunnel_nm = f'{sd}_{domain}'
 # `${{ vars.KEY }}` — an unset repository variable arrives as the empty string, not as
 # absent, and getenv's default would not fire. That would put `http:// {` in the Caddyfile
 # and take both sites down until someone read the generated config.
-hora_domain, hora_route = os.getenv('HORA_DOMAIN') or domain, '/hora'
+# The apex now lands on the panchangam rather than on hora alone. Hora was always one limb
+# of a larger clock and the muhurtha block carries it -- planetary hours, sub-horas and all
+# -- next to the tithi and the muhurta they share a day with. /hora still answers for anyone
+# who bookmarked it; set APEX_ROUTE=/hora to put the apex back the way it was.
+hora_domain = os.getenv('HORA_DOMAIN') or os.getenv('MUHURTHA_DOMAIN') or domain
+hora_route = os.getenv('APEX_ROUTE') or '/muhurtha'
 app_svc, app_port = 'app', 5001
 # caddy_stack writes Dockerfile, docker-compose.yml and Caddyfile relative to the cwd, and
 # the compose mounts ./Caddyfile — so this has to stay a relative path or the mount would
@@ -45,8 +50,10 @@ def mk_caddyfile(path=CADDYFILE):
     reaches the same container through the same tunnel, and Caddy tells the two apart by the
     Host header it was going to read anyway.
 
-    The rewrite matches the bare root only, which is all hora needs — it is one page, and
-    /static and every other path still resolve untouched on both domains.'''
+    The rewrite matches the bare root only, which is all the apex needs — /muhurtha/day,
+    /muhurtha/feed.ics, /static and every other path still resolve untouched on both
+    domains, which matters more now than it did: a calendar client subscribes to a deep
+    path and would break if the rewrite were greedy.'''
     Path(path).write_text(caddy_site(joins('.', [sd, domain])) + caddy_site(hora_domain, f'rewrite / {hora_route}'))
     print(f'caddy: {joins(".", [sd, domain])} + {hora_domain} -> {app_svc}:{app_port}')
 
