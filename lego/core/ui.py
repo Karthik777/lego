@@ -341,7 +341,7 @@ def asset_css(path, **kw):
 def vendor_js(nm, **kw): return Script(src=vlink(f'/static/vendor/{nm}'), **kw)
 
 @timed_cache(seconds=3600)
-def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
+def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default, reveal=True):
     radii, shadows = getattr(radii, 'value', radii), getattr(shadows, 'value', shadows)
     d = AttrDict(mode='auto', theme='theme-%s' % color, radii=radii, shadows=shadows, font=font)
     j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')
@@ -350,4 +350,4 @@ def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=The
            Script(src=vlink('/static/vendor/oat.min.js'), type='module')]
     thm = [Link(rel='stylesheet', href=vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
            Script(src=vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
-    return oat + thm + [_nosleep(), Surreal("me('body').remove_class('hidden');")]
+    return oat + thm + [_nosleep()] + ([Surreal("me('body').remove_class('hidden');")] if reveal else [])

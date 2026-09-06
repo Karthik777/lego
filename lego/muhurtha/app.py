@@ -72,7 +72,7 @@ def _feed(key, tz, nm, layers, back, days):
     return build_feed(Place(lat, lon, tz, nm), layers, back, days)
 
 @cache(ttl=cfg.cache_ttl)
-def _month_html(key, tz, nm, y, m, today):
+def _month_html(key, tz, nm, y, m, today, ui_version):
     place = _mk(key, tz, nm)
     d = Date.fromisoformat(today)
     return ui.document(f'{y}-{m:02d} · Muhurtha · {nm or key}', place,
@@ -107,7 +107,7 @@ def month_page(req):
     y, m = _int(req, 'y', today.year), _int(req, 'm', today.month)
     if not (1 <= m <= 12) or not (1900 <= y <= 2200): y, m = today.year, today.month
     key = f'{place.lat:.4f},{place.lon:.4f}'
-    return HTMLResponse(_month_html(key, place.tzname, place.name, y, m, today.isoformat()))
+    return HTMLResponse(_month_html(key, place.tzname, place.name, y, m, today.isoformat(), ui.UI_VERSION))
 
 def day_page(req):
     place = place_of(req)

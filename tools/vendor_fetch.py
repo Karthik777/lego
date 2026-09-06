@@ -57,10 +57,9 @@ UA = ('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) '
       'Chrome/126.0.0.0 Safari/537.36')
 FAMILIES = ['Libre+Baskerville', 'Fira+Code', 'Playfair+Display']
 WEIGHTS = '300;400;500;600;700'
-# The hora block is a standalone document — it does not carry the core head — and Inter is
-# the only face it wants, so it gets its own sheet rather than the 20KB one every other
-# page links.
-HORA_FAMILIES = ['Inter']
+# Muhurtha uses Inter for its dense calendar labels. Keep it in a separate sheet from the
+# display fonts used by the shared theme.
+MUHURTHA_FAMILIES = ['Inter']
 
 def get(url, ua=False):
     req = Request(url, headers={'User-Agent': UA} if ua else {})
@@ -95,5 +94,5 @@ def fetch_fonts(families=None, out='fonts.css'):
 if __name__ == '__main__':
     print('packages:'); fetch_pkgs()
     print('fonts:');    fetch_fonts()
-    fetch_fonts(HORA_FAMILIES, out='inter.css')
+    fetch_fonts(MUHURTHA_FAMILIES, out='inter.css')
     print('\nvendored into', VENDOR.resolve())

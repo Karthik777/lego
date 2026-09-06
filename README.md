@@ -43,9 +43,7 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **muhurtha** is a panchangam that is also a calendar server. It computes the five limbs — tithi, vara, nakshatra, yoga, karana — the thirty muhurtas, the twenty-four horas and the kalams, and it publishes all of it as an iCalendar feed and a read-only CalDAV collection, so Google Calendar and Apple Calendar can subscribe to the traditional day. It serves `/muhurtha` here and the whole of [sankalpa.sh](https://sankalpa.sh).
 
-**hora** is Vedic planetary hours, computed in the browser from the local sunrise and sunset. It is the block that shows what "self-contained" can stretch to: it brings its own head, its own Tailwind stylesheet and its own document, so none of the app-wide chrome reaches it. It still answers at `/hora`; the muhurtha block carries the same computation next to the rest of the almanac.
-
-**thrifty** prices the total cost of ownership of LLM and agent platforms — models, agents, iterations and volumes in, per-request and monthly cost out, against pricing it fetches live from LiteLLM and OpenRouter. Like hora it is a whole document of its own, on its own stylesheet. It serves `/thrifty` here and the whole of [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh).
+**thrifty** prices the total cost of ownership of LLM and agent platforms — models, agents, iterations and volumes in, per-request and monthly cost out, against pricing it fetches live from LiteLLM and OpenRouter. It uses a standalone document and stylesheet. It serves `/thrifty` here and the whole of [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh).
 
 **blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
 
@@ -253,7 +251,7 @@ The app runs at [lego.sankalpa.sh](https://lego.sankalpa.sh).
 
 ### Three hostnames, one deployment
 
-[sankalpa.sh](https://sankalpa.sh) and [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh) are the same deployment. Not a second server, a second container, a second tunnel or even a second Cloudflare zone — the hora block already answers at `/hora` and thrifty at `/thrifty`, so all the extra hosts need is for Caddy to know about them:
+[sankalpa.sh](https://sankalpa.sh) and [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh) are the same deployment. They do not use a second server, container, tunnel or Cloudflare zone. Muhurtha answers at `/muhurtha` and Thrifty at `/thrifty`, so Caddy maps each hostname to its route:
 
 ```
 http://lego.sankalpa.sh {
@@ -271,7 +269,7 @@ http://thrifty.sankalpa.sh {
 
 `cloudflared` runs with `--url http://caddy`, so every hostname routed through the tunnel arrives at that same Caddy, and Caddy tells them apart by the Host header it was going to read anyway. `deploy2prod` adds each extra host as a proxied CNAME to the tunnel it just set up — proxied because an apex cannot hold a CNAME in plain DNS and Cloudflare serves one by flattening it. Any A record or parked CNAME already on the name is replaced. If a host fails it warns with the record to add by hand, carries on to the rest, and the lego deploy is unaffected.
 
-Only the bare `/` is rewritten, so `/static` and every other path still resolve normally on every hostname. `deploy.py`'s `SITES` is the whole list: a hostname to the route it should serve. To move a block elsewhere set `HORA_DOMAIN` or `THRIFTY_DOMAIN` — each feeds both the Caddyfile and its block's canonical and `og:` URLs.
+Only the bare `/` is rewritten, so `/static` and every other path still resolve normally on every hostname. `deploy.py`'s `SITES` maps each hostname to its route. Set `MUHURTHA_DOMAIN` or `THRIFTY_DOMAIN` to move a block. Each value controls the Caddyfile and the block's canonical and `og:` URLs.
 
 For remote storage, point `get_pth` in `core/cfg.py` at an S3 bucket via fsspec.
 

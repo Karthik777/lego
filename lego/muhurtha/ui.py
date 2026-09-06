@@ -2,24 +2,26 @@
 everything the almanac would.
 
 Rendered on the server, because the panchanga is computed on the server -- the browser gets
-finished markup and one small script whose only job is to know what time it is. The block
-ships its own document, like hora does, so the app-wide theme never reaches it.'''
+finished markup and one small script whose only job is to know what time it is. The document
+uses the app-wide appearance state while retaining its almanac layout.'''
 
 from datetime import date as Date, datetime, timedelta
 from calendar import monthrange, month_name
+from hashlib import md5
 from fasthtml.common import (Html, Head, Body, Meta, Title, Link, Script, Style, Div, Span, P, A,
                              H1, H2, H3, Button, Input, Label, Table, Thead, Tbody, Tr, Th, Td,
                              Ol, Li, Ul, Small, B, I, NotStr, Dialog, Form, Header, Footer,
-                             Section, Nav, Socials, to_xml)
+                             Section, Nav, Details, Summary, Socials, to_xml)
 from fastcore.all import Path
-from lego.core import asset_css, asset_js, vlink
+from lego.core import asset_css, asset_js, vlink, themes, THEMES
 from .cfg import cfg, Routes, LAYERS, DEFAULT_LAYERS
 from .panchanga import Place, day_panchanga, month_panchanga
 from .names import PLANET_GLYPH, RASI_GLYPH, RASI
 
-__all__ = ['document', 'month_view', 'day_view', 'subscribe_view', 'now_band']
+__all__ = ['document', 'month_view', 'day_view', 'subscribe_view', 'now_band', 'UI_VERSION']
 
 here = Path(__file__).parent
+UI_VERSION = md5(b''.join((here / name).read_bytes() for name in ('ui.py', 'muhurtha.css', 'muhurtha.js'))).hexdigest()[:8]
 
 # Diacritics belong on the page, not in the data: a calendar app may render an .ics in any
 # font it likes, but this document picks its own.
@@ -55,7 +57,15 @@ def head(title, desc=None, canonical=None):
         *Socials(title=title, description=desc or cfg.tagline, site_name=cfg.domain,
                  image='/static/favicon.svg', url=url),
         Link(rel='stylesheet', href=vlink('/static/vendor/inter.css')),
-        asset_css(here / 'muhurtha.css'))
+        *themes(reveal=False), asset_css(here / 'muhurtha.css'))
+
+def appearance():
+    modes = Div(*[Button(label, type='button', cls='choice', onclick=f"setMode('{mode}')")
+                  for mode, label in [('auto', 'Auto'), ('light', 'Light'), ('dark', 'Dark')]], cls='choices')
+    colors = Div(*[Button(type='button', cls='swatch', style=f'background:{color}',
+                          title=theme.removeprefix('theme-'), aria_label=theme.removeprefix('theme-'),
+                          onclick=f"setTheme('{theme}')") for theme, color in THEMES], cls='swatches')
+    return Details(Summary('Theme', cls='btn'), Div(modes, colors, cls='appearance-menu'), cls='appearance')
 
 def masthead(place, active='month', when=None):
     q = f'?{place_q(place)}'
@@ -65,7 +75,7 @@ def masthead(place, active='month', when=None):
             cls='min-w-0'),
         Nav(A(Button('Month', cls=f"btn{' on' if active=='month' else ''}"), href=f'{Routes.month}{q}'),
             A(Button('Today', cls=f"btn{' on' if active=='day' else ''}"), href=f'{Routes.day}{q}'),
-            Button('Place', cls='btn', onclick='mh.openPlace()'),
+            Button('Place', cls='btn', onclick='mh.openPlace()'), appearance(),
             A(Button('Subscribe', cls='btn accent'), href=f'{Routes.subscribe}{q}')),
         cls='mast')
 
@@ -89,8 +99,7 @@ def place_q(place):
 
 def document(title, place, body, active='month', boot=None):
     b = Body(Div(masthead(place, active), body, footer(), cls='wrap'),
-             place_dialog(),
-             Script(NotStr(f'window.MH={boot or "{}"};')),
+             place_dialog(), Script(NotStr(f'window.MH={boot or "{}"};')),
              asset_js(here / 'muhurtha.js'))
     return to_xml(Html(head(title), b, lang='en'))
 

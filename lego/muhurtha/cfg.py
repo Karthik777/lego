@@ -31,7 +31,7 @@ DEFAULT_LAYERS = ('day', 'kalam', 'window')
 DENSE_LAYERS = ('hora', 'muhurta', 'panchanga')
 
 cfg = AttrDict(
-    domain      = os.getenv('MUHURTHA_DOMAIN') or os.getenv('HORA_DOMAIN') or 'sankalpa.sh',
+    domain      = os.getenv('MUHURTHA_DOMAIN') or 'sankalpa.sh',
     title       = os.getenv('MUHURTHA_TITLE') or 'Muhurtha',
     tagline     = 'A calendar that keeps the traditional day: panchangam, muhurta and hora, subscribable from any calendar app.',
     theme_color = '#8C2F1E',

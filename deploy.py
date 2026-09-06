@@ -14,14 +14,14 @@ exc = ['data/','backups/', 'mrsladjoe/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
 tunnel_nm = f'{sd}_{domain}'
 # The extra hostnames: one block each, served at the root of its own host. Same server, same
-# container, same tunnel and the same zone as lego.sankalpa.sh — hora answers at /hora and
-# thrifty at /thrifty, and on their own hosts that is what the root should serve.
+# container, same tunnel and the same zone as lego.sankalpa.sh — muhurtha answers at
+# /muhurtha and thrifty at /thrifty, and on their own hosts that is what the root should serve.
 #
 # `or` rather than a getenv default, because the workflow passes every key through as
 # `${{ vars.KEY }}` — an unset repository variable arrives as the empty string, not as
 # absent, and getenv's default would not fire. That would put `http:// {` in the Caddyfile
 # and take every site down until someone read the generated config.
-SITES = {os.getenv('HORA_DOMAIN')    or os.getenv('MUHURTHA_DOMAIN') or domain: os.getenv('APEX_ROUTE') or '/muhurtha',
+SITES = {os.getenv('MUHURTHA_DOMAIN') or domain: os.getenv('APEX_ROUTE') or '/muhurtha',
          os.getenv('THRIFTY_DOMAIN') or f'thrifty.{domain}': '/thrifty'}
 app_svc, app_port = 'app', 5001
 # caddy_stack writes Dockerfile, docker-compose.yml and Caddyfile relative to the cwd, and
