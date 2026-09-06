@@ -23,11 +23,12 @@
     --mh-r: var(--radius-small);
 }
 
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-    margin: 0;
-    background: var(--mh-paper);
+/* Everything is scoped to .mh. The block sits inside the app shell now, so a bare `body`
+   or `a` rule here would restyle the blog and the dashboards too. */
+.mh {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 20px 96px;
     color: var(--mh-ink);
     font-family: var(--mh-sans);
     font-size: 15px;
@@ -35,73 +36,56 @@ body {
     -webkit-font-smoothing: antialiased;
     font-variant-numeric: tabular-nums;
 }
-a { color: inherit; text-decoration: none; }
-h1, h2, h3 { margin: 0; font-weight: 400; }
-button, input, select { font: inherit; color: inherit; }
-
-.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px 96px; }
-@media (max-width: 640px) { .wrap { padding: 0 14px 96px; } }
+.mh *, .mh *::before, .mh *::after { box-sizing: border-box; }
+.mh a { color: inherit; text-decoration: none; }
+.mh h1, .mh h2, .mh h3 { margin: 0; font-weight: 400; }
+.mh button, .mh input, .mh select { font: inherit; color: inherit; }
+@media (max-width: 640px) { .mh { padding: 0 14px 96px; } }
 
 /* --- labels: the quiet voice everything non-numeric speaks in --- */
-.lbl {
+.mh .lbl {
     font-size: 10px;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--mh-muted);
     font-weight: 500;
 }
-.serif { font-family: var(--mh-serif); }
-.num { font-variant-numeric: tabular-nums; }
-.dim { color: var(--mh-muted); }
-.ink2 { color: var(--mh-ink-2); }
-.acc { color: var(--mh-accent); }
+.mh .serif { font-family: var(--mh-serif); }
+.mh .num { font-variant-numeric: tabular-nums; }
+.mh .dim { color: var(--mh-muted); }
+.mh .ink2 { color: var(--mh-ink-2); }
+.mh .acc { color: var(--mh-accent); }
 
-/* --- masthead --- */
-.mast {
+/* --- the page's own control bar --- */
+/* Not a masthead any more. The site title, the nav and the theme picker all live in the
+   app navbar above this; what is left is the three questions this page answers -- which
+   month, which day, which place. */
+.mh .mast {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 16px;
-    padding: 26px 0 14px;
-    border-bottom: 1px solid var(--mh-ink);
+    padding: 4px 0 12px;
+    border-bottom: 1px solid var(--mh-rule);
     flex-wrap: wrap;
 }
-.mast h1 {
+.mh .mast .where {
     font-family: var(--mh-serif);
-    font-size: 30px;
-    letter-spacing: -0.01em;
-    line-height: 1;
+    font-size: 19px;
+    line-height: 1.2;
+    margin-top: 3px;
 }
-.mast .sub { margin-top: 5px; }
-.mast nav { display: flex; gap: 6px; align-items: center; }
-.appearance { position: relative; }
-.appearance > summary { list-style: none; }
-.appearance > summary::-webkit-details-marker { display: none; }
-.appearance-menu {
-    position: absolute;
-    z-index: 20;
-    top: calc(100% + 7px);
-    right: 0;
-    width: 210px;
-    padding: 12px;
-    border: 1px solid var(--mh-rule);
-    border-radius: var(--mh-r);
-    background: var(--mh-paper);
-    box-shadow: var(--shadow-medium);
-}
-.choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 10px; }
-.choice {
-    border: 1px solid var(--mh-rule);
-    border-radius: var(--mh-r);
-    background: var(--mh-paper-2);
-    padding: 5px;
-    font-size: 11px;
-    cursor: pointer;
-}
-.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
-.swatch { width: 26px; height: 26px; border: 1px solid var(--mh-rule); border-radius: 50%; cursor: pointer; }
+.mh .mast nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
-.btn {
+/* Body copy that is not a heading and not a datum: instructions, notes, caveats. */
+.mh .note {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--mh-ink-2);
+    margin: 10px 0 0;
+}
+
+.mh .btn {
     border: 1px solid var(--mh-rule);
     background: transparent;
     border-radius: var(--mh-r);
@@ -111,23 +95,30 @@ button, input, select { font: inherit; color: inherit; }
     white-space: nowrap;
     transition: border-color .15s, background .15s;
 }
-.btn:hover { border-color: var(--mh-ink-2); background: var(--mh-paper-2); }
-.btn.on { border-color: var(--mh-ink); background: var(--mh-ink); color: var(--mh-paper); }
-.btn.accent { border-color: var(--mh-accent); color: var(--mh-accent); }
-.btn.accent:hover { background: var(--mh-accent); color: var(--mh-paper); }
-.btn.ghost { border-color: transparent; padding: 6px 8px; }
+.mh .btn:hover { border-color: var(--mh-ink-2); background: var(--mh-paper-2); }
+.mh .btn.on { border-color: var(--mh-ink); background: var(--mh-ink); color: var(--mh-paper); }
+.mh .btn.accent { border-color: var(--mh-accent); color: var(--mh-accent); }
+.mh .btn.accent:hover { background: var(--mh-accent); color: var(--mh-paper); }
+/* .accent sets a colour after .on sets a background, so the active Subscribe button came
+   out dark red on dark. Both classes at once needs its own rule. */
+.mh .btn.accent.on {
+    border-color: var(--mh-accent);
+    background: var(--mh-accent);
+    color: var(--mh-paper);
+}
+.mh .btn.ghost { border-color: transparent; padding: 6px 8px; }
 
 /* --- the now band: hora, muhurta and the two limbs that are running --- */
-.now {
+.mh .now {
     display: grid;
     grid-template-columns: minmax(200px, 1.05fr) repeat(3, minmax(0, 1fr));
     gap: 0;
     border-bottom: 1px solid var(--mh-rule);
     background: var(--mh-paper-2);
 }
-.now > div { padding: 15px 18px; border-left: 1px solid var(--mh-rule-2); min-width: 0; }
-.now > div:first-child { border-left: 0; background: var(--mh-accent-soft); }
-.now .big {
+.mh .now > div { padding: 15px 18px; border-left: 1px solid var(--mh-rule-2); min-width: 0; }
+.mh .now > div:first-child { border-left: 0; background: var(--mh-accent-soft); }
+.mh .now .big {
     font-family: var(--mh-serif);
     font-size: 25px;
     line-height: 1.15;
@@ -136,30 +127,30 @@ button, input, select { font: inherit; color: inherit; }
     align-items: baseline;
     gap: 9px;
 }
-.now .big .glyph { font-size: 21px; color: var(--mh-accent); }
-.now .mid { font-family: var(--mh-serif); font-size: 18px; margin-top: 5px; line-height: 1.2; }
-.now .meta { font-size: 12px; color: var(--mh-muted); margin-top: 4px; }
-.now .bar {
+.mh .now .big .glyph { font-size: 21px; color: var(--mh-accent); }
+.mh .now .mid { font-family: var(--mh-serif); font-size: 18px; margin-top: 5px; line-height: 1.2; }
+.mh .now .meta { font-size: 12px; color: var(--mh-muted); margin-top: 4px; }
+.mh .now .bar {
     height: 2px;
     background: var(--mh-rule);
     margin-top: 9px;
     overflow: hidden;
     border-radius: 2px;
 }
-.now .bar i { display: block; height: 100%; background: var(--mh-accent); }
+.mh .now .bar i { display: block; height: 100%; background: var(--mh-accent); }
 @media (max-width: 860px) {
-    .now { grid-template-columns: 1fr 1fr; }
-    .now > div:nth-child(3) { border-left: 0; }
-    .now > div:nth-child(n + 3) { border-top: 1px solid var(--mh-rule-2); }
+    .mh .now { grid-template-columns: 1fr 1fr; }
+    .mh .now > div:nth-child(3) { border-left: 0; }
+    .mh .now > div:nth-child(n + 3) { border-top: 1px solid var(--mh-rule-2); }
 }
 @media (max-width: 380px) {
-    .now { grid-template-columns: 1fr; }
-    .now > div { border-left: 0; }
-    .now > div + div { border-top: 1px solid var(--mh-rule-2); }
+    .mh .now { grid-template-columns: 1fr; }
+    .mh .now > div { border-left: 0; }
+    .mh .now > div + div { border-top: 1px solid var(--mh-rule-2); }
 }
 
 /* --- month grid --- */
-.monthbar {
+.mh .monthbar {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -167,27 +158,27 @@ button, input, select { font: inherit; color: inherit; }
     padding: 22px 0 12px;
     flex-wrap: wrap;
 }
-.monthbar h2 { font-family: var(--mh-serif); font-size: 24px; }
-.monthbar .yr { color: var(--mh-muted); font-weight: 300; }
-.monthbar .season { margin-top: 3px; }
+.mh .monthbar h2 { font-family: var(--mh-serif); font-size: 24px; }
+.mh .monthbar .yr { color: var(--mh-muted); font-weight: 300; }
+.mh .monthbar .season { margin-top: 3px; }
 
-.dow {
+.mh .dow {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     border-top: 1px solid var(--mh-ink);
     border-bottom: 1px solid var(--mh-rule);
 }
-.dow div { padding: 7px 9px; text-align: left; }
+.mh .dow div { padding: 7px 9px; text-align: left; }
 
 /* minmax(0,...) not 1fr: a bare 1fr floors at the content's own width, and "Uttara
    Bhadrapada" is wider than a seventh of a phone, so the grid would push past the viewport
    instead of letting the ellipsis do its job. */
-.grid {
+.mh .grid {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     border-left: 1px solid var(--mh-rule-2);
 }
-.cell {
+.mh .cell {
     border-right: 1px solid var(--mh-rule-2);
     border-bottom: 1px solid var(--mh-rule-2);
     min-height: 106px;
@@ -199,27 +190,27 @@ button, input, select { font: inherit; color: inherit; }
     background: var(--mh-shukla);
     transition: background .15s;
 }
-.cell.krishna { background: var(--mh-krishna); }
-.cell.pad { background: transparent; }
-.cell:not(.pad):hover { background: var(--mh-accent-soft); }
-.cell .top {
+.mh .cell.krishna { background: var(--mh-krishna); }
+.mh .cell.pad { background: transparent; }
+.mh .cell:not(.pad):hover { background: var(--mh-accent-soft); }
+.mh .cell .top {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 6px;
 }
-.cell .d {
+.mh .cell .d {
     font-family: var(--mh-serif);
     font-size: 23px;
     font-weight: 300;
     line-height: 1;
 }
-.cell.sun .d { color: var(--mh-accent); }
-.cell .phase { font-size: 12px; color: var(--mh-muted); line-height: 1; }
+.mh .cell.sun .d { color: var(--mh-accent); }
+.mh .cell .phase { font-size: 12px; color: var(--mh-muted); line-height: 1; }
 /* The tithi name fits a desktop cell and does not fit a seventh of a phone. Printed
    almanacs solve this the same way: the number carries the day, the name is one tap away
    on the day page, and the moon glyph already says which fortnight it belongs to. */
-.cell .ti {
+.mh .cell .ti {
     font-size: 12px;
     margin-top: 6px;
     line-height: 1.3;
@@ -227,8 +218,8 @@ button, input, select { font: inherit; color: inherit; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.cell .t-num { display: none; letter-spacing: .02em; }
-.cell .nk {
+.mh .cell .t-num { display: none; letter-spacing: .02em; }
+.mh .cell .nk {
     font-size: 11.5px;
     color: var(--mh-muted);
     line-height: 1.3;
@@ -236,10 +227,10 @@ button, input, select { font: inherit; color: inherit; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.cell .tm { font-size: 10.5px; color: var(--mh-muted); margin-top: auto; padding-top: 5px; }
-.cell.today { box-shadow: inset 0 0 0 1.5px var(--mh-accent); }
-.cell.today .d { color: var(--mh-accent); font-weight: 400; }
-.cell .mark {
+.mh .cell .tm { font-size: 10.5px; color: var(--mh-muted); margin-top: auto; padding-top: 5px; }
+.mh .cell.today { box-shadow: inset 0 0 0 1.5px var(--mh-accent); }
+.mh .cell.today .d { color: var(--mh-accent); font-weight: 400; }
+.mh .cell .mark {
     position: absolute;
     top: 0;
     left: 0;
@@ -248,81 +239,81 @@ button, input, select { font: inherit; color: inherit; }
     background: var(--mh-gold);
 }
 @media (max-width: 720px) {
-    .cell { min-height: 84px; padding: 6px 5px 7px; }
-    .cell .d { font-size: 18px; }
-    .cell .ti { font-size: 11px; margin-top: 4px; color: var(--mh-ink-2); }
-    .cell .t-word { display: none; }
-    .cell .t-num { display: inline; }
-    .cell .nk {
+    .mh .cell { min-height: 84px; padding: 6px 5px 7px; }
+    .mh .cell .d { font-size: 18px; }
+    .mh .cell .ti { font-size: 11px; margin-top: 4px; color: var(--mh-ink-2); }
+    .mh .cell .t-word { display: none; }
+    .mh .cell .t-num { display: inline; }
+    .mh .cell .nk {
         font-size: 10px;
         white-space: normal;
         line-height: 1.25;
         max-height: 2.5em;
     }
-    .cell .tm { display: none; }
-    .dow div { padding: 6px 4px; font-size: 9px; }
+    .mh .cell .tm { display: none; }
+    .mh .dow div { padding: 6px 4px; font-size: 9px; }
 }
 
 /* --- day view --- */
-.dayhead { padding: 26px 0 18px; border-bottom: 1px solid var(--mh-rule); }
-.dayhead .row { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
-.dayhead .dnum {
+.mh .dayhead { padding: 26px 0 18px; border-bottom: 1px solid var(--mh-rule); }
+.mh .dayhead .row { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.mh .dayhead .dnum {
     font-family: var(--mh-serif);
     font-size: 68px;
     font-weight: 300;
     line-height: 0.86;
     letter-spacing: -0.02em;
 }
-.dayhead .vara { font-family: var(--mh-serif); font-size: 25px; line-height: 1.1; }
-.dayhead .gdate { margin-top: 4px; }
-.dayhead .era { margin-top: 12px; font-size: 12.5px; color: var(--mh-ink-2); line-height: 1.7; }
-.dayhead .era b { font-weight: 500; color: var(--mh-ink); }
-.daynav { display: flex; gap: 6px; margin-left: auto; align-items: center; }
+.mh .dayhead .vara { font-family: var(--mh-serif); font-size: 25px; line-height: 1.1; }
+.mh .dayhead .gdate { margin-top: 4px; }
+.mh .dayhead .era { margin-top: 12px; font-size: 12.5px; color: var(--mh-ink-2); line-height: 1.7; }
+.mh .dayhead .era b { font-weight: 500; color: var(--mh-ink); }
+.mh .daynav { display: flex; gap: 6px; margin-left: auto; align-items: center; }
 
-.cols {
+.mh .cols {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
     gap: 0 40px;
     align-items: start;
 }
-@media (max-width: 900px) { .cols { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 900px) { .mh .cols { grid-template-columns: 1fr; gap: 0; } }
 
-section.blk { padding: 22px 0 4px; border-bottom: 1px solid var(--mh-rule-2); }
-section.blk > h3 { margin-bottom: 12px; }
+.mh section.blk { padding: 22px 0 4px; border-bottom: 1px solid var(--mh-rule-2); }
+.mh section.blk > h3 { margin-bottom: 12px; }
 
 /* rows of name + time, the almanac's basic unit */
-.rows { display: flex; flex-direction: column; }
-.rw {
+.mh .rows { display: flex; flex-direction: column; }
+.mh .rw {
     display: flex;
     align-items: baseline;
     gap: 12px;
     padding: 8px 0;
     border-top: 1px solid var(--mh-rule-2);
 }
-.rw:first-child { border-top: 0; }
-.rw .k { flex: 0 0 84px; }
-.rw .v { flex: 1; min-width: 0; font-family: var(--mh-serif); font-size: 16px; line-height: 1.35; }
-.rw .v small { font-family: var(--mh-sans); font-size: 11.5px; color: var(--mh-muted); }
-.rw .t { font-size: 12.5px; color: var(--mh-ink-2); white-space: nowrap; }
-.rw.live .v { color: var(--mh-accent); }
-.rw .seq { display: flex; flex-direction: column; gap: 3px; }
-.rw .seq span.past { color: var(--mh-muted); }
+.mh .rw:first-child { border-top: 0; }
+.mh .rw .k { flex: 0 0 84px; }
+.mh .rw .v { flex: 1; min-width: 0; font-family: var(--mh-serif); font-size: 16px; line-height: 1.35; }
+.mh .rw .v small { font-family: var(--mh-sans); font-size: 11.5px; color: var(--mh-muted); }
+.mh .rw .t { font-size: 12.5px; color: var(--mh-ink-2); white-space: nowrap; }
+.mh .rw.live .v { color: var(--mh-accent); }
+.mh .rw .seq { display: flex; flex-direction: column; gap: 3px; }
+.mh .rw .seq span.past { color: var(--mh-muted); }
 
 /* hora ribbon */
-.ribbon { display: flex; gap: 2px; margin: 4px 0 12px; }
-.ribbon i {
+.mh .ribbon { display: flex; gap: 2px; margin: 4px 0 12px; }
+.mh .ribbon i {
     flex: 1;
     height: 22px;
     background: var(--mh-rule-2);
     border-radius: 1px;
     position: relative;
 }
-.ribbon i.night { background: var(--mh-rule); }
-.ribbon i.on { background: var(--mh-accent); }
+.mh .ribbon i.night { background: var(--mh-rule); }
+.mh .ribbon i.on { background: var(--mh-accent); }
 
-.horas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 22px; }
-@media (max-width: 520px) { .horas { grid-template-columns: 1fr; } }
-.hr {
+.mh .horas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 22px; }
+@media (max-width: 520px) { .mh .horas { grid-template-columns: 1fr; } }
+.mh .hr {
     display: flex;
     align-items: baseline;
     gap: 9px;
@@ -330,31 +321,31 @@ section.blk > h3 { margin-bottom: 12px; }
     border-top: 1px solid var(--mh-rule-2);
     font-size: 13px;
 }
-.hr .g { width: 15px; color: var(--mh-muted); font-size: 13px; }
-.hr .n { flex: 1; }
-.hr .t { color: var(--mh-muted); font-size: 12px; white-space: nowrap; }
-.hr.on { color: var(--mh-accent); }
-.hr.on .g, .hr.on .t { color: var(--mh-accent); }
-.hr.on .n { font-weight: 600; }
-.hr.night .g { opacity: .55; }
+.mh .hr .g { width: 15px; color: var(--mh-muted); font-size: 13px; }
+.mh .hr .n { flex: 1; }
+.mh .hr .t { color: var(--mh-muted); font-size: 12px; white-space: nowrap; }
+.mh .hr.on { color: var(--mh-accent); }
+.mh .hr.on .g, .mh .hr.on .t { color: var(--mh-accent); }
+.mh .hr.on .n { font-weight: 600; }
+.mh .hr.night .g { opacity: .55; }
 
 /* muhurta strip */
-.mus { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 1px; background: var(--mh-rule-2); border: 1px solid var(--mh-rule-2); }
-.mu { background: var(--mh-paper); padding: 6px 8px; font-size: 11.5px; line-height: 1.35; }
-.mu b { display: block; font-weight: 500; font-size: 12px; }
-.mu .t { color: var(--mh-muted); font-size: 10.5px; }
-.mu.good { background: var(--mh-accent-soft); }
-.mu.bad { color: var(--mh-muted); }
-.mu.on { outline: 1.5px solid var(--mh-accent); outline-offset: -1.5px; }
+.mh .mus { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 1px; background: var(--mh-rule-2); border: 1px solid var(--mh-rule-2); }
+.mh .mu { background: var(--mh-paper); padding: 6px 8px; font-size: 11.5px; line-height: 1.35; }
+.mh .mu b { display: block; font-weight: 500; font-size: 12px; }
+.mh .mu .t { color: var(--mh-muted); font-size: 10.5px; }
+.mh .mu.good { background: var(--mh-accent-soft); }
+.mh .mu.bad { color: var(--mh-muted); }
+.mh .mu.on { outline: 1.5px solid var(--mh-accent); outline-offset: -1.5px; }
 
 /* small key/value tables */
-.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 12px 20px; }
-.kv > div { min-width: 0; }
-.kv .v { font-family: var(--mh-serif); font-size: 16px; margin-top: 2px; }
-.kv .v small { font-family: var(--mh-sans); font-size: 11px; color: var(--mh-muted); }
+.mh .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 12px 20px; }
+.mh .kv > div { min-width: 0; }
+.mh .kv .v { font-family: var(--mh-serif); font-size: 16px; margin-top: 2px; }
+.mh .kv .v small { font-family: var(--mh-sans); font-size: 11px; color: var(--mh-muted); }
 
-table.tab { width: 100%; border-collapse: collapse; font-size: 13px; }
-table.tab th {
+.mh table.tab { width: 100%; border-collapse: collapse; font-size: 13px; }
+.mh table.tab th {
     text-align: left;
     font-size: 10px;
     letter-spacing: .12em;
@@ -364,12 +355,12 @@ table.tab th {
     padding: 0 8px 6px 0;
     border-bottom: 1px solid var(--mh-rule);
 }
-table.tab td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--mh-rule-2); }
-table.tab td.g { width: 18px; color: var(--mh-muted); }
-table.tab td.nm { font-family: var(--mh-serif); font-size: 15px; }
+.mh table.tab td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--mh-rule-2); }
+.mh table.tab td.g { width: 18px; color: var(--mh-muted); }
+.mh table.tab td.nm { font-family: var(--mh-serif); font-size: 15px; }
 
-.warn { color: var(--mh-accent); }
-.pill {
+.mh .warn { color: var(--mh-accent); }
+.mh .pill {
     display: inline-block;
     border: 1px solid var(--mh-rule);
     border-radius: 999px;
@@ -379,13 +370,13 @@ table.tab td.nm { font-family: var(--mh-serif); font-size: 15px; }
     text-transform: uppercase;
     color: var(--mh-muted);
 }
-.pill.acc { border-color: var(--mh-accent); color: var(--mh-accent); }
+.mh .pill.acc { border-color: var(--mh-accent); color: var(--mh-accent); }
 
 /* --- subscribe --- */
-.sub-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 34px; }
-@media (max-width: 820px) { .sub-grid { grid-template-columns: 1fr; gap: 20px; } }
-.layers { display: flex; flex-direction: column; gap: 0; }
-.layer {
+.mh .sub-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 34px; }
+@media (max-width: 820px) { .mh .sub-grid { grid-template-columns: 1fr; gap: 20px; } }
+.mh .layers { display: flex; flex-direction: column; gap: 0; }
+.mh .layer {
     display: flex;
     gap: 11px;
     padding: 11px 0;
@@ -393,16 +384,16 @@ table.tab td.nm { font-family: var(--mh-serif); font-size: 15px; }
     cursor: pointer;
     align-items: flex-start;
 }
-.layer input { margin-top: 3px; accent-color: var(--mh-accent); }
-.layer b { font-weight: 500; font-size: 14px; }
-.layer span { display: block; font-size: 12px; color: var(--mh-muted); line-height: 1.45; }
-.url {
+.mh .layer input { margin-top: 3px; accent-color: var(--mh-accent); }
+.mh .layer b { font-weight: 500; font-size: 14px; }
+.mh .layer span { display: block; font-size: 12px; color: var(--mh-muted); line-height: 1.45; }
+.mh .url {
     display: flex;
     gap: 8px;
     margin-top: 12px;
     align-items: stretch;
 }
-.url input {
+.mh .url input {
     flex: 1;
     min-width: 0;
     border: 1px solid var(--mh-rule);
@@ -412,8 +403,8 @@ table.tab td.nm { font-family: var(--mh-serif); font-size: 15px; }
     font-family: ui-monospace, "Fira Code", monospace;
     font-size: 11.5px;
 }
-ol.steps { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--mh-ink-2); line-height: 1.75; }
-ol.steps code {
+.mh ol.steps { margin: 8px 0 0; padding-left: 18px; font-size: 13px; color: var(--mh-ink-2); line-height: 1.75; }
+.mh ol.steps code {
     font-family: ui-monospace, "Fira Code", monospace;
     font-size: 11.5px;
     background: var(--mh-paper-2);
@@ -422,7 +413,7 @@ ol.steps code {
 }
 
 /* --- place picker --- */
-dialog.place {
+.mh dialog.place {
     border: 1px solid var(--mh-rule);
     border-radius: 6px;
     background: var(--mh-paper);
@@ -431,10 +422,10 @@ dialog.place {
     width: min(440px, calc(100vw - 28px));
     box-shadow: 0 24px 60px rgba(0, 0, 0, .18);
 }
-dialog.place::backdrop { background: rgba(28, 25, 23, .38); }
-dialog.place .hd { padding: 16px 18px 12px; border-bottom: 1px solid var(--mh-rule-2); }
-dialog.place .bd { padding: 14px 18px 18px; }
-dialog.place input[type=text] {
+.mh dialog.place::backdrop { background: rgba(28, 25, 23, .38); }
+.mh dialog.place .hd { padding: 16px 18px 12px; border-bottom: 1px solid var(--mh-rule-2); }
+.mh dialog.place .bd { padding: 14px 18px 18px; }
+.mh dialog.place input[type=text] {
     width: 100%;
     border: 1px solid var(--mh-rule);
     background: var(--mh-paper-2);
@@ -442,12 +433,12 @@ dialog.place input[type=text] {
     padding: 9px 11px;
     font-size: 14px;
 }
-.hits { list-style: none; margin: 10px 0 0; padding: 0; max-height: 260px; overflow: auto; }
-.hits li { padding: 9px 2px; border-top: 1px solid var(--mh-rule-2); cursor: pointer; font-size: 13.5px; }
-.hits li:hover { color: var(--mh-accent); }
-.hits li small { display: block; color: var(--mh-muted); font-size: 11.5px; }
+.mh .hits { list-style: none; margin: 10px 0 0; padding: 0; max-height: 260px; overflow: auto; }
+.mh .hits li { padding: 9px 2px; border-top: 1px solid var(--mh-rule-2); cursor: pointer; font-size: 13.5px; }
+.mh .hits li:hover { color: var(--mh-accent); }
+.mh .hits li small { display: block; color: var(--mh-muted); font-size: 11.5px; }
 
-footer.foot {
+.mh footer.foot {
     margin-top: 34px;
     padding-top: 14px;
     border-top: 1px solid var(--mh-rule);
@@ -455,4 +446,4 @@ footer.foot {
     color: var(--mh-muted);
     line-height: 1.7;
 }
-footer.foot a { border-bottom: 1px solid var(--mh-rule); }
+.mh footer.foot a { border-bottom: 1px solid var(--mh-rule); }

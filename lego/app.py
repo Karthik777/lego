@@ -53,11 +53,12 @@ for _d in ('vendor', 'assets'):
     if (Path('static')/_d).exists():
         lego.router.routes.insert(0, Mount(f'/static/{_d}', app=StaticImmutable(directory=f'static/{_d}'), name=f'static_{_d}'))
 
-# connect your blocks
+# connect your blocks. nav order follows connect order, except muhurtha, which prepends
+# itself — so the bar reads Muhurtha, Blog, Thrifty, Dashboards left to right.
 b.connect(lego)
-d.connect(lego) # dashboards
 mu.connect(lego) # muhurtha — the panchangam calendar, and the ICS/CalDAV server behind it
 t.connect(lego) # thrifty — also the whole of thrifty.sankalpa.sh, rewritten / to /thrifty
+d.connect(lego) # dashboards — last of the nav blocks, so its pill sits on the right
 a.connect(lego) # auth needs to be the last to connect. it reads RouteOverrides skip list to skip auth
 
 # optionally add a scheduled backup of data folders

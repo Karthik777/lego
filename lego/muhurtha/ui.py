@@ -2,23 +2,27 @@
 everything the almanac would.
 
 Rendered on the server, because the panchanga is computed on the server -- the browser gets
-finished markup and one small script whose only job is to know what time it is. The document
-uses the app-wide appearance state while retaining its almanac layout.'''
+finished markup and one small script whose only job is to know what time it is.
+
+The block used to ship a whole document of its own, which made it read as a different site
+that happened to share a domain. It now renders into the app shell like every other block:
+one navbar, one theme, one set of chrome. Its styles are scoped under `.mh` so an almanac
+layout stays an almanac layout without leaking a body rule onto the rest of the app.'''
 
 from datetime import date as Date, datetime, timedelta
 from calendar import monthrange, month_name
 from hashlib import md5
-from fasthtml.common import (Html, Head, Body, Meta, Title, Link, Script, Style, Div, Span, P, A,
+from fasthtml.common import (Meta, Title, Link, Script, Style, Div, Span, P, A,
                              H1, H2, H3, Button, Input, Label, Table, Thead, Tbody, Tr, Th, Td,
                              Ol, Li, Ul, Small, B, I, NotStr, Dialog, Form, Header, Footer,
-                             Section, Nav, Details, Summary, Socials, to_xml)
+                             Section, Nav)
 from fastcore.all import Path
-from lego.core import asset_css, asset_js, vlink, themes, THEMES
+from lego.core import asset_css, asset_js, vlink, base
 from .cfg import cfg, Routes, LAYERS, DEFAULT_LAYERS
 from .panchanga import Place, day_panchanga, month_panchanga
 from .names import PLANET_GLYPH, RASI_GLYPH, RASI
 
-__all__ = ['document', 'month_view', 'day_view', 'subscribe_view', 'now_band', 'UI_VERSION']
+__all__ = ['page', 'mh_head', 'month_view', 'day_view', 'subscribe_view', 'now_band', 'UI_VERSION']
 
 here = Path(__file__).parent
 UI_VERSION = md5(b''.join((here / name).read_bytes() for name in ('ui.py', 'muhurtha.css', 'muhurtha.js'))).hexdigest()[:8]
@@ -42,52 +46,47 @@ def lbl(t): return Div(t, cls='lbl')
 
 # === document shell ===
 
-def head(title, desc=None, canonical=None):
-    url = canonical or f'https://{cfg.domain}{Routes.index}'
-    return Head(
-        Meta(charset='UTF-8'),
-        Meta(name='viewport', content='width=device-width, initial-scale=1.0, viewport-fit=cover'),
-        Meta(name='theme-color', content=cfg.theme_color),
-        Meta(name='description', content=desc or cfg.tagline),
-        Meta(name='robots', content='index, follow'),
-        Meta(name='apple-mobile-web-app-capable', content='yes'),
-        Title(title),
-        Link(rel='canonical', href=url),
-        Link(rel='icon', type='image/svg+xml', href='/static/favicon.svg'),
-        *Socials(title=title, description=desc or cfg.tagline, site_name=cfg.domain,
-                 image='/static/favicon.svg', url=url),
-        Link(rel='stylesheet', href=vlink('/static/vendor/inter.css')),
-        *themes(reveal=False), asset_css(here / 'muhurtha.css'))
+def mh_head(boot=None):
+    """The block's own stylesheet and script, hoisted into the app-wide head.
 
-def appearance():
-    modes = Div(*[Button(label, type='button', cls='choice', onclick=f"setMode('{mode}')")
-                  for mode, label in [('auto', 'Auto'), ('light', 'Light'), ('dark', 'Dark')]], cls='choices')
-    colors = Div(*[Button(type='button', cls='swatch', style=f'background:{color}',
-                          title=theme.removeprefix('theme-'), aria_label=theme.removeprefix('theme-'),
-                          onclick=f"setTheme('{theme}')") for theme, color in THEMES], cls='swatches')
-    return Details(Summary('Theme', cls='btn'), Div(modes, colors, cls='appearance-menu'), cls='appearance')
+    fasthtml lifts Link, Script and Title out of a returned tuple, which is how a block adds
+    to the head without the app having to know it exists -- the same trick dash uses for its
+    chart bundle."""
+    return [Link(rel='stylesheet', href=vlink('/static/vendor/inter.css')),
+            asset_css(here / 'muhurtha.css'),
+            Script(NotStr(f'window.MH={boot or "{}"};')),
+            asset_js(here / 'muhurtha.js')]
 
-def masthead(place, active='month', when=None):
+def controls(place, active='month'):
+    """The page's own controls -- which month, which day, which place.
+
+    No title and no theme picker: the navbar already carries both, and a second set of site
+    chrome inside the page is what made this look like a separate window."""
     q = f'?{place_q(place)}'
     return Header(
-        Div(H1(dia('Muhurtha'), cls='serif'),
-            Div(f'{place.name or place.key()} · {place.tzname}', cls='lbl sub'),
+        Div(Div('Panchangam', cls='lbl'),
+            Div(f'{place.name or place.key()} · {place.tzname}', cls='where'),
             cls='min-w-0'),
         Nav(A(Button('Month', cls=f"btn{' on' if active=='month' else ''}"), href=f'{Routes.month}{q}'),
             A(Button('Today', cls=f"btn{' on' if active=='day' else ''}"), href=f'{Routes.day}{q}'),
-            Button('Place', cls='btn', onclick='mh.openPlace()'), appearance(),
-            A(Button('Subscribe', cls='btn accent'), href=f'{Routes.subscribe}{q}')),
+            Button('Place', cls='btn', onclick='mh.openPlace()'),
+            A(Button('Subscribe', cls=f"btn accent{' on' if active=='subscribe' else ''}"),
+              href=f'{Routes.subscribe}{q}')),
         cls='mast')
+
+def page(title, place, body, auth=None, active='month', boot=None):
+    'The block rendered into the app shell, navbar and theme and all.'
+    inner = Div(controls(place, active), body, footer(), place_dialog(), cls='mh')
+    return (*base(inner, auth, title=title), *mh_head(boot))
 
 def footer():
     return Footer(
-        P(f'Positions are sidereal, {cfg.ayanamsa} ayanamsa. Sun and moon longitudes are '
-          'Meeus truncations of VSOP87 and ELP2000-82, agreeing with JPL DE421 to a few '
-          'arcseconds; tithi and nakshatra boundaries land within seconds of the ephemeris.'),
-        P('This is a dṛk (observational) panchangam. A vākya almanac computed from the older '
-          'Sūrya Siddhānta tables will differ, sometimes by an hour or more, and neither is '
-          'a mistake — they are different reckonings.'),
-        P(A('Subscribe to this calendar', href=f'{Routes.subscribe}'), ' · ',
+        P(f'All positions are sidereal. The ayanamsa is {cfg.ayanamsa}.'),
+        P('The sun and moon positions come from VSOP87 and ELP2000-82. They agree with '
+          'JPL DE421 to a few arcseconds.'),
+        P('This is a dṛk panchangam. It uses observed positions. A vākya almanac uses older '
+          'tables. The two can differ by more than one hour. Both methods are correct.'),
+        P(A('Subscribe', href=f'{Routes.subscribe}'), ' · ',
           A('JSON', href=Routes.api_day), ' · ',
           A('iCalendar', href=Routes.feed)),
         cls='foot')
@@ -97,17 +96,11 @@ def place_q(place):
     return urlencode(dict(lat=round(place.lat, 4), lon=round(place.lon, 4),
                           tz=place.tzname, place=place.name or ''))
 
-def document(title, place, body, active='month', boot=None):
-    b = Body(Div(masthead(place, active), body, footer(), cls='wrap'),
-             place_dialog(), Script(NotStr(f'window.MH={boot or "{}"};')),
-             asset_js(here / 'muhurtha.js'))
-    return to_xml(Html(head(title), b, lang='en'))
-
 def place_dialog():
     return Dialog(
         Div(Div('Choose a place', cls='serif', style='font-size:18px'),
-            Div('The panchangam is local: sunrise sets the day and every boundary with it.',
-                cls='lbl', style='margin-top:5px;text-transform:none;letter-spacing:0;font-size:12px'),
+            Div('The panchangam is local. Sunrise starts the day. All times change with the place.',
+                cls='note', style='margin-top:5px'),
             cls='hd'),
         Div(Input(type='text', id='mh-q', placeholder='Search a city…', autocomplete='off'),
             Ul(id='mh-hits', cls='hits'),
@@ -312,70 +305,67 @@ def day_view(place, d, today=None):
 
 # === subscribe ===
 
+def _steps(*items): return Ol(*[Li(*(x if isinstance(x, tuple) else (x,))) for x in items], cls='steps')
+
 def subscribe_view(place, base_url):
+    """How to add the feed, in the fewest words that still work.
+
+    Written to ASD-STE100 rules: short sentences, active voice, one instruction to a line.
+    The first draft explained why each protocol existed, which is interesting and is not
+    what somebody reads this page to find out."""
     from .dav import encode_token
     q = place_q(place)
     feed = f'{base_url}{Routes.feed}?{q}&layers=day,kalam,window'
     dav = f'{base_url}{Routes.dav}/{encode_token(place, DEFAULT_LAYERS)}/'
     return Div(
         Header(Div(Div('Subscribe', cls='vara serif', style='font-size:34px'),
-                   Div('Put the traditional day inside the one you already keep.', cls='lbl gdate'),
+                   Div('Add the traditional day to the calendar you already use.',
+                       cls='lbl gdate'),
                    cls='row'), cls='dayhead'),
         Div(
-            Div(Section(H3(lbl('1 · Choose what appears')),
+            Div(Section(H3(lbl('1 · Select the entries')),
                     Div(*[Label(Input(type='checkbox', name='layer', value=k,
                                       checked=k in DEFAULT_LAYERS, onchange='mh.rebuild()'),
                                 Div(B(k.title()), Span(v)), cls='layer') for k, v in LAYERS.items()],
                         cls='layers'),
-                    P('Horas and muhurtas are thirty and twenty-four entries a day. They are '
-                      'worth having in a calendar you consult, and unbearable in one you live '
-                      'in — so they are off by default, and their window is shorter.',
-                      cls='lbl', style='text-transform:none;letter-spacing:0;font-size:12px;line-height:1.6;margin-top:14px'),
+                    P('The hora layer adds 24 entries each day. The muhurta layer adds 30. '
+                      'Select them only if you want the full almanac. They are off by default.',
+                      cls='note'),
                     cls='blk'),
-                Section(H3(lbl('2 · Take the link')),
-                    Div(lbl('iCalendar feed · https'), style='margin-top:4px'),
+                Section(H3(lbl('2 · Copy the link')),
+                    Div(lbl('Calendar feed'), style='margin-top:4px'),
                     Div(Input(type='text', id='feed-url', value=feed, readonly=True),
                         Button('Copy', cls='btn accent', onclick='mh.copy("feed-url")'), cls='url'),
-                    Div(Button('Open in Calendar', cls='btn',
-                               onclick='mh.webcal()', id='webcal-btn'),
-                        Span('Hands the feed straight to Apple Calendar, Outlook or whichever '
-                             'app owns webcal:// links.', cls='lbl',
-                             style='text-transform:none;letter-spacing:0;font-size:11.5px'),
-                        style='display:flex;gap:10px;align-items:center;margin-top:9px'),
-                    Div(lbl('CalDAV collection'), style='margin-top:20px'),
+                    Div(Button('Open in Calendar', cls='btn', onclick='mh.webcal()', id='webcal-btn'),
+                        Span('This sends the feed to your calendar app.', cls='note'),
+                        style='display:flex;gap:10px;align-items:center;margin-top:9px;flex-wrap:wrap'),
+                    Div(lbl('CalDAV address'), style='margin-top:20px'),
                     Div(Input(type='text', id='dav-url', value=dav, readonly=True),
                         Button('Copy', cls='btn', onclick='mh.copy("dav-url")'), cls='url'),
+                    P('Use the calendar feed for Google. Use either one for Apple.', cls='note'),
                     cls='blk')),
             Div(Section(H3(lbl('Google Calendar')),
-                    Ol(Li('Open Google Calendar on the web. A phone cannot add a subscription; '
-                          'once added it syncs to every device.'),
-                       Li('In the left column, next to ', B('Other calendars'),
-                          ', click ', B('+'), ' → ', B('From URL'), '.'),
-                       Li('Paste the link above and press ', B('Add calendar'), '.'),
-                       Li('Google refreshes external calendars on its own schedule, usually '
-                          'every 8 to 24 hours. The feed carries a 12-hour refresh hint.'),
-                       cls='steps'), cls='blk'),
-                Section(H3(lbl('Apple Calendar · subscription')),
-                    Ol(Li(B('File → New Calendar Subscription'),
-                          ' on the Mac, or Settings → Apps → Calendar → Accounts → '
-                          'Add Account → Other → Add Subscribed Calendar on iOS.'),
-                       Li('Paste the link and set ', B('Auto-refresh'),
-                          ' to every hour or every day.'),
-                       Li('Untick alerts and attachments; this calendar has neither.'),
-                       cls='steps'), cls='blk'),
-                Section(H3(lbl('Apple Calendar · CalDAV')),
-                    Ol(Li('Settings → Apps → Calendar → Accounts → Add Account → Other → ',
-                          B('Add CalDAV Account'), '.'),
-                       Li('Server: paste the CalDAV link above. Leave user name and password '
-                          'blank — the collection is public and read-only.'),
-                       Li('CalDAV refreshes on the client\'s schedule rather than Google\'s, '
-                          'which is the only reason to prefer it. Google Calendar cannot '
-                          'subscribe to CalDAV at all.'),
-                       cls='steps'), cls='blk'),
-                Section(H3(lbl('Anything else')),
-                    P('The feed is plain RFC 5545 over https. Outlook, Fantastical, Thunderbird, '
-                      'Proton and every other client take the same URL. Point ',
-                      NotStr('<code>curl</code>'), ' at it if you would rather read the file.',
-                      style='font-size:13px;color:var(--ink-2);line-height:1.7'),
+                    _steps('Open Google Calendar in a web browser. You cannot add a feed on a phone.',
+                           ('Find ', B('Other calendars'), ' in the left column. Click ', B('+'), '.'),
+                           ('Click ', B('From URL'), '.'),
+                           ('Paste the calendar feed link. Click ', B('Add calendar'), '.'),
+                           'Google reads the feed again every 8 to 24 hours.'),
+                    cls='blk'),
+                Section(H3(lbl('Apple Calendar · Mac')),
+                    _steps(('Click ', B('File'), '. Then click ', B('New Calendar Subscription'), '.'),
+                           'Paste the calendar feed link. Click Subscribe.',
+                           ('Set ', B('Auto-refresh'), ' to Every hour.')),
+                    cls='blk'),
+                Section(H3(lbl('Apple Calendar · iPhone')),
+                    _steps(('Open ', B('Settings'), '. Go to Apps, then Calendar, then Accounts.'),
+                           ('Tap ', B('Add Account'), ', then ', B('Other'), '.'),
+                           ('Tap ', B('Add Subscribed Calendar'), ' for the feed. '
+                            'Tap ', B('Add CalDAV Account'), ' for CalDAV.'),
+                           'Paste the link. For CalDAV, leave the user name and the password empty. '
+                           'The calendar is public and read-only.'),
+                    cls='blk'),
+                Section(H3(lbl('Other apps')),
+                    P('The feed uses the iCalendar format. Outlook, Fantastical, Thunderbird '
+                      'and other apps accept the same link.', cls='note'),
                     cls='blk')),
             cls='sub-grid'))

@@ -19,12 +19,12 @@ class Routes:
 # Layers a subscriber can switch on. Keeping them separate is the whole point: a calendar
 # with 30 muhurta blocks a day is unreadable, and one with none is not a panchangam.
 LAYERS = {
-    'day':      'One all-day entry per day, carrying the full panchangam',
-    'panchanga':'Tithi and nakshatra as timed spans, ending when they actually end',
-    'kalam':    'Rahu kalam, Yamagandam, Gulika kalam',
-    'window':   'Brahma muhurta, Abhijit, Godhuli, Nishita',
-    'hora':     'All 24 planetary hours',
-    'muhurta':  'All 30 muhurtas',
+    'day':      'One entry for each day. It shows the full panchangam.',
+    'panchanga':'Tithi and nakshatra. Each one starts and ends at its true time.',
+    'kalam':    'Rahu kalam, Yamagandam and Gulika kalam.',
+    'window':   'Brahma muhurta, Abhijit, Godhuli and Nishita.',
+    'hora':     'All 24 planetary hours.',
+    'muhurta':  'All 30 muhurtas.',
 }
 DEFAULT_LAYERS = ('day', 'kalam', 'window')
 # Layers that emit many events a day are capped harder, or a year's feed is tens of MB.
@@ -33,7 +33,7 @@ DENSE_LAYERS = ('hora', 'muhurta', 'panchanga')
 cfg = AttrDict(
     domain      = os.getenv('MUHURTHA_DOMAIN') or 'sankalpa.sh',
     title       = os.getenv('MUHURTHA_TITLE') or 'Muhurtha',
-    tagline     = 'A calendar that keeps the traditional day: panchangam, muhurta and hora, subscribable from any calendar app.',
+    tagline     = 'The traditional day in your calendar. Panchangam, muhurta and hora, from any calendar app.',
     theme_color = '#8C2F1E',
     # Default place when a visitor has not chosen one and has not shared their location.
     lat  = float(os.getenv('MUHURTHA_LAT') or 13.0827),
