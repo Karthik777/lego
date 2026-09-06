@@ -269,7 +269,7 @@ B['learn.wavepacket'] = (root, p, emit) => {
     const T = draw(); frames++; best = Math.max(best, T);
     const say = Math.max(best, shown);                     // the last full run's answer stands while the next one runs
     read.textContent = `barrier ${V0.toFixed(2)}× the packet energy · width ${bw} · transmitted ${(say * 100).toFixed(1)}%`;
-    if (frames % 10 === 0) emit('transmission', +say.toFixed(4));
+    if (frames % 60 === 0) emit('transmission', +say.toFixed(4));   // once a second: every emit reruns the document
     if (frames > 230) { shown = best; frames = 0; best = 0; peak0 = 0; reset(); }   // it loops: a concept brick is watched more than once
     timer = requestAnimationFrame(tick);
   };
