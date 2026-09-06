@@ -116,7 +116,7 @@ def _range(place, layers, start=None, end=None):
     if end:   hi = min(hi, end.date() + timedelta(days=1))
     return (lo, hi) if lo <= hi else None
 
-@lru_cache(maxsize=64)
+@lru_cache(maxsize=4)
 def _objects(key, tz, nm, layers, lo, hi):
     place = Place(*(float(x) for x in key.split(',')), tz, nm)
     label = feed_name(place, list(layers))
@@ -185,9 +185,13 @@ def dav_handle(method, tok, rest, headers, body):
                     return 200, {'Content-Type': 'text/calendar; charset=utf-8',
                                  'ETag': f'"{md5(text.encode()).hexdigest()}"'}, text
             return 404, {}, 'Not found'
-        # A browser landing on the collection gets the feed rather than a protocol error.
-        from .feed import build_feed
-        return 200, {'Content-Type': 'text/calendar; charset=utf-8'}, build_feed(place, layers)
+        # A browser landing on the collection gets pointed at the feed route rather than a
+        # protocol error -- and by redirecting rather than building inline, the work happens
+        # behind the feed's cache instead of once per curious visitor.
+        from urllib.parse import urlencode
+        q = urlencode(dict(lat=round(place.lat, 4), lon=round(place.lon, 4), tz=place.tzname,
+                           place=place.name or '', layers=','.join(sorted(layers))))
+        return 302, {'Location': f'{Routes.feed}?{q}'}, ''
 
     if method == 'PROPFIND':
         depth = _depth(headers)

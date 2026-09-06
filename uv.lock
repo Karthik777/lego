@@ -1299,6 +1299,19 @@ wheels = [
 ]
 
 [[package]]
+name = "icalendar"
+version = "7.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "tzdata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/2b/1bbf82d316df18c3331d9a06228819c8a5814ceda545a3e9980e52ffce1b/icalendar-7.3.0.tar.gz", hash = "sha256:7bd001c8e648205e1bde5c6a5b77096598e8d0893dcf57755c6c597635620132", size = 525811, upload-time = "2026-08-19T15:10:21.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/82/50bff78b0bb0c7d7c0cb39e0ee189b92f611fff6bd7cf57f25e92d5a7551/icalendar-7.3.0-py3-none-any.whl", hash = "sha256:8355acfe17be81b368f0b1e3740817cea9b56ea889931f8f1a87c62f2d28db0b", size = 542540, upload-time = "2026-08-19T15:10:19.525Z" },
+]
+
+[[package]]
 name = "idna"
 version = "3.18"
 source = { registry = "https://pypi.org/simple" }
@@ -1790,6 +1803,7 @@ dev = [
     { name = "cfeasy" },
     { name = "fossick" },
     { name = "gheasy" },
+    { name = "icalendar" },
     { name = "koshas" },
     { name = "pytest" },
     { name = "vpseasy" },
@@ -1817,6 +1831,7 @@ dev = [
     { name = "cfeasy", specifier = ">=0.0.3" },
     { name = "fossick", specifier = ">=0.0.2" },
     { name = "gheasy", specifier = ">=0.0.2" },
+    { name = "icalendar", specifier = ">=6.0" },
     { name = "koshas", specifier = ">=0.0.16" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "vpseasy", specifier = ">=0.0.6" },

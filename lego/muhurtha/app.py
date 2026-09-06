@@ -8,6 +8,7 @@ import json
 from datetime import date as Date, datetime, timedelta
 from zoneinfo import ZoneInfo, available_timezones
 from fasthtml.common import HTMLResponse, JSONResponse, RedirectResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.responses import Response
 from starlette.routing import Route
 from lego.core import RouteOverrides, cache, quick_lgr
@@ -154,10 +155,17 @@ def api_month(req):
 # === CalDAV ===
 
 async def dav_root(req):
-    '''Everything under /muhurtha/dav.
+    """Everything under /muhurtha/dav.
 
     One handler for the whole tree because CalDAV is a protocol over a path, not a set of
-    endpoints -- the method and the depth header decide far more than the URL does.'''
+    endpoints -- the method and the depth header decide far more than the URL does.
+
+    The handler has to be async to read the request body, but everything after that is
+    arithmetic: a depth-1 PROPFIND generates months of panchangam and takes seconds. Run on
+    the event loop that starves every other request in the worker -- /health included, which
+    is how one crawler hitting /.well-known/caldav takes the whole site to 502. Starlette
+    puts plain `def` handlers on a threadpool for exactly this reason; an `async def` one
+    has to ask."""
     tok = req.path_params.get('tok') or ''
     rest = req.path_params.get('rest') or ''
     if not tok:
@@ -165,7 +173,7 @@ async def dav_root(req):
     body = (await req.body()).decode('utf-8', 'replace') if req.method in ('REPORT', 'PROPFIND', 'PUT') else ''
     hdrs = {k.lower(): v for k, v in req.headers.items()}
     try:
-        st, h, out = dav_handle(req.method, tok, rest, hdrs, body)
+        st, h, out = await run_in_threadpool(dav_handle, req.method, tok, rest, hdrs, body)
     except Exception as e:
         error(f'caldav {req.method} {req.url.path}: {e}')
         return Response('error', status_code=500)
