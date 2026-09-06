@@ -1,7 +1,7 @@
 """Docker + Hetzner + Cloudflare tunnel deployment for VedicReader."""
 import os, sys, secrets
 from fastcore.all import Path, joins
-from dockeasy import fasthtml_app, env_set, env_get
+from dockeasy import Dockerfile, env_set, env_get
 from cfeasy import CF
 from vpseasy import hetzner_deploy, caddy_stack, Hetzner
 from setup import ROOT, mk_env, env2push, push_gh_vars
@@ -9,7 +9,7 @@ from setup import ROOT, mk_env, env2push, push_gh_vars
 root = Path(__file__).resolve().parent
 pkgs = ['rclone','libsqlite3-dev','curl']
 vols = ['/app/data', '/app/backups', '/app/static']
-inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Dockerfile','Caddyfile','.env','uv.lock']
+inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Dockerfile','Caddyfile','.dockerignore','.env','uv.lock']
 exc = ['data/','backups/', 'mrsladjoe/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
 tunnel_nm = f'{sd}_{domain}'
@@ -31,55 +31,29 @@ CADDYFILE = Path('Caddyfile')
 RSYNC_FORCE = {'checksum': '--checksum', 'ignore-times': '--ignore-times'}
 
 def caddy_site(host, *directives):
-    '''One site block for the shared Caddy.
-
-    http:// because the tunnel terminates TLS in front of it — the same prefix dockeasy
-    writes for `cloudflared=True`, for the same reason: there is no public port 80 to run
-    an ACME challenge against.'''
     return f'http://{host} {{\n' + ''.join(f'\t{d}\n' for d in directives) + f'\treverse_proxy {app_svc}:{app_port}\n}}\n'
 
 def mk_caddyfile(path=CADDYFILE):
-    '''Every hostname, one Caddy, one app container.
-
-    dockeasy's `caddy_svc` writes a Caddyfile for a single site, so caddy_stack's copy is
-    replaced with this one after the fact. Nothing else about the stack changes: each extra
-    host reaches the same container through the same tunnel, and Caddy tells them apart by
-    the Host header it was going to read anyway.
-
-    Each rewrite matches the bare root only, which is all these blocks need — they are one
-    page each, and /static and every other path still resolve untouched on every domain.'''
     main = joins('.', [sd, domain])
     Path(path).write_text(caddy_site(main) + ''.join(caddy_site(h, f'rewrite / {r}') for h, r in SITES.items()))
     print(f'caddy: {", ".join([main, *SITES])} -> {app_svc}:{app_port}')
 
 def mk_compose():
-    df = fasthtml_app(pkgs=pkgs, vols=vols, healthcheck='/health', cmd=['python', 'main.py'])
+    df = (Dockerfile().from_('python:3.13-slim').workdir('/app').apt_install(*pkgs)
+          .run('pip install uv').copy('pyproject.toml', '.').copy('uv.lock', '.')
+          .run('uv sync --frozen --no-dev --no-cache')
+          .env('PATH', '/app/.venv/bin:$PATH').copy('.', '.')
+          .run('uv pip check && python -c "import lego"')
+          .run('mkdir -p ' + ' '.join(vols))
+          .healthcheck('curl -f http://localhost:5001/health', i='30s', t='5s', r='3')
+          .expose(5001).cmd(['python', 'main.py']))
     c = caddy_stack(joins('.', [sd, domain]), df, vols=vols)
     mk_caddyfile()
     return c
 
-def zone_of(host):
-    '''The zone a hostname sits in — the last two labels.
-
-    True for every host lego deploys (`sankalpa.sh` and its subdomains) and the same
-    assumption `setup_tunnel(domain, sd)` already makes. A multi-label public suffix like
-    `co.uk` would need the zone passed in instead.'''
-    return '.'.join(host.split('.')[-2:])
+def zone_of(host): return '.'.join(host.split('.')[-2:])
 
 def add_site_dns(cf, tid):
-    '''Point each extra hostname at the tunnel that already exists.
-
-    One tunnel, not one per site: cloudflared runs with `--url http://caddy`, so every
-    hostname routed through it arrives at the same Caddy. An apex cannot hold a CNAME in
-    plain DNS; Cloudflare serves one anyway by flattening it, which is why these need to
-    stay proxied.
-
-    `upsert_record` clears any same-name record first, so an A record or a parked CNAME
-    already sitting on the name is replaced rather than fought with.
-
-    A failure here costs that one hostname: the tunnel and the lego record are both in place
-    by the time this runs, and the loop carries on to the rest. So it warns with the record
-    to add by hand rather than aborting a deploy that is otherwise fine.'''
     for host in SITES:
         try:
             cf.tunnel_cname(zone_of(host), host, tid)
@@ -112,10 +86,6 @@ def deploy2prod(force=None, password=False):
     print(f'deployed: {r.ip}')
 
 def rm_site_dns(cf):
-    '''Drop the extra CNAMEs, which would otherwise outlive the tunnel they name.
-
-    The name match is exact on purpose: lego's own record lives in these same zones, and a
-    prefix or suffix test would take `lego.sankalpa.sh` out with them.'''
     for host in SITES:
         zid = cf.zone_id(zone_of(host))
         for r in cf.dns_records(zid):
@@ -153,4 +123,4 @@ def deploy_cli():
     elif cmd == 'env': mk_env(env2push(), path=root/'.env')
     else: print('usage: lego-deploy compose | deploy | nuke | env')
 
-if __name__ == '__main__': deploy2prod(password=True)
+if __name__ == '__main__': deploy_cli()

@@ -52,7 +52,7 @@ def mk_env(env:dict=None, path=Path(ROOT/'.env.example')):
 
 def push_gh_vars(dry_run=False):
 	"Push local .env values to GitHub. None-default keys → secrets; string-default → variables."
-	to_push = env2push()
+	to_push = {k: v for k, v in env2push().items() if v not in (None, '')}
 	if not to_push: return print('push: nothing to push (no matching keys with values in .env)')
 	gh_push_env(to_push, dry_run=dry_run, path=ROOT)
 	print(f'push: {"would push" if dry_run else "pushed"} {len(to_push)} keys to GitHub as '
