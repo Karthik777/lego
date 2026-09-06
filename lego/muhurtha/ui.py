@@ -17,7 +17,7 @@ from fasthtml.common import (Meta, Title, Link, Script, Style, Div, Span, P, A,
                              Ol, Li, Ul, Small, B, I, NotStr, Dialog, Form, Header, Footer,
                              Section, Nav)
 from fastcore.all import Path
-from lego.core import asset_css, asset_js, vlink, base
+from lego.core import asset_css, asset_js, vlink, base, lc_icon
 from .cfg import cfg, Routes, LAYERS, DEFAULT_LAYERS
 from .panchanga import Place, day_panchanga, month_panchanga
 from .names import PLANET_GLYPH, RASI_GLYPH, RASI
@@ -57,19 +57,39 @@ def mh_head(boot=None):
             Script(NotStr(f'window.MH={boot or "{}"};')),
             asset_js(here / 'muhurtha.js')]
 
+def zone_label(place):
+    'Short zone and offset for the place, as its own clock reads them right now.'
+    t = datetime.now(place.tz)
+    off = t.strftime('%z')
+    return f"{t.strftime('%Z')} {off[:3]}:{off[3:]}" if off else t.strftime('%Z')
+
+def coords(place):
+    'Readable coordinates, for when a place has no name to show.'
+    lat, lon = place.lat, place.lon
+    return f"{abs(lat):.2f}°{'N' if lat >= 0 else 'S'} {abs(lon):.2f}°{'E' if lon >= 0 else 'W'}"
+
+def place_chip(place):
+    """Which city this almanac is for -- the one fact every number on the page depends on.
+
+    It is the control as well as the label. A separate Place button said the same thing
+    twice and left the city looking like a caption, when it is the subject. A place with no
+    name falls back to its coordinates, which are at least true."""
+    return Button(lc_icon('map-pin', 14, cls='pin'),
+                  Span(place.name or coords(place), cls='city'),
+                  Span(zone_label(place), cls='zone'),
+                  cls='chip', onclick='mh.openPlace()',
+                  title='Change place — sunrise, and every boundary with it, is local')
+
 def controls(place, active='month'):
-    """The page's own controls -- which month, which day, which place.
+    """The page's own controls -- which place, which month, which day.
 
     No title and no theme picker: the navbar already carries both, and a second set of site
     chrome inside the page is what made this look like a separate window."""
     q = f'?{place_q(place)}'
     return Header(
-        Div(Div('Panchangam', cls='lbl'),
-            Div(f'{place.name or place.key()} · {place.tzname}', cls='where'),
-            cls='min-w-0'),
+        place_chip(place),
         Nav(A(Button('Month', cls=f"btn{' on' if active=='month' else ''}"), href=f'{Routes.month}{q}'),
             A(Button('Today', cls=f"btn{' on' if active=='day' else ''}"), href=f'{Routes.day}{q}'),
-            Button('Place', cls='btn', onclick='mh.openPlace()'),
             A(Button('Subscribe', cls=f"btn accent{' on' if active=='subscribe' else ''}"),
               href=f'{Routes.subscribe}{q}')),
         cls='mast')
@@ -104,7 +124,7 @@ def place_dialog():
             cls='hd'),
         Div(Input(type='text', id='mh-q', placeholder='Search a city…', autocomplete='off'),
             Ul(id='mh-hits', cls='hits'),
-            Div(Button('Use my location', cls='btn', onclick='mh.gps()'),
+            Div(Button('Use my location', cls='btn', id='mh-gps', onclick='mh.gps()'),
                 Button('Close', cls='btn ghost', onclick='mh.closePlace()'),
                 style='display:flex;gap:8px;margin-top:14px'),
             cls='bd'),

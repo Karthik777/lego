@@ -111,7 +111,7 @@ def month_page(req, auth=None):
     if not (1 <= m <= 12) or not (1900 <= y <= 2200): y, m = today.year, today.month
     key = f'{place.lat:.4f},{place.lon:.4f}'
     body, boot = _month_body(key, place.tzname, place.name, y, m, today.isoformat(), ui.UI_VERSION)
-    return ui.page(f'{month_name[m]} {y} · Muhurtha', place, NotStr(body),
+    return ui.page(f'{month_name[m]} {y} · {place.name or ui.coords(place)} · Muhurtha', place, NotStr(body),
                    auth, active='month', boot=boot)
 
 def day_page(req, auth=None):
@@ -119,7 +119,7 @@ def day_page(req, auth=None):
     d = date_of(req, place)
     p = day_panchanga(place, d, planets=False, spans=False)
     body = ui.day_view(place, d, datetime.now(place.tz).date())
-    return ui.page(f"{d.isoformat()} · {p['tithi']['name']} · {p['nakshatra']['name']}",
+    return ui.page(f"{d.isoformat()} · {p['tithi']['name']} · {place.name or ui.coords(place)}",
                    place, body, auth, active='day', boot=_boot(day_panchanga(place, d)))
 
 def subscribe_page(req, auth=None):
@@ -127,7 +127,8 @@ def subscribe_page(req, auth=None):
     boot = json.dumps(dict(davBase=f'{base_url(req)}{Routes.dav}/',
                            place=[round(place.lat, 4), round(place.lon, 4),
                                   place.tzname, place.name]))
-    return ui.page('Subscribe · Muhurtha', place, ui.subscribe_view(place, base_url(req)),
+    return ui.page(f'Subscribe · {place.name or ui.coords(place)} · Muhurtha', place,
+                   ui.subscribe_view(place, base_url(req)),
                    auth, active='subscribe', boot=boot)
 
 def feed_ics(req):

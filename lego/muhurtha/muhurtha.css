@@ -69,12 +69,46 @@
     border-bottom: 1px solid var(--mh-rule);
     flex-wrap: wrap;
 }
-.mh .mast .where {
-    font-family: var(--mh-serif);
-    font-size: 19px;
-    line-height: 1.2;
-    margin-top: 3px;
+/* The place chip. Set into the rule under the bar rather than sitting on top of it, so it
+   reads as part of the page's frame instead of as another button. */
+.mh .chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 3px 2px 7px;
+    margin-bottom: -13px;
+    border: 0;
+    border-bottom: 2px solid var(--mh-accent);
+    border-radius: 0;          /* Oat rounds every button; this one is a rule, not a chip. */
+    background: transparent;
+    cursor: pointer;
+    max-width: 100%;
+    min-width: 0;
 }
+.mh .chip .pin {
+    align-self: center;
+    color: var(--mh-accent);
+    flex: 0 0 auto;
+}
+.mh .chip .city {
+    font-family: var(--mh-serif);
+    font-size: 21px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mh .chip .zone {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mh-muted);
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+.mh .chip:hover .city { color: var(--mh-accent); }
+.mh .chip:hover .zone { color: var(--mh-ink-2); }
 .mh .mast nav { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
 /* Body copy that is not a heading and not a datum: instructions, notes, caveats. */

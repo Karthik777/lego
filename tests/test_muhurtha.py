@@ -363,3 +363,24 @@ def test_stylesheet_is_scoped_to_the_block():
                      if x.strip() and not x.strip().startswith('.mh')]
         depth += line.count('{') - line.count('}')
     assert not bare, f'unscoped selectors would leak onto other pages: {bare}'
+
+
+def test_only_muhurtha_is_flagged_new():
+    from lego.core import RouteOverrides
+    import lego.app  # noqa: F401
+    tagged = [x[0] for x in RouteOverrides.nav if x[2] == 'new']
+    assert tagged == ['Muhurtha']
+
+@pytest.mark.parametrize('q,want', [
+    ('lat=13.0827&lon=80.2707&tz=Asia/Kolkata&place=Chennai', 'Chennai'),
+    ('lat=-33.8688&lon=151.2093&tz=Australia/Sydney', '33.87°S 151.21°E'),
+])
+def test_the_page_names_the_place_it_was_computed_for(client, q, want):
+    'Every number on the page depends on the place, so the place has to be on the page.'
+    r = client.get(f'/muhurtha/month?{q}')
+    assert want in r.text
+
+def test_unnamed_place_falls_back_to_coordinates():
+    from lego.muhurtha.ui import coords
+    assert coords(Place(13.0827, 80.2707, 'Asia/Kolkata')) == '13.08°N 80.27°E'
+    assert coords(Place(-33.8688, -70.6693, 'UTC')) == '33.87°S 70.67°W'
