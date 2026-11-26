@@ -9,7 +9,7 @@ from setup import ROOT, mk_env, env2push, push_gh_vars, docker_isolation
 root = Path(__file__).resolve().parent
 pkgs = ['rclone','libsqlite3-dev','curl']
 vols = ['/app/data', '/app/backups', '/app/static']
-inc = ['lego/','static/','pyproject.toml','docker-compose.yml','main.py','Dockerfile','Caddyfile','.dockerignore','.env','uv.lock']
+inc = ['lego/', 'fhoat/','static/','pyproject.toml','docker-compose.yml','main.py','Dockerfile','Caddyfile','.dockerignore','.env','uv.lock']
 exc = ['data/','backups/','.venv/','mrsladjoe/']
 sd, domain, srv = 'lego', 'sankalpa.sh', '/srv/app'
 tunnel_nm = f'{sd}_{domain}'
@@ -41,7 +41,7 @@ def mk_caddyfile(path=CADDYFILE):
 def mk_compose():
     docker_isolation(root)
     df = (Dockerfile().from_('python:3.13-slim').workdir('/app').apt_install(*pkgs)
-          .run('pip install uv').copy('pyproject.toml', '.').copy('uv.lock', '.')
+          .run('pip install uv').copy('pyproject.toml', '.').copy('uv.lock', '.').copy('fhoat', 'fhoat')
           .run('uv sync --frozen --no-dev --no-cache --no-install-project')
           .copy('lego', 'lego').copy('static', 'static').copy('main.py', '.')
           .run('uv pip check --python .venv/bin/python && .venv/bin/python -c "import lego"')

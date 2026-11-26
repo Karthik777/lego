@@ -9,13 +9,14 @@ from itertools import islice, cycle
 from .cfg import cfg as s, RouteOverrides as r, not_prod
 from .icons import lc_icon, lc_sprites, lc_sprite_nms
 from .utils import loadX
+from fhoat import Theme, oat_hdrs, oat_htmlkw, ModeToggle, ThemePicker, FontToggle
 
 __all__ = ['landing', 'welcome_page', 'placeholder', 'navbar', 'theme_switcher', 'logout', 'mode_switcher',
            'svg_img', 'montage', 'typewriter', 'base', 'Badge', 'BadgeT', 'BadgePresetsT', 'PresetsT',
            'welcome', 'not_found', 'email_template', 'main', 'themes', 'github_star', 'stringify', 'sprites', 'rendered',
            'ButtonT', 'TextT', 'ThemeRadii', 'ThemeShadows', 'ThemeFont', 'NavBarT', 'THEMES',
            'LabelInput', 'LabelTextArea', 'LabelSelect', 'modal', 'CmdPalette', 'asset_js', 'asset_css', 'vendor_js', 'vlink',
-           'vendor_hdrs']
+           'vendor_hdrs', 'theme_htmlkw']
 
 def stringify(o):
     'Join class fragments (str | list | tuple, arbitrarily nested) into one class string.'
@@ -35,15 +36,13 @@ class TextT:
     center, left, right = 'align-center', 'align-left', 'align-right'
     break_ = 'break-words'
 
-class ThemeRadii: none, sm, md, lg = 'radii-none', 'radii-sm', 'radii-md', 'radii-lg'
-class ThemeShadows: none, sm, md, lg = 'shadows-none', 'shadows-sm', 'shadows-md', 'shadows-lg'
-class ThemeFont: default, sm, lg = 'font-base', 'font-sm', 'font-lg'
+# fhoat setting values (html data-radius / data-shadow / data-size)
+class ThemeRadii: none, sm, md, lg = 'none', 'sm', 'md', 'lg'
+class ThemeShadows: none, sm, md, lg = 'none', 'sm', 'md', 'lg'
+class ThemeFont: default, sm, lg = '', 'sm', 'lg'
 
-THEMES = [('theme-paper', '#8a1f11'),
-          ('theme-zinc', '#71717a'), ('theme-slate', '#64748b'), ('theme-stone', '#78716c'),
-          ('theme-red', '#dc2626'), ('theme-rose', '#e11d48'), ('theme-orange', '#ea580c'),
-          ('theme-green', '#16a34a'), ('theme-blue', '#2563eb'), ('theme-violet', '#7c3aed'),
-          ('theme-yellow', '#ca8a04')]
+THEMES = dict(paper='#8a1f11', zinc='#71717a', slate='#64748b', stone='#78716c', red='#dc2626', rose='#e11d48',
+              orange='#ea580c', green='#16a34a', blue='#2563eb', violet='#7c3aed', yellow='#ca8a04')
 
 class PresetsT:
     animate_shine = 'shadow-md'
@@ -191,35 +190,17 @@ def _navbar(usr=None, title='', style=NavBarT.default, cls='w-full sticky', mobi
     rgt = Div(*[c for c, inc in cmps if inc], cls='flex items-center gap-1')
     return Div(Nav(lft, rgt, cls=mobile_cls), cls=[style, cls])
 
-def theme_switcher(cls='relative', heading='Customise', sub_heading='theme selection'):
-    swatches = Div(*[Button(type='button', cls='swatch', style=f'background:{c}',
-                            title=t.removeprefix('theme-'), onclick=f"setTheme('{t}')") for t, c in THEMES],
-                   cls='swatch-grid')
-    def opts(setter, pairs):
-        return Div(*[Button(lbl, type='button', cls='button outline small', onclick=f"{setter}('{v}')")
-                     for v, lbl in pairs], cls='opt-row')
-    menu = Div(H3(heading), P(sub_heading, cls='text-light text-sm'), swatches,
-               P('Corners', cls='text-sm font-medium mb-1'),
-               opts('setRadii', [(ThemeRadii.none, 'Sharp'), (ThemeRadii.sm, 'Subtle'), (ThemeRadii.md, 'Round'), (ThemeRadii.lg, 'Rounder')]),
-               P('Shadows', cls='text-sm font-medium mb-1'),
-               opts('setShadows', [(ThemeShadows.none, 'Flat'), (ThemeShadows.sm, 'Soft'), (ThemeShadows.md, 'Medium'), (ThemeShadows.lg, 'Deep')]),
-               popover=True, id='theme-menu', cls='theme-menu card')
-    btn = Button(lc_icon('palette', 20), type='button', popovertarget='theme-menu',
-                 cls=f'{ButtonT.icon} {ButtonT.sm}', aria_label='Customise theme')
-    return Ot_dropdown(btn, menu, cls=cls)
+def theme_switcher(cls='relative', heading='Customise', sub_heading=None):
+    "fhoat's theme menu: lego's palettes, corners and shadows."
+    return ThemePicker(THEMES, title=heading, id='theme-menu', icon=lc_icon('palette', 20), cls=cls)
 
 def mode_switcher():
-    btn_cls = f'{ButtonT.icon} {ButtonT.sm}'
-    return Div(Div(lc_icon('sun-moon', 20), On('setMode("dark");'), cls=[btn_cls], id='auto-mode-btn'),
-               Div(lc_icon('moon', 20), On('setMode("light");'), cls=btn_cls, id='dark-mode-btn'),
-               Div(lc_icon('sun', 20), On('setMode("auto");'), cls=btn_cls, id='light-mode-btn'))
+    "fhoat's mode button: auto, light, dark."
+    return ModeToggle(auto=lc_icon('sun-moon', 20), light=lc_icon('sun', 20), dark=lc_icon('moon', 20), order=('auto', 'dark', 'light'))
 
 def font_size_switcher():
-    btn_cls = f'{ButtonT.icon} {ButtonT.sm}'
-    return Div(
-        Div(lc_icon('case-lower', 20), On('setFont("%s");' % ThemeFont.default), cls=[btn_cls], id='sm-font-btn'),
-        Div(lc_icon('case-lower', 24), On('setFont("%s");' % ThemeFont.lg), cls=[btn_cls], id='lg-font-btn'),
-        Div(lc_icon('case-lower', 28), On('setFont("%s");' % ThemeFont.sm), cls=[btn_cls], id='xl-font-btn'))
+    "fhoat's text size button: base, then large, then small."
+    return FontToggle(sizes=(ThemeFont.default, ThemeFont.lg, ThemeFont.sm), icon=lc_icon('case-lower', 20))
 
 def svg_img(svg_path, cls='', w=16, h=16, outer_cls='', loading='lazy', **kw):
     return Div(Img(src=f'/{svg_path}', cls=f'inout {cls}', width=w, height=h, loading=loading, **kw),
@@ -340,14 +321,26 @@ def asset_css(path, **kw):
 
 def vendor_js(nm, **kw): return Script(src=vlink(f'/static/vendor/{nm}'), **kw)
 
+STORE = 'lego'
+# The readers' settings before fhoat, under __LEGO__ as class names; carried over once, in <head> before fhoat.js reads them.
+# The theme is dropped: the old script reset it to the app's on every load, so no reader ever kept one.
+_MIGRATE = ("(()=>{try{const o=JSON.parse(localStorage.getItem('__LEGO__'));if(!o||localStorage.getItem('%s'))return;"
+            "const v=(x,p)=>typeof x==='string'?x.replace(/^uk-/,'').replace(p,''):'',n={mode:o.mode,radius:v(o.radii,/^radii-/),"
+            "shadow:v(o.shadows,/^shadows-/),size:{'font-sm':'sm','font-lg':'lg'}[v(o.font,/^$/)]};for(const k in n)if(!n[k])delete n[k];"
+            "localStorage.setItem('%s',JSON.stringify(n));localStorage.removeItem('__LEGO__')}catch(e){}})();") % (STORE, STORE)
+
+def _thm(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default):
+    "The app's default look as an fhoat Theme."
+    return Theme(name=color, radius=radii or None, shadow=shadows or None, size=font or None)
+
+def theme_htmlkw(**kw):
+    "The <html> attrs for the default look; pass as fast_app's htmlkw."
+    return oat_htmlkw(_thm(**kw), store=STORE)
+
 @timed_cache(seconds=3600)
-def themes(color='paper', radii=ThemeRadii.md, shadows=ThemeShadows.sm, font=ThemeFont.default, reveal=True):
-    radii, shadows = getattr(radii, 'value', radii), getattr(shadows, 'value', shadows)
-    d = AttrDict(mode='auto', theme='theme-%s' % color, radii=radii, shadows=shadows, font=font)
-    j = loadX(_js, dict(state=json.dumps(d), theme=d.theme), r'\{\{__(\w+)__\}\}')
-    c = loadX(_css)
-    oat = [Link(rel='stylesheet', href=vlink('/static/vendor/oat.min.css')),
-           Script(src=vlink('/static/vendor/oat.min.js'), type='module')]
+def themes(reveal=True, **kw):
+    "Oat and fhoat's themes and mode (served at /fhoat), lego's own look layer, and the old-settings carry-over."
+    c, j = loadX(_css), loadX(_js)
     thm = [Link(rel='stylesheet', href=vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
            Script(src=vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
-    return oat + thm + [_nosleep()] + ([Surreal("me('body').remove_class('hidden');")] if reveal else [])
+    return [Script(_MIGRATE), *oat_hdrs(_thm(**kw), look=False, compat=True)] + thm + [_nosleep()] + ([Surreal("me('body').remove_class('hidden');")] if reveal else [])

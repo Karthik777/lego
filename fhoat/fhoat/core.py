@@ -11,24 +11,22 @@ from fasthtml.components import Ot_dropdown, Ot_tabs
 from starlette.responses import FileResponse, Response
 from starlette.routing import Route
 
-__all__ = ['OAT_VER', 'oatcss', 'oatjs', 'THEMES', 'Theme', 'oat_hdrs', 'oat_htmlkw', 'serve_oat', 'fast_app',
+__all__ = ['OAT_VER', 'OAT_DIR', 'oatcss', 'oatjs', 'THEMES', 'Theme', 'oat_hdrs', 'oat_htmlkw', 'serve_oat', 'fast_app',
            'Card', 'Group', 'Search', 'Grid', 'Row', 'Col', 'DialogX', 'DialogOpen', 'DialogClose', 'Container', 'OatBusy',
            'Btn', 'ABtn', 'Badge', 'Alert', 'Field', 'Switch', 'Tabs', 'Dropdown', 'Avatar', 'Skeleton',
-           'Navbar', 'Hero', 'PageFooter', 'ModeToggle', 'ThemePicker', 'Toast', 'toast_hdr']
+           'Navbar', 'Hero', 'PageFooter', 'ModeToggle', 'ThemePicker', 'FontToggle', 'Toast', 'toast_hdr']
 
 OAT_VER = '1.1.0'
 STATIC, PREFIX = Path(__file__).parent/'static', '/fhoat'
-FILES = ('oat.min.css', 'oat.min.js', 'fhoat.css', 'fhoat.js')
+OAT_DIR = STATIC   # the files, for an app that mounts them itself
+FILES = ('oat.min.css', 'oat.min.js', 'oat10.css', 'oat10.js', 'themes.css', 'fhoat.css', 'fhoat.js')
 oatcss = f'https://cdn.jsdelivr.net/npm/@knadh/oat@{OAT_VER}/oat.min.css'
 oatjs = f'https://cdn.jsdelivr.net/npm/@knadh/oat@{OAT_VER}/oat.min.js'
-THEMES = dict(default='#262626', slate='#334155', stone='#44403c', rose='#e11d48', orange='#ea580c', amber='#b45309',
+THEMES = dict(default='#262626', zinc='#18181b', slate='#334155', stone='#44403c', red='#dc2626', rose='#e11d48', orange='#ea580c', amber='#b45309', yellow='#ca8a04',
               green='#15803d', teal='#0f766e', blue='#2563eb', indigo='#4f46e5', violet='#7c3aed', paper='#8a1f11', ink='#000000')
 
 # ── Theme ────────────────────────────────────────────────────────────────────
-RADII = dict(none=(0, 0, 0), sm=(.125, .25, .375), md=(.25, .5, .75), lg=(.375, .75, 1.25), full=(.5, 1, 1.5))
-SHADOWS = dict(none=('none',)*3, sm=('0 1px 2px rgb(0 0 0 / .05)', '0 1px 3px rgb(0 0 0 / .08)', '0 8px 20px -8px rgb(0 0 0 / .18)'),
-               md=('0 1px 3px rgb(0 0 0 / .08)', '0 4px 10px -2px rgb(0 0 0 / .12)', '0 14px 30px -10px rgb(0 0 0 / .25)'),
-               lg=('0 2px 6px rgb(0 0 0 / .1)', '0 8px 20px -4px rgb(0 0 0 / .18)', '0 24px 48px -12px rgb(0 0 0 / .32)'))
+RADII, SHADOWS, SIZES = ('none', 'sm', 'md', 'lg', 'full'), ('none', 'sm', 'md', 'lg'), ('sm', 'lg', 'xl')
 FONTS = dict(sans=None, serif='var(--font-serif)', mono='var(--font-mono)')
 
 def _fg(c):
@@ -48,16 +46,22 @@ def _ld(v, f=lambda x: x):
 
 @dataclass
 class Theme:
-    "One look: a preset `name`, an accent (`#hex` or a (light, dark) pair), corners, shadows, type, scale and raw tokens."
-    name: str = None; primary: str | tuple = None; radius: str = None; shadow: str = None
+    "One look: a preset `name`, an accent (`#hex` or a (light, dark) pair), corners, shadows, text size, type, scale and raw tokens."
+    name: str = None; primary: str | tuple = None; radius: str = None; shadow: str = None; size: str = None
     font: str = None; display: str = None; scale: float = None; tokens: dict = None
+
+    def __post_init__(self):
+        for k, ok in (('radius', RADII), ('shadow', SHADOWS), ('size', SIZES)):
+            if getattr(self, k) not in (None, *ok): raise ValueError(f'{k} must be one of {ok}')
+
+    def attrs(self) -> dict:
+        "The `<html>` attrs: preset, corners, shadows and size, which a reader's choice in the browser replaces."
+        return {f'data_{k}': v for k in ('theme', 'radius', 'shadow', 'size') if (v := getattr(self, 'name' if k == 'theme' else k))}
 
     def vars(self) -> dict:
         "The CSS custom properties this theme sets, beyond its preset."
         d = {}
         if self.primary: d |= {'--primary': _ld(self.primary), '--primary-foreground': _ld(self.primary, _fg), '--ring': _ld(self.primary)}
-        if self.radius: d |= dict(zip(('--radius-small', '--radius-medium', '--radius-large'), (f'{x}rem' for x in RADII[self.radius])))
-        if self.shadow: d |= dict(zip(('--shadow-small', '--shadow-medium', '--shadow-large'), SHADOWS[self.shadow]))
         if self.font: d['--font-sans'] = FONTS.get(self.font, self.font)
         if self.display: d['--font-display'] = FONTS.get(self.display, self.display) or 'var(--font-sans)'
         for k, v in (self.tokens or {}).items(): d['--' + k.lstrip('-').replace('_', '-')] = v
@@ -82,19 +86,21 @@ def _read(nm): return (STATIC/nm).read_text()
 def _ver(nm): return hashlib.md5((STATIC/nm).read_bytes()).hexdigest()[:10]
 def _src(nm, prefix=PREFIX): return f'{prefix}/{nm}?v={_ver(nm)}'
 
-def oat_hdrs(theme=True, cdn=False, prefix=PREFIX):
-    "Head tags for Oat and the fhoat layer; `cdn` pulls Oat from jsDelivr and inlines the layer."
+def oat_hdrs(theme=True, cdn=False, prefix=PREFIX, look=True, script=True, compat=False, themes=True):
+    "Head tags for Oat (with 1.0's metrics when `compat`), fhoat's `themes`, its `look` layer and its `script`; `cdn` pulls Oat from jsDelivr and inlines fhoat's CSS."
     t = _theme(theme)
-    css = (Link(rel='stylesheet', href=oatcss), Style(_read('fhoat.css'))) if cdn else \
-          (Link(rel='stylesheet', href=_src('oat.min.css', prefix)), Link(rel='stylesheet', href=_src('fhoat.css', prefix)))
-    js = Script(src=oatjs if cdn else _src('oat.min.js', prefix), defer=True)
+    css = lambda nm: Style(_read(nm)) if cdn else Link(rel='stylesheet', href=_src(nm, prefix))
+    oat = Link(rel='stylesheet', href=oatcss if cdn else _src('oat.min.css', prefix))
+    lyr = (css('oat10.css') if compat else None, css('themes.css') if themes else None, css('fhoat.css') if look else None)
     own = Style(t.css()) if t.css() else None
-    return tuple(o for o in (Meta(name='color-scheme', content='light dark'), *css, own, Script(_read('fhoat.js')), js) if o is not None)
+    js = Script(_read('fhoat.js')) if script else None
+    sweep = Script(_read('oat10.js')) if compat and cdn else Script(src=_src('oat10.js', prefix), defer=True) if compat else None
+    hd = (Meta(name='color-scheme', content='light dark'), oat, *lyr, own, js, sweep, Script(src=oatjs if cdn else _src('oat.min.js', prefix), defer=True))
+    return tuple(o for o in hd if o is not None)
 
-def oat_htmlkw(theme=True, mode='auto'):
-    "The `<html>` attrs fhoat.js reads: default theme and mode."
-    t = _theme(theme)
-    return dict(data_mode=mode) | (dict(data_theme=t.name) if t.name else {})
+def oat_htmlkw(theme=True, mode='auto', tips=True, store=None):
+    "The `<html>` attrs fhoat.js reads: defaults for mode and look; `tips=False` hides Oat's tooltips; `store` names the localStorage key."
+    return dict(data_mode=mode) | _theme(theme).attrs() | ({} if tips else dict(data_tips='off')) | (dict(data_store=store) if store else {})
 
 def serve_oat(app, prefix=PREFIX):
     "Serve the vendored Oat and fhoat files, ahead of fast_app's static catch-all, cached for a year."
@@ -106,11 +112,11 @@ def serve_oat(app, prefix=PREFIX):
     return app
 
 @delegates(fh_fast_app, keep=True)
-def fast_app(*args, oat=True, mode='auto', cdn=False, hdrs=None, htmlkw=None, **kw):
+def fast_app(*args, oat=True, mode='auto', cdn=False, tips=True, store=None, hdrs=None, htmlkw=None, **kw):
     "fasthtml's `fast_app` with `oat` in place of `pico`: True, a preset name, a dict or a `Theme`."
     if not oat: return fh_fast_app(*args, hdrs=hdrs, htmlkw=htmlkw, **kw)
     t = _theme(oat)
-    res = fh_fast_app(*args, pico=False, hdrs=(*oat_hdrs(t, cdn), *(hdrs or ())), htmlkw=oat_htmlkw(t, mode) | (htmlkw or {}), **kw)
+    res = fh_fast_app(*args, pico=False, hdrs=(*oat_hdrs(t, cdn), *(hdrs or ())), htmlkw=oat_htmlkw(t, mode, tips, store) | (htmlkw or {}), **kw)
     if not cdn: serve_oat(res[0])
     return res
 
@@ -236,17 +242,35 @@ _PALETTE = ('<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="
             '<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.29-.44-.65-.44-1.12a1.64 1.64 0 0 1 '
             '1.67-1.67h2c3.05 0 5.55-2.5 5.55-5.55C21.97 6.01 17.46 2 12 2z"/>')
 
-def ModeToggle(**kw) -> FT:
-    "One button cycling auto, light and dark; the icon shows the current mode."
-    return Button(_svg(_AUTO, 'auto'), _svg(_SUN, 'light'), _svg(_MOON, 'dark'), type='button', onclick='fhoat.cycle()',
-                  cls='ghost icon small ot-mode', aria_label='Colour mode: auto, light or dark', **kw)
+def _ico(o, cls): return Span(o, cls=cls) if o is not None else None
 
-def ThemePicker(themes=None, id='ot-themes', **kw) -> FT:
-    "A swatch menu that sets and remembers the reader's theme."
+def ModeToggle(auto=None, light=None, dark=None, order=('auto', 'light', 'dark'), **kw) -> FT:
+    "One button cycling the modes in `order`; the icon shows the current mode. Pass your own icons for any of the three."
+    ics = [_ico(o, k) if o is not None else _svg(d, k) for k, o, d in (('auto', auto, _AUTO), ('light', light, _SUN), ('dark', dark, _MOON))]
+    return Button(*ics, type='button', onclick=f"fhoat.cycle('mode','{','.join(order)}'.split(','))", cls='ghost icon small ot-mode', aria_label='Colour mode: auto, light or dark', **kw)
+
+RADIUS_OPTS = dict(none='Sharp', sm='Subtle', md='Round', lg='Rounder')
+SHADOW_OPTS = dict(none='Flat', sm='Soft', md='Medium', lg='Deep')
+
+def _opts(k, opts):
+    "A row of buttons that set setting `k`."
+    return Div(*[Button(lbl, type='button', role='menuitem', cls='outline small', data_set=f'{k}={v}', onclick=f"fhoat.set('{k}','{v}')")
+                 for v, lbl in opts.items()], cls='ot-opts')
+
+def ThemePicker(themes=None, radii=RADIUS_OPTS, shadows=SHADOW_OPTS, title='Theme', id='ot-themes', icon=None, **kw) -> FT:
+    "A menu that sets and remembers the reader's theme, corners and shadows; pass `radii=None` or `shadows=None` to leave a row out."
     sw = [Button(type='button', role='menuitem', cls='ot-swatch', style=f'--sw:{c}', aria_label=n, title=n, onclick=f"fhoat.theme('{n}')")
           for n, c in (themes or THEMES).items()]
-    return Ot_dropdown(Button(_svg(_PALETTE), popovertarget=id, type='button', cls='ghost icon small', aria_label='Theme'),
-                       Div(*sw, popover=True, id=id, cls='ot-swatches'), **kw)
+    menu = Div(H6(title), Div(*sw, cls='ot-swatches'), *((H6('Corners'), _opts('radius', radii)) if radii else ()),
+               *((H6('Shadows'), _opts('shadow', shadows)) if shadows else ()), popover=True, id=id, cls='ot-picker')
+    return Ot_dropdown(Button(icon if icon is not None else _svg(_PALETTE), popovertarget=id, type='button', cls='ghost icon small', aria_label='Theme'), menu, **kw)
+
+_CASE = '<path d="m15 16 2.54-7.63a.5.5 0 0 1 .92 0L21 16M15.5 14h5M3 16l4-10 4 10M4.2 13h5.6"/>'
+
+def FontToggle(sizes=('', 'lg', 'xl'), icon=None, **kw) -> FT:
+    "One button cycling the text size through `sizes` ('' is the app default; sm|lg|xl)."
+    return Button(icon if icon is not None else _svg(_CASE), type='button', onclick=f"fhoat.cycle('size','{','.join(sizes)}'.split(','))", cls='ghost icon small ot-size',
+                  aria_label='Text size', **kw)
 
 def _link(o): return A(o[0], href=o[1]) if isinstance(o, tuple) else o
 

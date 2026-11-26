@@ -4,6 +4,7 @@ from fasthtml.common import *
 from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware
 from .core import *
+from fhoat import serve_oat
 from lego import auth as a, blog as b, dash as d, muhurtha as mu, thrifty as t
 
 __all__ = ['launch', 'lego']
@@ -43,11 +44,12 @@ mw = [Middleware(GZipMiddleware, minimum_size=1024)]
 
 # default_hdrs=False and no `exts`: both would put CDN <script src> back in the head.
 # vendor_hdrs() is the same set, served locally — see lego/core/ui.py.
-lego, rt = fast_app(hdrs=hdrs, bodykw=kw, live=not_prod(), title=cfg.app_nm, default_hdrs=False, pico=False,
+lego, rt = fast_app(hdrs=hdrs, bodykw=kw, htmlkw=theme_htmlkw(), live=not_prod(), title=cfg.app_nm, default_hdrs=False, pico=False,
                     exception_handlers=exh, middleware=mw,
                     on_startup=start_scheduler, on_shutdown=stop_scheduler)
 
-# serve versioned css/js (vurl ?v= links) immutable, ahead of the default static route
+# serve versioned css/js (vurl ?v= links) immutable, ahead of the default static route; Oat and fhoat at /fhoat
+serve_oat(lego)
 from starlette.routing import Mount
 for _d in ('vendor', 'assets'):
     if (Path('static')/_d).exists():

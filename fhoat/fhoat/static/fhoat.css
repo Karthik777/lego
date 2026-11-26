@@ -1,11 +1,7 @@
-/* fhoat: a look layer and theme presets on top of Oat (oat.ink). Tokens only; your unlayered CSS always wins. */
-
-/* ── Mode: Oat colours are light-dark(); fhoat.js sets html.dark / html.light ── */
-html.dark { color-scheme: dark; }
-html.light { color-scheme: light; }
+/* fhoat look: type, links, nav, hero, cards, grid and tables, on top of Oat and themes.css. Its tokens sit at :where(:root), so presets and settings win. */
 
 @layer theme {
-  :root {
+  :where(:root) {
     --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
     --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif", Georgia, serif;
     --font-display: var(--font-sans);
@@ -15,39 +11,6 @@ html.light { color-scheme: light; }
     --measure: 68ch; --nav-h: 3.5rem;
     --tint: color-mix(in srgb, var(--primary) 8%, var(--background));
   }
-
-  /* presets: each moves the accent; paper and ink also move the surfaces */
-  [data-theme=slate]  { --primary: light-dark(#334155, #cbd5e1); --primary-foreground: light-dark(#f8fafc, #0f172a); }
-  [data-theme=stone]  { --primary: light-dark(#44403c, #d6d3d1); --primary-foreground: light-dark(#fafaf9, #1c1917); }
-  [data-theme=rose]   { --primary: light-dark(#e11d48, #fb7185); --primary-foreground: light-dark(#fff1f2, #4c0519); }
-  [data-theme=orange] { --primary: light-dark(#ea580c, #fb923c); --primary-foreground: light-dark(#fff7ed, #431407); }
-  [data-theme=amber]  { --primary: light-dark(#b45309, #fbbf24); --primary-foreground: light-dark(#fffbeb, #451a03); }
-  [data-theme=green]  { --primary: light-dark(#15803d, #4ade80); --primary-foreground: light-dark(#f0fdf4, #052e16); }
-  [data-theme=teal]   { --primary: light-dark(#0f766e, #2dd4bf); --primary-foreground: light-dark(#f0fdfa, #042f2e); }
-  [data-theme=blue]   { --primary: light-dark(#2563eb, #60a5fa); --primary-foreground: light-dark(#eff6ff, #172554); }
-  [data-theme=indigo] { --primary: light-dark(#4f46e5, #818cf8); --primary-foreground: light-dark(#eef2ff, #1e1b4b); }
-  [data-theme=violet] { --primary: light-dark(#7c3aed, #a78bfa); --primary-foreground: light-dark(#f5f3ff, #2e1065); }
-  [data-theme=paper] {
-    --background: light-dark(#f8f4e8, #1f1c17); --foreground: light-dark(#1b1a17, #ddd4c1);
-    --card: light-dark(#fbf8ef, #27231d); --card-foreground: var(--foreground);
-    --primary: light-dark(#8a1f11, #dcae6d); --primary-foreground: light-dark(#f8f4e8, #1f1c17);
-    --secondary: light-dark(#efe8d4, #2f2a22); --secondary-foreground: var(--foreground);
-    --muted: light-dark(#efe8d4, #2a2520); --muted-foreground: light-dark(#6c6a63, #a59e8e);
-    --accent: light-dark(#ebe2c9, #352f26); --faint: light-dark(#f3eddd, #24201b);
-    --border: light-dark(#ded6be, #3a342b); --input: light-dark(#d6cdb2, #463f34);
-    --font-sans: var(--font-serif); --font-display: var(--font-serif);
-  }
-  [data-theme=ink] {
-    --background: light-dark(#ffffff, #000000); --foreground: light-dark(#000000, #f5f5f5);
-    --card: var(--background); --card-foreground: var(--foreground);
-    --primary: var(--foreground); --primary-foreground: var(--background);
-    --secondary: var(--background); --secondary-foreground: var(--foreground);
-    --muted: light-dark(#f2f2f2, #141414); --accent: light-dark(#ececec, #1c1c1c);
-    --border: light-dark(#111111, #e5e5e5); --input: var(--border);
-    --shadow-small: none; --shadow-medium: none; --shadow-large: 0 0 0 1px var(--border);
-    --radius-small: 0; --radius-medium: 0; --radius-large: 0;
-  }
-  [data-theme] { --ring: var(--primary); }
 }
 
 @layer base {
@@ -138,16 +101,6 @@ html.light { color-scheme: light; }
 
   /* buttons sit on a subtle lift */
   :is(button, [type=submit], a.button):not(.ghost, .outline, [data-variant=secondary], [role=tab], [role=menuitem]) { box-shadow: var(--shadow-small); }
-
-  /* mode toggle: one icon per mode */
-  .ot-mode svg { display: none; }
-  html[data-mode=auto] .ot-mode .auto, html[data-mode=light] .ot-mode .light, html[data-mode=dark] .ot-mode .dark { display: block; }
-
-  /* theme picker */
-  .ot-swatches { display: grid; grid-template-columns: repeat(5, 1.75rem); gap: var(--space-2); padding: var(--space-3); }
-  .ot-swatch { width: 1.75rem; height: 1.75rem; padding: 0; border-radius: var(--radius-full); border: 2px solid var(--border);
-    box-shadow: none !important; background: var(--sw); transition: transform var(--transition-fast);
-    &:hover { transform: scale(1.12); --_hov: var(--sw); } }
 
   /* footer */
   .ot-footer { border-block-start: 1px solid var(--border); padding-block: var(--space-8); color: var(--muted-foreground); font-size: var(--text-7);

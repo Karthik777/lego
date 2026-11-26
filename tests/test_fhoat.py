@@ -42,9 +42,19 @@ def test_custom_theme_css():
     th = Theme(primary=('#8a1f11', '#dcae6d'), radius='lg', font='serif', tokens=dict(container_max='60rem'), scale=1.1)
     css = th.css()
     assert '--primary:light-dark(#8a1f11, #dcae6d)' in css and '--primary-foreground:light-dark(#fafafa, #0a0a0a)' in css
-    assert '--radius-large:1.25rem' in css and '--font-sans:var(--font-serif)' in css and '--container-max:60rem' in css
+    assert '--font-sans:var(--font-serif)' in css and '--container-max:60rem' in css and 'radius' not in css
     assert 'font-size:110%' in css and css in client(oat=th).get('/').text
     assert Theme().css() == '' and client(oat=dict(primary='#2563eb')).get('/').text.count('--primary:#2563eb') == 1
+
+def test_settings_on_html():
+    t = client(oat=Theme(name='ink', radius='lg', shadow='none', size='lg'), tips=False, store='__APP__').get('/').text
+    for a in ('data-theme="ink"', 'data-radius="lg"', 'data-shadow="none"', 'data-size="lg"', 'data-tips="off"', 'data-store="__APP__"'): assert a in t
+    try: Theme(radius='huge'); assert False
+    except ValueError: pass
+
+def test_hdrs_opt_out():
+    h = to_xml(oat_hdrs(look=False, script=False, prefix='/css/fhoat'))
+    assert '/css/fhoat/oat.min.css?v=' in h and '/css/fhoat/oat.min.js?v=' in h and 'fhoat.css' not in h and 'window.fhoat' not in h
 
 def test_toast_header():
     r = client().post('/t')
@@ -68,6 +78,9 @@ def test_components():
     assert '<ot-dropdown' in m and 'popovertarget="m"' in m and m.count('role="menuitem"') == 2
     assert 'data-variant="avatar"' in x(Avatar(initials='KR')) and x(Skeleton(2)).count('skeleton line') == 2
     n = x(Navbar('B', ('Docs', '/d')))
-    assert 'class="ot-nav"' in n and 'href="/d"' in n and 'fhoat.cycle()' in n
-    assert x(ThemePicker()).count('fhoat.theme(') == len(THEMES)
+    assert 'class="ot-nav"' in n and 'href="/d"' in n and "fhoat.cycle('mode'" in n
+    p = x(ThemePicker())
+    assert p.count('fhoat.theme(') == len(THEMES) and 'data-set="radius=lg"' in p and 'data-set="shadow=none"' in p
+    assert 'data-set' not in x(ThemePicker(radii=None, shadows=None))
+    assert "fhoat.cycle('size'," in x(FontToggle())
     assert 'fhoat.toast(' in x(Toast('hi'))

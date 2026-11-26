@@ -1,0 +1,24 @@
+/* Oat 1.0 on Oat 1.1: the tokens and metrics 1.1 changed, for an app drawn on 1.0. oat_hdrs(compat=True), loaded after Oat. */
+@layer theme {
+  :root {
+    --foreground: light-dark(#09090b, #fafafa); --card-foreground: light-dark(#09090b, #fafafa);
+    --primary: light-dark(#574747, #fafafa); --secondary-foreground: light-dark(#574747, #fafafa);
+    --border: light-dark(#d4d4d8, #52525b); --input: light-dark(#d4d4d8, #52525b); --ring: light-dark(#574747, #d4d4d8);
+    --radius-medium: .375rem; --radius-large: .75rem;
+    --shadow-small: 0 1px 2px 0 rgb(0 0 0 / .05);
+    --shadow-medium: 0 1px 3px 0 rgb(0 0 0 / .1), 0 1px 2px -1px rgb(0 0 0 / .1);
+    --shadow-large: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1);
+    --transition: .2s cubic-bezier(.4, 0, .2, 1);
+  }
+}
+@layer base {
+  a { text-decoration: underline; }
+  :is(button, [type=submit], [type=reset], [type=button], a.button) { font-family: revert; }
+  :is(button, [type=submit], [type=reset], [type=button], a.button):not([data-variant], .outline, .ghost) { --_hov: color-mix(in srgb, var(--primary), white 25%); }
+}
+@layer components {
+  .badge { padding: var(--space-1) var(--space-4); }
+  dialog:is([open], :popover-open)::backdrop { background-color: #00000080; }
+  blockquote { border-inline-start-width: 4px; }
+  code { background-color: var(--faint); }
+}

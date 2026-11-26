@@ -20,6 +20,7 @@ dependencies = [
     "email-validator>=2.3.0",
     "litesearch>=0.0.29",
     "fastlucide>=0.0.7",
+    "fhoat",
     "mistletoe>=1.4.0",
     "pyjwt>=2.11.0",
     "python-fasthtml>=0.14.0",
@@ -42,7 +43,7 @@ Issues = "https://github.com/Karthik777/lego/issues"
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["lego", "fhoat"]
+packages = ["lego"]
 
 [build-system]
 requires = ["hatchling"]
@@ -58,3 +59,9 @@ dev = [
     "pytest>=9.0.3",
     "vpseasy>=0.0.6",
 ]
+
+[tool.uv.workspace]
+members = ["fhoat"]
+
+[tool.uv.sources]
+fhoat = { workspace = true }

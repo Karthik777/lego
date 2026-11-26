@@ -683,7 +683,7 @@
   }
 
   // theme.js swaps classes on <html>; auto mode follows the OS instead
-  new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(repaint).observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', repaint);
   document.addEventListener('htmx:afterSwap', (e) => scan(e.target));
   if (document.readyState !== 'loading') scan(); else document.addEventListener('DOMContentLoaded', () => scan());
