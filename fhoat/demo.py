@@ -1,0 +1,116 @@
+"fhoat gallery: every component, plus pages shaped like lego's blog and vedicreader's reader. `python -m fhoat.demo`."
+from fhoat import *
+
+app, rt = fast_app(oat=True, title='fhoat')
+
+def page(*c, title='fhoat'):
+    "One shell for every demo page."
+    nav = Navbar('◆ fhoat', ('Components', '/'), ('Lego', '/lego'), ('Vedic Reader', '/vr'), end=(ThemePicker(), ModeToggle()))
+    return Title(title), nav, Container(*c), PageFooter(Span('fhoat · Oat UI for FastHTML'), A('oat.ink', href='https://oat.ink'))
+
+def sec(title, *c): return Section(H2(title, cls='mb-4'), *c, cls='mb-8')
+
+# ── Components ───────────────────────────────────────────────────────────────
+def buttons():
+    return sec('Buttons', Div(Btn('Primary'), Btn('Secondary', variant='secondary'), Btn('Danger', variant='danger'),
+                              Btn('Outline', look='outline'), Btn('Ghost', look='ghost'), Btn('Small', size='small'),
+                              ABtn('Link button', href='#', look='outline'), Btn('Busy', aria_busy='true', disabled=True), cls='hstack'))
+
+def badges():
+    return sec('Badges and alerts', Div(Badge('New'), Badge('Draft', variant='secondary'), Badge('Live', variant='success'),
+                                         Badge('Beta', variant='warning'), Badge('Down', variant='danger'), Badge('Outline', cls='outline'), cls='hstack mb-4'),
+               Div(Alert('Your changes are saved.', title='Saved', variant='success'), Alert('Disk is 90% full.', title='Heads up', variant='warning'),
+                   Alert('The payment failed.', title='Error', variant='danger'), Alert('Plain note with no variant.'), cls='vstack'))
+
+def forms():
+    f = Form(Field('Email', Input(type='email', name='email', placeholder='you@example.com'), hint='We never share it.'),
+             Field('Plan', Select(Option('Free'), Option('Pro'), name='plan')),
+             Field('Bio', Textarea(name='bio', rows=3, placeholder='A line about you')),
+             Div(Switch('Email me updates', name='news', checked=True), Label(Input(type='checkbox', name='tos'), 'I agree'), cls='hstack mb-4'),
+             Group(Input(type='search', name='q', placeholder='Search'), Btn('Go')), hx_post='/toast', hx_swap='none')
+    return sec('Forms', Grid(Card(f, header=H3('Sign up')),
+                             Card(P('Range, progress and meter are plain HTML.'), Input(type='range'), Progress(value=60, max=100),
+                                  Meter(value=.7), Skeleton(2, box=True, cls='mt-4'), header=H3('Native'))))
+
+def overlays():
+    dlg = DialogX(P('Dialogs are native <dialog>. A backdrop click or Esc closes them.'), header=H3('Delete project?'),
+                  footer=(DialogClose('Cancel'), Btn('Delete', variant='danger', onclick="this.closest('dialog').close()")), id='dlg')
+    dd = Dropdown('Options ▾', A('Profile', href='#'), A('Settings', href='#'), Btn('Sign out', look='ghost'))
+    return sec('Overlays', Div(DialogOpen('Open dialog', id='dlg'), dd, Btn('Toast', hx_post='/toast', hx_swap='none', look='outline'),
+                               Btn('Tooltip', title='Oat turns a title into a tooltip', look='ghost'), dlg, cls='hstack'))
+
+def tabs():
+    return sec('Tabs', Tabs(('Account', P('Manage your account.')), ('Billing', P('Invoices and cards.')), ('Team', P('Invite people.'))))
+
+def table():
+    rows = [('Rigveda', 'Veda', '10,552', 'success', 'Live'), ('Bhagavad Gītā', 'Itihāsa', '700', 'success', 'Live'),
+            ('Tirukkuṟaḷ', 'Nīti', '1,330', 'warning', 'Review'), ('Arthaśāstra', 'Nīti', '5,348', 'secondary', 'Draft')]
+    return sec('Table', Div(Table(Thead(Tr(Th('Work'), Th('Shelf'), Th('Verses'), Th('State'))),
+                                  Tbody(*[Tr(Td(Strong(w)), Td(s), Td(n), Td(Badge(b, variant=v))) for w, s, n, v, b in rows])), cls='table'))
+
+def people():
+    return sec('Avatars', Div(Avatar(initials='KR'), Avatar(initials='AB', size='large'), Avatar(initials='S', size='small'), cls='hstack'))
+
+@rt('/')
+def index():
+    hero = Hero('Oat UI for FastHTML', sub='Semantic HTML that looks finished. One switch: fast_app(oat=True). Themes when you want them.',
+                eyebrow='a Pico replacement', actions=(ABtn('See Lego', href='/lego'), ABtn('See Vedic Reader', href='/vr', look='outline')))
+    return page(hero, buttons(), badges(), forms(), overlays(), tabs(), table(), people(), OatBusy())
+
+@rt('/toast')
+def post(): return toast_hdr('Saved. Toasts ride on HX-Trigger.', 'Done', 'success')
+
+# ── Lego-shaped: a blog front, a sign-in dialog, a dashboard ─────────────────
+POSTS = [('Connect order', 'Blocks connect in order; auth goes last.', 'Architecture'),
+         ('litesearch', 'Full-text and vector search in one SQLite file.', 'Search'),
+         ('The blog block', 'Markdown posts with frontmatter, seeded on start.', 'Blocks'),
+         ('dockeasy', 'One command from a folder to a container.', 'Deploy'),
+         ('gheasy', 'Secrets and variables pushed from .env.', 'Tools'),
+         ('vpseasy', 'A VPS, a tunnel and a deploy, scripted.', 'Deploy')]
+
+def post_card(t, d, tag): return A(Badge(tag, variant='secondary', cls='mb-2'), H3(t), P(d), href='#', cls='card')
+
+def signin():
+    return DialogX(Form(Field('Email', Input(type='email', name='email')), Field('Password', Input(type='password', name='pw')),
+                        Btn('Sign in', cls='w-100'), Div(Btn('Google', look='outline'), Btn('GitHub', look='outline'), cls='hstack mt-4 justify-center')),
+                   header=(H3('Welcome back'), P('Sign in to continue')), id='signin')
+
+@rt('/lego')
+def lego():
+    feat = Card(Span('Featured', cls='eyebrow'), H2('VedicReader, built from blocks'),
+                P('How one FastHTML app grew into eight packages, a block at a time.'), footer=(ABtn('Read', href='#', size='small'), Span('6 min', cls='text-light')))
+    side = Div(*[Card(H4(t), P(d, cls='text-light'), cls='mb-4') for t, d, _ in POSTS[:2]])
+    kpis = Grid(*[Card(Small(k, cls='text-light'), H2(v), Badge(c, variant=bv)) for k, v, c, bv in
+                  [('Visitors', '12,480', '+8%', 'success'), ('Sign-ups', '342', '+3%', 'success'), ('Errors', '17', '−2', 'secondary'), ('p95', '84 ms', '+6 ms', 'warning')]], min='12rem')
+    return page(Hero('Build webapps one block at a time', sub='A FastHTML + Oat starter. Clone it, connect your blocks, ship it.',
+                     actions=(DialogOpen('Sign in', id='signin'), ABtn('GitHub', href='#', look='outline'))),
+                sec('Latest', Row(Col(feat, span=8), Col(side, span=4))), sec('All posts', Grid(*[post_card(*p) for p in POSTS], min='16rem')),
+                sec('Dashboard', kpis), signin(), title='Lego')
+
+# ── Vedic Reader-shaped: a shelf, a verse, a day ─────────────────────────────
+WORKS = [('Bhagavad Gītā', 'भगवद्गीता', '18 chapters · 700 verses'), ('Viṣṇu Sahasranāma', 'विष्णुसहस्रनाम', '108 verses'),
+         ('Tirukkuṟaḷ', 'திருக்குறள்', '133 chapters · 1,330 kuṟaḷ'), ('Śrī Sūktam', 'श्रीसूक्तम्', '15 mantras'),
+         ('Gaṇapati Atharvaśīrṣa', 'गणपत्यथर्वशीर्षम्', '10 sections'), ('Puruṣa Sūktam', 'पुरुषसूक्तम्', '16 mantras')]
+VERSE = ('कर्मण्येवाधिकारस्ते मा फलेषु कदाचन ।', 'मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि ॥ २.४७ ॥')
+DAY = [('Tithi', 'Śukla Ṣaṣṭhī', 'till 14:32'), ('Vāra', 'Bhṛgu vāsara', 'Friday'), ('Nakṣatra', 'Śravaṇa', 'till 21:05'),
+       ('Yoga', 'Vṛddhi', 'till 09:48'), ('Karaṇa', 'Kaulava', 'till 14:32')]
+
+def work(en, sa, n): return A(H3(en), P(sa, lang='ta' if en.startswith('Tiru') else 'sa', style='font-size:var(--text-5)'), Small(n, cls='text-light'), href='#', cls='card')
+
+def verse():
+    lines = [P(l, lang='sa', style='font-size:var(--text-3);line-height:1.6') for l in VERSE]
+    iast = P('karmaṇy evādhikāras te mā phaleṣu kadācana', cls='text-light', style='font-style:italic')
+    words = Table(Tbody(*[Tr(Td(Strong(w)), Td(g)) for w, g in [('कर्मणि', 'in action'), ('एव', 'only'), ('अधिकारः', 'right'), ('ते', 'your')]]))
+    return Card(*lines, iast, Tabs(('Meaning', P('Your right is to the work alone, never to its fruits.')), ('Word by word', words), ('Notes', P('Gītā 2.47.'))),
+                header=(H3('Bhagavad Gītā 2.47'), Div(Btn('▶ Play', size='small'), Btn('Aa', size='small', look='ghost'), cls='hstack')),
+                footer=(Btn('← 2.46', look='ghost', size='small'), Span(cls='w-100'), Btn('2.48 →', look='ghost', size='small')))
+
+@rt('/vr')
+def vr():
+    day = Card(Table(Tbody(*[Tr(Th(k), Td(Strong(v)), Td(t, cls='text-light')) for k, v, t in DAY])),
+               header=(H3('Today · Chennai'), Badge('Ṣaṣṭhī vrata', variant='warning')))
+    return page(Search(Group(Input(type='search', placeholder='Search verses, words, works…'), Btn('Search'))),
+                sec('Continue reading', Row(Col(verse(), span=8), Col(day, span=4))),
+                sec('Shelf', Grid(*[work(*w) for w in WORKS], min='15rem')), title='Vedic Reader')
+
+if __name__ == '__main__': serve(appname='fhoat.demo', port=5002)

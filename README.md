@@ -45,6 +45,8 @@ Each block exposes a `connect(app)` function that registers routes, seeds data, 
 
 **thrifty** prices the total cost of ownership of LLM and agent platforms — models, agents, iterations and volumes in, per-request and monthly cost out, against pricing it fetches live from LiteLLM and OpenRouter. It uses a standalone document and stylesheet. It serves `/thrifty` here and the whole of [thrifty.sankalpa.sh](https://thrifty.sankalpa.sh).
 
+**fhoat** is Oat UI for FastHTML, as a drop-in for Pico: `from fhoat import *; app, rt = fast_app(oat=True)`. It has themes, light and dark modes, and Pico-named components. See `fhoat/README.md`.
+
 **blog** is a full publishing block. Posts are seeded from Markdown files with YAML frontmatter. The list page uses a newspaper-style featured/sidebar/grid layout. Post detail pages support single-column or two-column newspaper layout, set per-post via `layout: newspaper` in the frontmatter. Code blocks never split across columns. To force a column break at a specific point in a post, add:
 
 ````md

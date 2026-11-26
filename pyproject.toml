@@ -42,7 +42,7 @@ Issues = "https://github.com/Karthik777/lego/issues"
 
 
 [tool.hatch.build.targets.wheel]
-packages = ["lego"]
+packages = ["lego", "fhoat"]
 
 [build-system]
 requires = ["hatchling"]

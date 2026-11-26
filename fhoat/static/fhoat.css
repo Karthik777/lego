@@ -1,0 +1,161 @@
+/* fhoat: a look layer and theme presets on top of Oat (oat.ink). Tokens only; your unlayered CSS always wins. */
+
+/* ── Mode: Oat colours are light-dark(); fhoat.js sets html.dark / html.light ── */
+html.dark { color-scheme: dark; }
+html.light { color-scheme: light; }
+
+@layer theme {
+  :root {
+    --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+    --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Noto Serif", Georgia, serif;
+    --font-display: var(--font-sans);
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, monospace;
+    --radius-small: .25rem; --radius-medium: .5rem; --radius-large: .75rem;
+    --shadow-small: 0 1px 2px rgb(0 0 0 / .05), 0 1px 1px rgb(0 0 0 / .03);
+    --measure: 68ch; --nav-h: 3.5rem;
+    --tint: color-mix(in srgb, var(--primary) 8%, var(--background));
+  }
+
+  /* presets: each moves the accent; paper and ink also move the surfaces */
+  [data-theme=slate]  { --primary: light-dark(#334155, #cbd5e1); --primary-foreground: light-dark(#f8fafc, #0f172a); }
+  [data-theme=stone]  { --primary: light-dark(#44403c, #d6d3d1); --primary-foreground: light-dark(#fafaf9, #1c1917); }
+  [data-theme=rose]   { --primary: light-dark(#e11d48, #fb7185); --primary-foreground: light-dark(#fff1f2, #4c0519); }
+  [data-theme=orange] { --primary: light-dark(#ea580c, #fb923c); --primary-foreground: light-dark(#fff7ed, #431407); }
+  [data-theme=amber]  { --primary: light-dark(#b45309, #fbbf24); --primary-foreground: light-dark(#fffbeb, #451a03); }
+  [data-theme=green]  { --primary: light-dark(#15803d, #4ade80); --primary-foreground: light-dark(#f0fdf4, #052e16); }
+  [data-theme=teal]   { --primary: light-dark(#0f766e, #2dd4bf); --primary-foreground: light-dark(#f0fdfa, #042f2e); }
+  [data-theme=blue]   { --primary: light-dark(#2563eb, #60a5fa); --primary-foreground: light-dark(#eff6ff, #172554); }
+  [data-theme=indigo] { --primary: light-dark(#4f46e5, #818cf8); --primary-foreground: light-dark(#eef2ff, #1e1b4b); }
+  [data-theme=violet] { --primary: light-dark(#7c3aed, #a78bfa); --primary-foreground: light-dark(#f5f3ff, #2e1065); }
+  [data-theme=paper] {
+    --background: light-dark(#f8f4e8, #1f1c17); --foreground: light-dark(#1b1a17, #ddd4c1);
+    --card: light-dark(#fbf8ef, #27231d); --card-foreground: var(--foreground);
+    --primary: light-dark(#8a1f11, #dcae6d); --primary-foreground: light-dark(#f8f4e8, #1f1c17);
+    --secondary: light-dark(#efe8d4, #2f2a22); --secondary-foreground: var(--foreground);
+    --muted: light-dark(#efe8d4, #2a2520); --muted-foreground: light-dark(#6c6a63, #a59e8e);
+    --accent: light-dark(#ebe2c9, #352f26); --faint: light-dark(#f3eddd, #24201b);
+    --border: light-dark(#ded6be, #3a342b); --input: light-dark(#d6cdb2, #463f34);
+    --font-sans: var(--font-serif); --font-display: var(--font-serif);
+  }
+  [data-theme=ink] {
+    --background: light-dark(#ffffff, #000000); --foreground: light-dark(#000000, #f5f5f5);
+    --card: var(--background); --card-foreground: var(--foreground);
+    --primary: var(--foreground); --primary-foreground: var(--background);
+    --secondary: var(--background); --secondary-foreground: var(--foreground);
+    --muted: light-dark(#f2f2f2, #141414); --accent: light-dark(#ececec, #1c1c1c);
+    --border: light-dark(#111111, #e5e5e5); --input: var(--border);
+    --shadow-small: none; --shadow-medium: none; --shadow-large: 0 0 0 1px var(--border);
+    --radius-small: 0; --radius-medium: 0; --radius-large: 0;
+  }
+  [data-theme] { --ring: var(--primary); }
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--nav-h) + 1rem); }
+  body { line-height: 1.6; text-rendering: optimizeLegibility; font-feature-settings: "cv11", "ss01"; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); letter-spacing: -.015em; text-wrap: balance; }
+  h1 { letter-spacing: -.025em; }
+  p, li { text-wrap: pretty; }
+  a:not(.button, [role=button], [role=menuitem]) {
+    color: var(--primary); text-underline-offset: .2em; text-decoration-thickness: from-font;
+    text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+    &:hover { text-decoration-color: currentColor; }
+  }
+  ::selection { background: color-mix(in srgb, var(--primary) 22%, transparent); }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  hr { border: 0; border-top: 1px solid var(--border); margin-block: var(--space-6); }
+  pre {
+    background: var(--faint); border: 1px solid var(--border); border-radius: var(--radius-medium);
+    padding: var(--space-4); overflow-x: auto; font-size: var(--text-7); line-height: 1.55;
+  }
+  :not(pre) > code { background: var(--muted); padding: .1em .35em; border-radius: var(--radius-small); font-size: .875em; }
+  blockquote { border-inline-start: 3px solid var(--primary); padding-inline-start: var(--space-4); color: var(--muted-foreground); font-style: italic; }
+  img { height: auto; }
+}
+
+@layer components {
+  /* after Oat's grid tokens in this layer, so these win */
+  :root { --container-max: 72rem; --container-pad: clamp(1rem, 3vw, 2rem); }
+  form[role=search] { margin-block-end: var(--space-6); }
+
+  /* container and prose */
+  main.container, .container { padding-block: var(--space-8); }
+  .prose { max-width: var(--measure); font-size: var(--text-5); line-height: 1.7;
+    & > * + * { margin-block-start: 1em; }
+    & :is(h2, h3) { margin-block-start: 1.6em; } }
+
+  /* navbar */
+  .ot-nav {
+    position: sticky; top: 0; z-index: var(--z-dropdown); min-height: var(--nav-h);
+    background: color-mix(in srgb, var(--background) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px);
+    border-block-end: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    & > nav { display: flex; align-items: center; gap: var(--space-4); max-width: var(--container-max); min-height: var(--nav-h);
+      margin-inline: auto; padding-inline: var(--container-pad); }
+    & .brand { font-family: var(--font-display); font-weight: var(--font-semibold); font-size: var(--text-5); color: var(--foreground);
+      text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-2); }
+    & ul { display: flex; align-items: center; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
+    & ul a { display: block; padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); font-size: var(--text-7);
+      color: var(--muted-foreground); text-decoration: none; transition: background-color var(--transition-fast), color var(--transition-fast);
+      &:hover, &[aria-current] { color: var(--foreground); background: var(--accent); } }
+    & .end { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space-2); }
+  }
+  @media (max-width: 640px) { .ot-nav ul { display: none; } }
+
+  /* hero */
+  .hero { padding-block: clamp(3rem, 8vw, 6rem); text-align: center;
+    & h1 { font-size: clamp(2.25rem, 1.6rem + 3vw, 3.75rem); line-height: 1.05; max-width: 20ch; margin-inline: auto; }
+    & p { font-size: var(--text-4); color: var(--muted-foreground); max-width: 46ch; margin: var(--space-4) auto 0; }
+    & .hstack { justify-content: center; margin-block-start: var(--space-8); } }
+  .eyebrow { display: inline-block; font-size: var(--text-8); font-weight: var(--font-semibold); letter-spacing: .08em;
+    text-transform: uppercase; color: var(--primary); margin-block-end: var(--space-3); }
+
+  /* cards: header and footer rule off, links lift */
+  .card {
+    & > header { margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-4); padding: var(--space-4) var(--space-6);
+      border-block-end: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: var(--space-2) var(--space-4); & :is(h1, h2, h3, h4, h5, h6, p) { margin: 0; } }
+    & > footer { margin: var(--space-4) calc(-1 * var(--space-6)) calc(-1 * var(--space-6)); padding: var(--space-4) var(--space-6);
+      border-block-start: 1px solid var(--border); background: var(--faint); border-end-start-radius: inherit; border-end-end-radius: inherit;
+      display: flex; gap: var(--space-2); align-items: center; }
+    & > :is(h1, h2, h3, h4) { margin-block-end: var(--space-2); }
+    & > p { color: var(--muted-foreground); }
+  }
+  a.card, .card[hx-get], .card.hover { display: block; color: inherit; text-decoration: none;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+    &:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); } }
+
+  /* auto-fit grid: Grid(..., min='16rem') */
+  .grid { display: grid; gap: var(--grid-gap); grid-template-columns: repeat(auto-fit, minmax(min(var(--min, 14rem), 100%), 1fr)); }
+
+  /* tables */
+  table { width: 100%; font-variant-numeric: tabular-nums;
+    & th { font-size: var(--text-8); text-transform: uppercase; letter-spacing: .05em; color: var(--muted-foreground); font-weight: var(--font-semibold); }
+    & tbody tr { transition: background-color var(--transition-fast); }
+    & tbody tr:hover { background: var(--faint); } }
+
+  /* dialogs: a dialog over Card keeps one surface */
+  dialog > .card { border: 0; box-shadow: none; background: transparent; }
+
+  /* buttons sit on a subtle lift */
+  :is(button, [type=submit], a.button):not(.ghost, .outline, [data-variant=secondary], [role=tab], [role=menuitem]) { box-shadow: var(--shadow-small); }
+
+  /* mode toggle: one icon per mode */
+  .ot-mode svg { display: none; }
+  html[data-mode=auto] .ot-mode .auto, html[data-mode=light] .ot-mode .light, html[data-mode=dark] .ot-mode .dark { display: block; }
+
+  /* theme picker */
+  .ot-swatches { display: grid; grid-template-columns: repeat(5, 1.75rem); gap: var(--space-2); padding: var(--space-3); }
+  .ot-swatch { width: 1.75rem; height: 1.75rem; padding: 0; border-radius: var(--radius-full); border: 2px solid var(--border);
+    box-shadow: none !important; background: var(--sw); transition: transform var(--transition-fast);
+    &:hover { transform: scale(1.12); --_hov: var(--sw); } }
+
+  /* footer */
+  .ot-footer { border-block-start: 1px solid var(--border); padding-block: var(--space-8); color: var(--muted-foreground); font-size: var(--text-7);
+    & > div { max-width: var(--container-max); margin-inline: auto; padding-inline: var(--container-pad); display: flex; gap: var(--space-4);
+      flex-wrap: wrap; justify-content: space-between; } }
+}
+
+/* Oat's stacks zero their children's margins; a dialog keeps its centring */
+@layer utilities { :is(.hstack, .vstack) > dialog { margin: auto; } }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
