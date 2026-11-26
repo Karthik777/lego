@@ -1,8 +1,8 @@
 /* fhoat themes: mode, presets and the reader's settings, on Oat's tokens. Layered, so your unlayered CSS always wins. */
 
 /* ── Mode: Oat colours are light-dark(); fhoat.js sets html.dark / html.light ── */
-html.dark { color-scheme: dark; }
-html.light { color-scheme: light; }
+html.dark, html[data-mode=dark] { color-scheme: dark; }
+html.light, html[data-mode=light] { color-scheme: light; }   /* the server's mode holds before the script runs */
 
 /* the cross-fade fhoat.js runs for the moment a setting changes */
 @media (prefers-reduced-motion: no-preference) {
@@ -67,27 +67,4 @@ html[data-tips=off] .ot-tooltip { display: none !important; }
   [data-size=sm] { --text-regular: .875rem; --text-7: .8125rem; --text-8: .6875rem; }
   [data-size=lg] { --text-regular: 1.125rem; --text-7: 1rem; --text-8: .8125rem; }
   [data-size=xl] { --text-regular: 1.25rem; --text-7: 1.125rem; --text-8: .875rem; }
-}
-
-/* the reader's controls: ModeToggle, ThemePicker */
-@layer components {
-  /* mode toggle: one icon per mode */
-  .ot-mode > * { display: none; }
-  html[data-mode=auto] .ot-mode > .auto, html[data-mode=light] .ot-mode > .light, html[data-mode=dark] .ot-mode > .dark { display: inline-flex; }
-
-  /* theme picker */
-  .ot-picker { width: 20rem; max-width: calc(100vw - 1rem); padding: var(--space-4);
-    & h6 { margin: var(--space-3) 0 var(--space-2); font-size: var(--text-8); text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); }
-    & h6:first-child { margin-block-start: 0; } }
-  .ot-swatches { display: grid; grid-template-columns: repeat(auto-fill, 1.75rem); gap: var(--space-2); }
-  .ot-opts { display: flex; flex-wrap: wrap; gap: var(--space-1);
-    & > [role=menuitem] { display: inline-flex; width: auto; padding: var(--space-1) var(--space-3); justify-content: center; } }
-  @media (max-width: 640px) {
-    /* ot-dropdown aligns the menu to its trigger, which can push it off a phone's screen: pin it under the bar instead */
-    ot-dropdown [popover].ot-picker { position: fixed; left: .5rem !important; right: .5rem; top: 3.25rem !important; width: auto; max-width: none; }
-  }
-  [data-set][aria-pressed=true] { background: var(--accent); border-color: var(--ring); }
-  .ot-swatch { width: 1.75rem; height: 1.75rem; padding: 0; border-radius: var(--radius-full); border: 2px solid var(--border);
-    box-shadow: none !important; background: var(--sw); transition: transform var(--transition-fast);
-    &:hover { transform: scale(1.12); --_hov: var(--sw); } }
 }

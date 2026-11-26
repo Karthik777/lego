@@ -1,19 +1,44 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "fhoat"
-version = "0.1.0"
-description = "Oat UI for FastHTML: a drop-in for Pico. fast_app(oat=True)"
-authors = [{ name = "Karthik Rajgopal", email = "karthik.rajgopal@hotmail.com" }]
-requires-python = ">=3.10"
-license = { text = "MIT" }
+dynamic = ["version"]
+description = "Oat UI for FastHTML: a drop-in for Pico"
 readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Karthik Rajgopal", email = "karthik.rajgopal@hotmail.com"}]
+keywords = ["fasthtml", "oat", "css", "htmx", "ui", "nbdev"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Framework :: FastHTML",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Development Status :: 3 - Alpha",
+]
 dependencies = ["python-fasthtml>=0.12"]
 
+[project.optional-dependencies]
+dev = ["nbdev>=3.3", "httpx"]
+
 [project.urls]
-Homepage = "https://github.com/Karthik777/lego/tree/main/fhoat"
+Repository = "https://github.com/Karthik777/fhoat"
+Documentation = "https://Karthik777.github.io/fhoat/"
 
-[tool.hatch.build.targets.wheel]
-packages = ["fhoat"]
+[project.entry-points.nbdev]
+fhoat = "fhoat._modidx:d"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.setuptools.dynamic]
+version = {attr = "fhoat.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["fhoat"]
+
+[tool.setuptools.package-data]
+fhoat = ["static/*"]
+
+[tool.nbdev]
+jupyter_hooks = false
+custom_sidebar = false

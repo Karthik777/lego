@@ -1,4 +1,4 @@
-/* fhoat look: type, links, nav, hero, cards, grid and tables, on top of Oat and themes.css. Its tokens sit at :where(:root), so presets and settings win. */
+/* fhoat restyle: plain tags (type, links, code, tables, buttons, focus) and the container. Its tokens sit at :where(:root), so presets and settings win. */
 
 @layer theme {
   :where(:root) {
@@ -8,7 +8,7 @@
     --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, monospace;
     --radius-small: .25rem; --radius-medium: .5rem; --radius-large: .75rem;
     --shadow-small: 0 1px 2px rgb(0 0 0 / .05), 0 1px 1px rgb(0 0 0 / .03);
-    --measure: 68ch; --nav-h: 3.5rem;
+    --measure: 68ch;
     --tint: color-mix(in srgb, var(--primary) 8%, var(--background));
   }
 }
@@ -47,48 +47,8 @@
     & > * + * { margin-block-start: 1em; }
     & :is(h2, h3) { margin-block-start: 1.6em; } }
 
-  /* navbar */
-  .ot-nav {
-    position: sticky; top: 0; z-index: var(--z-dropdown); min-height: var(--nav-h);
-    background: color-mix(in srgb, var(--background) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px);
-    border-block-end: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-    & > nav { display: flex; align-items: center; gap: var(--space-4); max-width: var(--container-max); min-height: var(--nav-h);
-      margin-inline: auto; padding-inline: var(--container-pad); }
-    & .brand { font-family: var(--font-display); font-weight: var(--font-semibold); font-size: var(--text-5); color: var(--foreground);
-      text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-2); }
-    & ul { display: flex; align-items: center; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
-    & ul a { display: block; padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); font-size: var(--text-7);
-      color: var(--muted-foreground); text-decoration: none; transition: background-color var(--transition-fast), color var(--transition-fast);
-      &:hover, &[aria-current] { color: var(--foreground); background: var(--accent); } }
-    & .end { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space-2); }
-  }
-  @media (max-width: 640px) { .ot-nav ul { display: none; } }
-
-  /* hero */
-  .hero { padding-block: clamp(3rem, 8vw, 6rem); text-align: center;
-    & h1 { font-size: clamp(2.25rem, 1.6rem + 3vw, 3.75rem); line-height: 1.05; max-width: 20ch; margin-inline: auto; }
-    & p { font-size: var(--text-4); color: var(--muted-foreground); max-width: 46ch; margin: var(--space-4) auto 0; }
-    & .hstack { justify-content: center; margin-block-start: var(--space-8); } }
-  .eyebrow { display: inline-block; font-size: var(--text-8); font-weight: var(--font-semibold); letter-spacing: .08em;
-    text-transform: uppercase; color: var(--primary); margin-block-end: var(--space-3); }
-
-  /* cards: header and footer rule off, links lift */
-  .card {
-    & > header { margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-4); padding: var(--space-4) var(--space-6);
-      border-block-end: 1px solid var(--border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-      gap: var(--space-2) var(--space-4); & :is(h1, h2, h3, h4, h5, h6, p) { margin: 0; } }
-    & > footer { margin: var(--space-4) calc(-1 * var(--space-6)) calc(-1 * var(--space-6)); padding: var(--space-4) var(--space-6);
-      border-block-start: 1px solid var(--border); background: var(--faint); border-end-start-radius: inherit; border-end-end-radius: inherit;
-      display: flex; gap: var(--space-2); align-items: center; }
-    & > :is(h1, h2, h3, h4) { margin-block-end: var(--space-2); }
-    & > p { color: var(--muted-foreground); }
-  }
-  a.card, .card[hx-get], .card.hover { display: block; color: inherit; text-decoration: none;
-    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
-    &:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); } }
-
-  /* auto-fit grid: Grid(..., min='16rem') */
-  .grid { display: grid; gap: var(--grid-gap); grid-template-columns: repeat(auto-fit, minmax(min(var(--min, 14rem), 100%), 1fr)); }
+  /* card text */
+  .card { & > :is(h1, h2, h3, h4) { margin-block-end: var(--space-2); } & > p { color: var(--muted-foreground); } }
 
   /* tables */
   table { width: 100%; font-variant-numeric: tabular-nums;
@@ -96,19 +56,12 @@
     & tbody tr { transition: background-color var(--transition-fast); }
     & tbody tr:hover { background: var(--faint); } }
 
-  /* dialogs: a dialog over Card keeps one surface */
-  dialog > .card { border: 0; box-shadow: none; background: transparent; }
-
   /* buttons sit on a subtle lift */
   :is(button, [type=submit], a.button):not(.ghost, .outline, [data-variant=secondary], [role=tab], [role=menuitem]) { box-shadow: var(--shadow-small); }
 
-  /* footer */
-  .ot-footer { border-block-start: 1px solid var(--border); padding-block: var(--space-8); color: var(--muted-foreground); font-size: var(--text-7);
-    & > div { max-width: var(--container-max); margin-inline: auto; padding-inline: var(--container-pad); display: flex; gap: var(--space-4);
-      flex-wrap: wrap; justify-content: space-between; } }
 }
 
-/* Oat's stacks zero their children's margins; a dialog keeps its centring */
-@layer utilities { :is(.hstack, .vstack) > dialog { margin: auto; } }
-
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+/* reduced motion: no transitions; the busy spinner still turns */
+@layer utilities { @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+  *:not([aria-busy=true]), *:not([aria-busy=true])::before, *::after { animation: none !important; } } }

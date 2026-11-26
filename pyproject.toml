@@ -65,3 +65,6 @@ members = ["fhoat"]
 
 [tool.uv.sources]
 fhoat = { workspace = true }
+
+[tool.uv.config-settings-package]
+fhoat = { editable_mode = "compat" }

@@ -343,4 +343,4 @@ def themes(reveal=True, **kw):
     c, j = loadX(_css), loadX(_js)
     thm = [Link(rel='stylesheet', href=vlink('/static/assets/theme.css')) if _asset('theme.css', c) else Style(c),
            Script(src=vlink('/static/assets/theme.js')) if _asset('theme.js', j) else Script(j)]
-    return [Script(_MIGRATE), *oat_hdrs(_thm(**kw), look=False, compat=True)] + thm + [_nosleep()] + ([Surreal("me('body').remove_class('hidden');")] if reveal else [])
+    return [Script(_MIGRATE), *oat_hdrs(_thm(**kw), restyle=False, compat=True)] + thm + [_nosleep()] + ([Surreal("me('body').remove_class('hidden');")] if reveal else [])
